@@ -1,0 +1,18 @@
+{
+  "name": "faq-api",
+  "version": "0.1.0",
+  "description": "API minima FAQ multiusuario - Fase 1: healthcheck y conectividad Qdrant",
+  "type": "module",
+  "main": "src/index.js",
+  "scripts": {
+    "start": "node src/index.js",
+    "dev": "node --watch src/index.js"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "dependencies": {
+    "dotenv": "^16.4.7",
+    "fastify": "^5.2.1"
+  }
+}
