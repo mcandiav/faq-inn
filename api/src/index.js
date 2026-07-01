@@ -4,6 +4,7 @@ import cookie from '@fastify/cookie';
 import jwt from '@fastify/jwt';
 import { loadConfig } from './config.js';
 import { getPool } from './db.js';
+import { ensureDatabase } from './lib/bootstrapDb.js';
 import { runMigrations } from './lib/migrate.js';
 import { registerAuth } from './plugins/auth.js';
 import { healthRoutes } from './routes/health.js';
@@ -20,6 +21,8 @@ const app = Fastify({
     level: process.env.LOG_LEVEL || 'info',
   },
 });
+
+await ensureDatabase(config);
 
 const pool = getPool(config.databaseUrl);
 app.decorate('db', { pool });

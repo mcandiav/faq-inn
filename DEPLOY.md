@@ -8,16 +8,17 @@ Plataforma multiusuario para administrar FAQs de agentes IA.
 
 ---
 
-## Decisión arquitectónica (V1.5)
+## Decisión arquitectónica (V2.0)
 
-El MVP usa **exactamente 2 contenedores Docker** en EasyPanel:
+El MVP usa **2 contenedores de aplicación** + **MariaDB compartido** (igual que Cronómetro / Planificador):
 
-| Contenedor | Rama Git | Equivalente | Rol |
-|---|---|---|---|
-| `http` | `http` | presentación | Interfaz web (nginx) + proxy `/api/*` |
-| `api` | `api` | aplicación + datos | Fastify + **MariaDB embebido** |
+| Contenedor / servicio | Rama Git | Rol |
+|---|---|---|
+| `dfaq-http` | `http` | Interfaz web (nginx) + proxy `/api/*` |
+| `dfaq-api` | `api` | Fastify (stateless — solo Node) |
+| `bignotti_mariadb` | *(existente)* | MariaDB compartido — base `dfaq` |
 
-**No se despliegan** contenedores separados para MariaDB, worker ni “front/back” adicionales.
+**No** se embebe MariaDB en `dfaq-api`. Deploy del API = **solo Deploy** (sin Stop manual).
 
 ```text
 https://dfaq.at-once.cl
@@ -25,8 +26,8 @@ https://dfaq.at-once.cl
    dfaq-http  (rama http, puerto 80)
         ↓ proxy /api/*
    dfaq-api   (rama api, puerto 3000)
-        ├── Fastify
-        └── MariaDB  → volumen /var/lib/mysql
+        ↓ TCP 3306
+   bignotti_mariadb  (base dfaq, usuario dfaq_app)
         ↓
    Qdrant (n8n_qdrant:6333, externo)
 ```
@@ -88,10 +89,10 @@ dfaq/
 | Dockerfile | `/Dockerfile` en la **raíz del repo** (no `api/Dockerfile`) |
 | Puerto interno | `3000` |
 | Healthcheck | `GET /health` |
-| Volumen persistente | `/var/lib/mysql` (tipo **Volumen**, ruta absoluta `/var/lib/mysql`) |
-| Réplicas | **1 sola instancia** (obligatorio) |
+| Volumen | **Ninguno** (quitar `/var/lib/mysql` si existía) |
+| Réplicas | `1` (cero downtime puede quedar OFF u ON — ya no hay lock MariaDB) |
 
-Dos contenedores compartiendo el mismo volumen MariaDB causan errores `Can't lock aria control file` e `Unable to lock ./ibdata1`.
+**Preparación MariaDB:** en el **primer deploy**, la API crea sola la base `dfaq` y el usuario `dfaq_app` si no existen. Solo necesitas el password **root** de `bignotti_mariadb` en `DB_ADMIN_PASSWORD` (una vez). Opcional: script manual `api/scripts/init-dfaq-database.sql`.
 
 **Variables de entorno:**
 
@@ -102,18 +103,29 @@ PORT=3000
 QDRANT_URL=http://n8n_qdrant:6333
 QDRANT_COLLECTION_TEMPLATE=kb_<tenant_slug>_nvidia_1024
 
+# MariaDB compartido (misma instancia que planificador)
+DB_HOST=bignotti_mariadb
+DB_PORT=3306
+DB_NAME=dfaq
+DB_USER=dfaq_app
+DB_PASSWORD=<secreto app>
+DB_ADMIN_USER=root
+DB_ADMIN_PASSWORD=<root de bignotti_mariadb — solo para bootstrap inicial>
+
+# Auth V1.9
+ADMIN_EMAIL=<tu email admin>
+ADMIN_PASSWORD=<secreto>
+SESSION_SECRET=<secreto>
+
 # Embeddings NVIDIA (gratuito en build.nvidia.com)
 EMBEDDING_PROVIDER=nvidia
 EMBEDDING_DIMENSION=1024
 NVIDIA_API_KEY=<secreto>
 NVIDIA_API_BASE=https://integrate.api.nvidia.com/v1
 NVIDIA_EMBEDDING_MODEL=baai/bge-m3
-MYSQL_DATABASE=dfaq
-MYSQL_USER=dfaq
-MYSQL_PASSWORD=<secreto>
-MYSQL_ROOT_PASSWORD=<secreto>
-DATABASE_URL=mysql://dfaq:<secreto>@127.0.0.1:3306/dfaq
 ```
+
+Quitar variables obsoletas: `MYSQL_ROOT_PASSWORD`, volumen `/var/lib/mysql`, `DATABASE_URL` con `127.0.0.1` (salvo que prefieras URL completa).
 
 **Endpoints de validación post-deploy:**
 
@@ -169,8 +181,8 @@ API_UPSTREAM=http://n8n_dfaq-api:3000
 
 Copiar variables desde `api/.env.example` y `http/.env.example`.
 
-- En local, `QDRANT_URL` suele ser `http://127.0.0.1:6333` (Qdrant local o túnel).
-- MariaDB arranca automáticamente dentro del contenedor `api` al usar Docker.
+- En local, `QDRANT_URL` suele ser `http://127.0.0.1:6333`.
+- MariaDB local o túnel; en EasyPanel usar `DB_HOST=bignotti_mariadb`.
 
 Ver también: `api/README.md` y `http/README.md`.
 
