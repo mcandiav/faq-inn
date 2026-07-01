@@ -986,6 +986,11 @@ code {
   box-shadow: 0 0 0 1px rgba(59, 130, 246, 0.35);
 }
 
+.profile-email-hint {
+  margin: -0.35rem 0 0.75rem;
+  font-size: 0.85rem;
+}
+
 .profile-logout {
   margin-top: 0.5rem;
 }
