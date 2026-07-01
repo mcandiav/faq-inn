@@ -433,6 +433,14 @@ code {
   font-weight: 600;
 }
 
+.unanswered-consulta-edit {
+  margin-top: 0.75rem;
+}
+
+.unanswered-consulta-edit .btn {
+  margin-top: 0.5rem;
+}
+
 .unanswered-card-head {
   display: flex;
   justify-content: space-between;
@@ -469,7 +477,8 @@ code {
 }
 
 .unanswered-answer-label textarea,
-.unanswered-answer {
+.unanswered-answer,
+.unanswered-question-input {
   width: 100%;
   margin-top: 0.35rem;
   padding: 0.65rem 0.75rem;
