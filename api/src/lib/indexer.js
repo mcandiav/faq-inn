@@ -5,7 +5,52 @@ import {
   faqPointId,
   qdrantRequest,
   resolveCollectionName,
+  resolvePointId,
 } from './qdrant.js';
+
+export async function deleteFaqPoints(config, collection, tenantSlug, faqUid, extraPointIds = []) {
+  const ids = new Set();
+
+  for (const rawId of extraPointIds) {
+    if (rawId === null || rawId === undefined || rawId === '') {
+      continue;
+    }
+    const numeric = Number(rawId);
+    if (Number.isInteger(numeric) && numeric > 0) {
+      ids.add(numeric);
+      continue;
+    }
+    ids.add(String(rawId));
+  }
+
+  const { response: filterResponse } = await qdrantRequest(
+    config,
+    'POST',
+    `/collections/${encodeURIComponent(collection)}/points/delete?wait=true`,
+    {
+      filter: {
+        must: [
+          { key: 'tenant_id', match: { value: tenantSlug } },
+          { key: 'faq_id', match: { value: faqUid } },
+        ],
+      },
+    }
+  );
+
+  let deletedByFilter = filterResponse.ok;
+
+  if (ids.size > 0) {
+    const { response: idResponse } = await qdrantRequest(
+      config,
+      'POST',
+      `/collections/${encodeURIComponent(collection)}/points/delete?wait=true`,
+      { points: [...ids] }
+    );
+    deletedByFilter = deletedByFilter || idResponse.ok;
+  }
+
+  return deletedByFilter;
+}
 
 export function embeddingHash(text) {
   return createHash('sha256').update(text).digest('hex').slice(0, 32);
@@ -68,7 +113,12 @@ export async function indexFaqItem(config, faq, tenantSlug) {
   });
   const hash = embeddingHash(text);
   const vector = await createEmbedding(text, config, { inputType: 'passage' });
-  const pointId = faqPointId(faq.faq_uid);
+  const pointId = resolvePointId(faq);
+
+  await deleteFaqPoints(config, collection, tenantSlug, faq.faq_uid, [
+    faq.qdrant_point_id,
+    faqPointId(faq.faq_uid),
+  ]);
 
   const { response, body } = await qdrantRequest(
     config,
@@ -109,19 +159,14 @@ export async function indexFaqItem(config, faq, tenantSlug) {
   };
 }
 
-export async function removeFaqFromQdrant(config, tenantSlug, faqUid) {
+export async function removeFaqFromQdrant(config, tenantSlug, faqUid, extraPointIds = []) {
   const collection = resolveCollectionName(
     config.qdrantCollectionTemplate,
     tenantSlug
   );
-  const pointId = faqPointId(faqUid);
 
-  const { response } = await qdrantRequest(
-    config,
-    'POST',
-    `/collections/${encodeURIComponent(collection)}/points/delete?wait=true`,
-    { points: [pointId] }
-  );
-
-  return response.ok;
+  return deleteFaqPoints(config, collection, tenantSlug, faqUid, [
+    ...extraPointIds,
+    faqPointId(faqUid),
+  ]);
 }
