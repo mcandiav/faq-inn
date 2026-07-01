@@ -28,5 +28,9 @@ export function loadConfig() {
     qdrantApiKey: process.env.QDRANT_API_KEY || '',
     qdrantCollectionTemplate:
       process.env.QDRANT_COLLECTION_TEMPLATE || 'kb_<tenant_slug>_openai_1536',
+    openaiApiKey: process.env.OPENAI_API_KEY || '',
+    openaiEmbeddingModel:
+      process.env.OPENAI_EMBEDDING_MODEL || 'text-embedding-3-small',
+    embeddingDimension: Number(process.env.OPENAI_EMBEDDING_DIMENSION || 1536),
   };
 }

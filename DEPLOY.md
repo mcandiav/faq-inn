@@ -85,6 +85,9 @@ APP_URL=https://dfaq.at-once.cl
 PORT=3000
 QDRANT_URL=http://n8n_qdrant:6333
 QDRANT_COLLECTION_TEMPLATE=kb_<tenant_slug>_openai_1536
+OPENAI_API_KEY=<secreto>
+OPENAI_EMBEDDING_MODEL=text-embedding-3-small
+OPENAI_EMBEDDING_DIMENSION=1536
 MYSQL_DATABASE=dfaq
 MYSQL_USER=dfaq
 MYSQL_PASSWORD=<secreto>
@@ -97,6 +100,15 @@ DATABASE_URL=mysql://dfaq:<secreto>@127.0.0.1:3306/dfaq
 - `GET /health` — API + MariaDB
 - `GET /api/db/health` — MariaDB
 - `GET /api/qdrant/health` — Qdrant
+- `POST /api/qdrant/collections/ensure` — crear/verificar colección
+- `POST /api/qdrant/faq/upsert-test` — upsert FAQ WiFi (requiere `OPENAI_API_KEY`)
+- `POST /api/search` — búsqueda semántica
+
+**Secuencia fases 4-6:**
+
+1. `POST /api/qdrant/collections/ensure` body `{}`
+2. `POST /api/qdrant/faq/upsert-test` body `{}`
+3. `POST /api/search` body `{"tenant_id":"morroreservas","agent_id":"chatwoot_reservas","query":"Tem internet bom para trabalhar?"}`
 
 ### 2. Servicio `dfaq-http`
 
@@ -112,10 +124,10 @@ DATABASE_URL=mysql://dfaq:<secreto>@127.0.0.1:3306/dfaq
 **Variables de entorno:**
 
 ```text
-API_UPSTREAM=http://dfaq-api:3000
+API_UPSTREAM=http://n8n_dfaq-api:3000
 ```
 
-`dfaq-api` debe coincidir con el **nombre interno** del App Service api en EasyPanel.
+`n8n_dfaq-api` = nombre interno del App Service api en el proyecto EasyPanel `n8n`.
 
 **Validación post-deploy:**
 

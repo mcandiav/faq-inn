@@ -3,6 +3,7 @@ import Fastify from 'fastify';
 import { loadConfig } from './config.js';
 import { healthRoutes } from './routes/health.js';
 import { qdrantRoutes } from './routes/qdrant.js';
+import { searchRoutes } from './routes/search.js';
 
 const config = loadConfig();
 
@@ -14,6 +15,7 @@ const app = Fastify({
 
 await healthRoutes(app, config);
 await qdrantRoutes(app, config);
+await searchRoutes(app, config);
 
 try {
   await app.listen({ port: config.port, host: config.host });
