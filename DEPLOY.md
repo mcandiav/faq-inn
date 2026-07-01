@@ -158,6 +158,8 @@ Quitar variables obsoletas: `MYSQL_ROOT_PASSWORD`, volumen `/var/lib/mysql`, `DA
 - `POST /api/qdrant/faq/upsert-test` — upsert FAQ WiFi (requiere `NVIDIA_API_KEY` u `OPENAI_API_KEY`)
 - `POST /api/search` — búsqueda semántica
 
+**Integración n8n:** configuración completa del nodo HTTP Request en [docs/N8N-SEARCH.md](docs/N8N-SEARCH.md).
+
 **Secuencia fases 4-6:**
 
 1. `POST /api/qdrant/collections/ensure` body `{}` → crea `kb_morroreservas_nvidia_1024`

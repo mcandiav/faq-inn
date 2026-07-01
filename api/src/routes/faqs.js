@@ -183,7 +183,7 @@ export async function faqRoutes(app, config) {
       return {
         status: 'ok',
         reindex: result,
-        message: `${result.reindexed} FAQ(s) reindexadas sin duplicados`,
+        message: `${result.reindexed} FAQ(s) reindexadas; Qdrant limpiado de huérfanos`,
       };
     } catch (error) {
       const code = error.statusCode || 500;
@@ -280,15 +280,27 @@ export async function faqRoutes(app, config) {
 
     await pool.query('DELETE FROM faq_items WHERE id = ?', [faq.id]);
 
+    let qdrant_cleaned = true;
     try {
-      await removeFaqFromQdrant(config, faq.tenant_slug, faq.faq_uid, [
+      qdrant_cleaned = await removeFaqFromQdrant(config, faq.tenant_slug, faq.faq_uid, [
         faq.id,
         faq.qdrant_point_id,
       ]);
     } catch (error) {
+      qdrant_cleaned = false;
       app.log.warn({ err: error }, 'No se pudo borrar punto Qdrant');
     }
 
-    return { status: 'ok', deleted: faq.id };
+    return {
+      status: 'ok',
+      deleted: faq.id,
+      qdrant_cleaned,
+      ...(qdrant_cleaned
+        ? {}
+        : {
+            warning:
+              'FAQ borrada en MariaDB pero quedaron restos en Qdrant. Usa «Sincronizar Qdrant».',
+          }),
+    };
   });
 }
