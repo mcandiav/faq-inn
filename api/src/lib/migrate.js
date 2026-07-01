@@ -66,6 +66,7 @@ CREATE TABLE IF NOT EXISTS unanswered_questions (
   channel VARCHAR(64) NOT NULL DEFAULT '',
   remote_id VARCHAR(255) NOT NULL DEFAULT '',
   contact_name VARCHAR(255) NOT NULL DEFAULT '',
+  phone VARCHAR(64) NOT NULL DEFAULT '',
   question TEXT NOT NULL,
   language VARCHAR(16) NOT NULL DEFAULT 'es',
   score DECIMAL(10, 8) NULL,
@@ -92,10 +93,28 @@ CREATE TABLE IF NOT EXISTS unanswered_questions (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 `;
 
+async function applySchemaPatches(pool) {
+  const [phoneCol] = await pool.query(
+    `SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS
+     WHERE TABLE_SCHEMA = DATABASE()
+       AND TABLE_NAME = 'unanswered_questions'
+       AND COLUMN_NAME = 'phone'`
+  );
+
+  if (phoneCol.length === 0) {
+    await pool.query(
+      `ALTER TABLE unanswered_questions
+       ADD COLUMN phone VARCHAR(64) NOT NULL DEFAULT '' AFTER contact_name`
+    );
+  }
+}
+
 export async function runMigrations(pool, config) {
   for (const statement of SCHEMA_SQL.split(';').map((s) => s.trim()).filter(Boolean)) {
     await pool.query(statement);
   }
+
+  await applySchemaPatches(pool);
 
   const adminEmail = process.env.ADMIN_EMAIL?.trim().toLowerCase();
   const adminPassword = process.env.ADMIN_PASSWORD;
