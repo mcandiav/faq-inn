@@ -1,4 +1,4 @@
-const APP_VERSION = '2.4.0';
+const APP_VERSION = '2.4.1';
 const apiBase = window.DFAQ_API_URL || '/api';
 const VIEW_STORAGE_KEY = 'dfaq-current-view';
 const VALID_VIEWS = ['dashboard', 'unanswered', 'profile', 'admin'];
