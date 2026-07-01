@@ -72,7 +72,10 @@ dfaq/
 | Dockerfile | `/Dockerfile` en la **raíz del repo** (no `api/Dockerfile`) |
 | Puerto interno | `3000` |
 | Healthcheck | `GET /health` |
-| Volumen persistente | `/var/lib/mysql` |
+| Volumen persistente | `/var/lib/mysql` (tipo **Volumen**, ruta absoluta `/var/lib/mysql`) |
+| Réplicas | **1 sola instancia** (obligatorio) |
+
+Dos contenedores compartiendo el mismo volumen MariaDB causan errores `Can't lock aria control file` e `Unable to lock ./ibdata1`.
 
 **Variables de entorno:**
 
