@@ -6,7 +6,9 @@
 
 | Fecha | Versión | Cambio realizado | Motivo | Impacto | Sección afectada |
 |---|---|---|---|---|---|
+| 2026-06-30 | V1.6 | Documentación alineada con arquitectura de 2 contenedores (`api` + `http`), ramas Git y MariaDB embebido. | Consolidar en README y DEPLOY la decisión V1.5 ya implementada en código. | Secciones 3, 4, 15, 16, 17 y 18 reflejan el despliegue real; repositorio `mcandiav/dfaq`. | README, DEPLOY.md |
 | 2026-06-30 | V1.5 | Arquitectura reducida a 2 servicios Docker (`api` + `http`) con ramas Git homónimas; MariaDB embebido en `api`. | Miguel prefiere 2 contenedores (api/http) en lugar de 4 (web, api, worker, mariadb). | EasyPanel despliega `dfaq-api` desde rama `api` y `dfaq-http` desde rama `http`; MariaDB persiste en volumen `/var/lib/mysql` dentro de `api`. | DEPLOY.md, estructura repositorio |
+| 2026-06-30 | V1.4 | Se define dominio público MVP `dfaq.at-once.cl`. | Miguel define el subdominio que se usará para publicar la aplicación en EasyPanel. | La arquitectura de despliegue queda con `APP_URL=https://dfaq.at-once.cl`; EasyPanel/Cloudflare/Traefik deberán publicar la app en ese dominio. | Arquitectura de despliegue en EasyPanel |
 | 2026-06-30 | V1.3 | Se define colección Qdrant separada por cliente como estrategia inicial. | Miguel prefiere aislar clientes por colección para simplificar borrado, separación operativa y reducir riesgo de mezcla de datos entre clientes. | El MVP debe crear/verificar una colección por tenant, usando nombres normalizados; se mantiene `tenant_id` y `agent_id` en payload como defensa adicional. | Estrategia Qdrant, Modelo de datos, Plan de programación MVP |
 | 2026-06-30 | V1.2 | Se adelanta Qdrant al inicio del MVP y se registra endpoint interno. | Miguel define que si Qdrant no funciona todo el proyecto es estéril, por lo que debe validarse desde el arranque del desarrollo. | El plan de programación cambia: la primera base técnica debe comprobar conectividad, colección, upsert y search contra `http://n8n_qdrant:6333/` antes del CRUD completo. | Estrategia Qdrant, Arquitectura de despliegue en EasyPanel, Plan de programación MVP |
 | 2026-06-30 | V1.1 | Se define EasyPanel como plataforma obligatoria de despliegue. | Miguel confirma que el programa debe levantarse en EasyPanel y que la arquitectura debe nutrirse de `infra.md`. | La solución queda condicionada a servicios Docker operables desde EasyPanel, con proyecto propio, MariaDB propia y conexión controlada con Qdrant/n8n existentes. | Arquitectura de despliegue en EasyPanel |
@@ -72,18 +74,36 @@ Principios definidos:
 6. El agente no debe mezclar datos entre clientes.
 7. Toda búsqueda debe filtrar por `tenant_id`, `agent_id` y `active = true`.
 
+### 3.1 Decisión de despliegue (V1.5)
+
+El MVP se desplegará con **exactamente 2 contenedores Docker** en EasyPanel:
+
+| Contenedor | Rama Git | Equivalente conceptual | Rol |
+|---|---|---|---|
+| `http` | `http` | capa de presentación | Interfaz web (nginx) y proxy de `/api/*` hacia `api`. |
+| `api` | `api` | capa de aplicación + datos | Backend Fastify, indexación futura y **MariaDB embebido** en el mismo contenedor. |
+
+Reglas vigentes:
+
+1. **No** se desplegarán 4 contenedores (`web`, `api`, `worker`, `mariadb`) como arquitectura inicial.
+2. MariaDB **no** tendrá contenedor propio; corre dentro de `api` con volumen persistente en `/var/lib/mysql`.
+3. El worker de indexación se integrará **después** como proceso lógico dentro de `api`, no como tercer contenedor.
+4. Repositorio GitHub: `mcandiav/dfaq`. Guía operativa: [DEPLOY.md](./DEPLOY.md).
+
 ---
 
 ## 4. Arquitectura propuesta
 
+### 4.1 Arquitectura lógica (negocio)
+
 ```text
 Usuarios / Clientes
         ↓
-App Web FAQ Manager
+Interfaz web (http)
         ↓
-MariaDB
+API + MariaDB (api)
         ↓
-Worker / servicio de indexación
+Indexación / embeddings (proceso en api)
         ↓
 OpenAI Embeddings
         ↓
@@ -92,17 +112,35 @@ Qdrant
 n8n / ChatWoot / Agente IA
 ```
 
-### 4.1 Componentes
+### 4.2 Arquitectura física de despliegue (EasyPanel)
 
-| Componente | Rol |
-|---|---|
-| App web | Interfaz multiusuario para administrar FAQs. |
-| MariaDB | Fuente maestra de clientes, usuarios, agentes, colecciones y FAQs. |
-| Worker de indexación | Genera embeddings y actualiza Qdrant. |
-| OpenAI Embeddings | Servicio inicial elegido para generar vectores multilingües. |
-| Qdrant | Índice vectorial de búsqueda semántica. |
-| n8n | Orquestador actual de agentes y canales como ChatWoot. |
-| ChatWoot | Canal de conversación donde opera el agente. |
+```text
+https://dfaq.at-once.cl
+        ↓
+http  (rama Git `http`, puerto 80)
+        ↓ proxy /api/*
+api   (rama Git `api`, puerto 3000)
+        ├── Fastify
+        ├── MariaDB embebido  → volumen /var/lib/mysql
+        └── (futuro) worker de indexación
+        ↓
+Qdrant  (n8n_qdrant:6333, externo al proyecto dfaq)
+        ↓
+n8n / ChatWoot / Agente IA
+```
+
+### 4.3 Componentes
+
+| Componente | Rol | Contenedor |
+|---|---|---|
+| `http` | Interfaz web y proxy nginx hacia la API. | `http` |
+| API Fastify | Autenticación, CRUD, búsqueda e integración. | `api` |
+| MariaDB | Fuente maestra de tenants, usuarios, agentes, colecciones y FAQs. | `api` (embebido) |
+| Indexación | Genera embeddings y actualiza Qdrant. | `api` (proceso futuro) |
+| OpenAI Embeddings | Servicio elegido para vectores multilingües. | externo |
+| Qdrant | Índice vectorial de búsqueda semántica. | `n8n_qdrant` (existente) |
+| n8n | Orquestador de agentes y canales. | existente |
+| ChatWoot | Canal de conversación del agente. | existente |
 
 ---
 
@@ -609,36 +647,38 @@ Antes de convertir esto en plataforma productiva falta validar:
 
 ---
 
-## 15. Decisiones abiertas
+## 15. Decisiones abiertas y cerradas
 
-| Tema | Decisión pendiente |
+| Tema | Decisión |
 |---|---|
-| Nombre del producto | Pendiente. Dominio público MVP definido: `dfaq.at-once.cl`. |
-| Framework app web | Pendiente. |
-| Colección Qdrant productiva | Definido: una colección por cliente con formato `kb_<tenant_slug>_openai_1536`. |
-| Modelo de embeddings definitivo | Inicialmente OpenAI `text-embedding-3-small`; evaluar Ollama local más adelante. |
-| API para n8n | Pendiente definir contrato final. |
-| Multi-tenant físico o lógico | Inicialmente lógico con filtros por `tenant_id` y `agent_id`. |
+| Nombre del producto | **DFAQ** — dominio `dfaq.at-once.cl`. |
+| Repositorio GitHub | `mcandiav/dfaq`. |
+| Contenedores EasyPanel | **2:** `http` + `api`. MariaDB embebido en `api`. |
+| Ramas Git de despliegue | `http` (interfaz) y `api` (backend + BD). |
+| Framework API | Node.js + Fastify (Fase 1 implementada). |
+| Framework interfaz | Pendiente; placeholder nginx en rama `http`. |
+| Colección Qdrant productiva | `kb_<tenant_slug>_openai_1536`. |
+| Modelo de embeddings | OpenAI `text-embedding-3-small` (inicial). |
+| API para n8n | Pendiente contrato final (`POST /api/search`). |
+| Multi-tenant | Lógico con filtros `tenant_id` + `agent_id`. |
+| Worker de indexación | Proceso lógico futuro **dentro de `api`**, no contenedor aparte. |
 
 ---
 
 ## 16. Próxima acción recomendada
 
-Definir la arquitectura MVP implementable sobre EasyPanel antes de programar:
+Fase 1 (esqueleto `api` + validación Qdrant/MariaDB) **implementada en código**. Siguiente foco:
 
-1. Nombre del producto/módulo.
-2. Framework tecnológico.
-3. Modelo de datos MariaDB definitivo.
-4. Contrato API de búsqueda.
-5. Contrato API de indexación.
-6. Pantallas mínimas de administración.
-7. Roles mínimos.
-8. Flujo de integración con n8n.
-9. Servicios Docker requeridos para EasyPanel.
-10. Variables de entorno.
-11. Estrategia de dominio y publicación por Cloudflare/Traefik.
-12. Conectividad con Qdrant existente o dedicado.
-13. Estrategia de backup y persistencia.
+1. Desplegar `dfaq-api` en EasyPanel (rama `api`, directorio `api`).
+2. Desplegar `dfaq-http` en EasyPanel (rama `http`, directorio `http`, dominio `dfaq.at-once.cl`).
+3. Validar `/api/qdrant/health` y `/api/db/health` desde producción.
+4. Resolver conectividad de red hacia `n8n_qdrant:6333` si falla.
+5. Definir migraciones MariaDB y modelo CRUD.
+6. Implementar pantallas reales en `http`.
+7. Integrar worker de indexación dentro de `api`.
+8. Exponer `POST /api/search` para n8n.
+
+Guía de despliegue: [DEPLOY.md](./DEPLOY.md).
 
 ---
 
@@ -657,41 +697,51 @@ Todo componente del sistema debe correr como servicio Docker administrado por Ea
 
 El proyecto no debe diseñarse como una instalación manual, ni como una aplicación dependiente de rutas locales del servidor. Debe ser portable, contenerizado y configurable por variables de entorno.
 
-### 17.2 Proyecto EasyPanel recomendado
+### 17.2 Proyecto EasyPanel
 
-Se recomienda crear un proyecto EasyPanel propio:
+Proyecto EasyPanel:
 
 ```text
-faq-multiusuario
+dfaq
 ```
+
+Repositorio Git: `https://github.com/mcandiav/dfaq`
 
 Motivo:
 
-- Separa la plataforma FAQ del proyecto EasyPanel actual `n8n`.
-- Evita mezclar la operación editorial de conocimiento con workflows de automatización.
-- Facilita backup, despliegue, variables, logs y reinicios independientes.
-- Permite crecer a futuro sin acoplarse al ciclo operativo de n8n.
+- Separa DFAQ del proyecto EasyPanel `n8n`.
+- Dos App Services (`dfaq-http`, `dfaq-api`) desde ramas homónimas.
+- MariaDB no requiere servicio aparte: vive en `api`.
 
-### 17.3 Servicios recomendados
+### 17.3 Servicios Docker (decisión V1.5)
 
-Arquitectura objetivo para MVP:
+Arquitectura **obligatoria** para MVP: **2 contenedores**.
 
 ```text
-faq-multiusuario
-  ├── faq-web
-  ├── faq-api
-  ├── faq-worker
-  └── faq-mariadb
+dfaq
+  ├── dfaq-http   → rama Git `http`, directorio `http/`, puerto 80
+  └── dfaq-api    → rama Git `api`, directorio `api/`, puerto 3000
 ```
 
-| Servicio | Rol | Observación |
-|---|---|---|
-| `faq-web` | Interfaz web de administración | Pantallas para clientes, agentes, colecciones y FAQs. |
-| `faq-api` | Backend/API | Autenticación, permisos, CRUD, búsqueda e integración interna. |
-| `faq-worker` | Indexación | Genera embeddings y actualiza Qdrant de forma desacoplada. |
-| `faq-mariadb` | Base de datos maestra | Fuente oficial de tenants, usuarios, agentes, FAQs, versiones y jobs. |
+| App Service | Rama Git | Directorio | Puerto | Rol |
+|---|---|---|---|---|
+| `dfaq-http` | `http` | `http/` | 80 | Interfaz web (nginx) y proxy `/api/*` → `api`. Dominio público: `dfaq.at-once.cl`. |
+| `dfaq-api` | `api` | `api/` | 3000 | Backend Fastify + **MariaDB embebido**. Volumen: `/var/lib/mysql`. |
 
-Para una primera versión muy simple se podría levantar web y API en un solo contenedor si el framework elegido lo justifica, pero la arquitectura lógica debe conservar la separación entre interfaz, API, base de datos e indexación.
+**No** forman parte del despliegue inicial:
+
+- Contenedor separado de MariaDB (embebido en `api`).
+- Contenedor `worker` (indexación futura como proceso en `api`).
+- Contenedores adicionales `faq-web` / `faq-mariadb` / `faq-worker` de diseños anteriores.
+
+Separación conceptual mantenida:
+
+```text
+http  = capa de presentación (equivalente a “front”)
+api   = capa de aplicación + datos (equivalente a “back” + MariaDB)
+```
+
+Detalle operativo: [DEPLOY.md](./DEPLOY.md).
 
 ### 17.4 Servicios de infraestructura integrados
 
@@ -747,49 +797,58 @@ active = true
 
 Si el volumen, criticidad o aislamiento requerido aumenta, se podrá evaluar una instancia Qdrant dedicada para clientes específicos, pero la separación por colección ya será la base inicial.
 
-### 17.6 MariaDB como fuente maestra propia
+### 17.6 MariaDB como fuente maestra (embebida en `api`)
 
-El servicio `faq-mariadb` debe ser la fuente oficial de datos.
+MariaDB corre **dentro del contenedor `api`**, no como servicio Docker independiente.
 
 Qdrant no es fuente maestra. Qdrant es un índice técnico derivado que puede reconstruirse desde MariaDB.
 
 Implicación operativa:
 
 ```text
-Si Qdrant se pierde o se corrompe, se reindexa desde MariaDB.
-Si MariaDB se pierde, se pierde la fuente oficial del sistema.
+Si Qdrant se pierde o se corrompe → se reindexa desde MariaDB.
+Si MariaDB se pierde → se pierde la fuente oficial del sistema.
 ```
 
-Por eso `faq-mariadb` requiere volumen persistente y política de backup antes de producción.
+Persistencia obligatoria en EasyPanel:
+
+```text
+Volumen en dfaq-api → /var/lib/mysql
+```
+
+Política de backup de `/var/lib/mysql` requerida antes de producción.
 
 ### 17.7 Flujo operativo de despliegue
-
-Flujo esperado en EasyPanel:
 
 ```text
 Cloudflare / Traefik
         ↓
-faq-web / faq-api
-        ↓
-faq-mariadb
-        ↓
-faq-worker
+dfaq-http  (https://dfaq.at-once.cl)
+        ↓ proxy /api/*
+dfaq-api
+        ├── Fastify
+        ├── MariaDB (127.0.0.1:3306, embebido)
+        └── (futuro) worker indexación
         ↓
 OpenAI Embeddings
         ↓
-Qdrant
+Qdrant (n8n_qdrant:6333)
         ↓
 n8n / ChatWoot / Agente IA
 ```
 
 ### 17.8 Variables de entorno esperadas
 
-Variables conceptuales mínimas, sin valores reales en documentación:
+**Servicio `dfaq-api` (rama `api`):**
 
 ```text
 APP_ENV
-APP_URL
-DATABASE_URL
+APP_URL=https://dfaq.at-once.cl
+DATABASE_URL=mysql://dfaq:<password>@127.0.0.1:3306/dfaq
+MYSQL_DATABASE=dfaq
+MYSQL_USER=dfaq
+MYSQL_PASSWORD
+MYSQL_ROOT_PASSWORD
 JWT_SECRET
 OPENAI_API_KEY
 OPENAI_EMBEDDING_MODEL
@@ -799,7 +858,15 @@ QDRANT_COLLECTION_TEMPLATE=kb_<tenant_slug>_openai_1536
 N8N_ALLOWED_TOKEN
 ```
 
-Las claves reales, tokens y secretos deben configurarse en EasyPanel o en archivos `.env` no versionados, nunca en documentación ni Git.
+**Servicio `dfaq-http` (rama `http`):**
+
+```text
+API_UPSTREAM=http://dfaq-api:3000
+```
+
+(`dfaq-api` = nombre interno del App Service api en EasyPanel)
+
+Las claves reales deben configurarse en EasyPanel, nunca en Git ni documentación.
 
 ### 17.9 Publicación y acceso
 
@@ -838,32 +905,33 @@ El Programador debe construir la aplicación pensando en EasyPanel desde el inic
 - Dockerfile reproducible.
 - Variables de entorno para toda configuración sensible.
 - Logs por stdout/stderr.
-- Healthcheck HTTP para API/web.
+- Healthcheck HTTP en `http` (`/health`) y `api` (`/health`, `/api/db/health`, `/api/qdrant/health`).
 - Migraciones de base de datos versionadas.
 - Sin rutas absolutas del host.
 - Sin dependencia de instalación manual en DEV.
-- Separación clara entre datos maestros en MariaDB e índice derivado en Qdrant.
+- MariaDB embebido en `api` con volumen `/var/lib/mysql`.
+- Separación clara entre datos maestros (MariaDB) e índice derivado (Qdrant).
 - Endpoint de búsqueda para n8n/agentes.
-- Worker desacoplado para indexación.
+- Indexación como proceso dentro de `api` (no tercer contenedor).
 
 ### 17.11 Estado de etapa
 
 El proyecto queda en esta etapa:
 
 ```text
-POC técnica validada
+POC técnica Qdrant validada (n8n)
 +
-Arquitectura base documentada
+Fase 1 código: api (Fastify + MariaDB + Qdrant health) + http (nginx)
 +
-Plataforma de despliegue definida: EasyPanel
+Arquitectura 2 contenedores documentada e implementada
 +
-Qdrant definido como validación inicial obligatoria
+Repositorio: mcandiav/dfaq (ramas api, http, main)
 ```
 
 Siguiente etapa:
 
 ```text
-Diseño MVP implementable en EasyPanel con Qdrant validado desde el primer incremento
+Primer deploy EasyPanel (dfaq-api + dfaq-http) y validación en producción
 ```
 
 ---
@@ -882,42 +950,59 @@ Sin Qdrant funcionando no hay MVP útil.
 
 ### 18.2 Fases recomendadas
 
-| Fase | Objetivo | Resultado esperado |
-|---|---|---|
-| 1 | Esqueleto dockerizado EasyPanel + healthcheck | App mínima desplegable y observable. |
-| 2 | Conectividad Qdrant | Servicio puede llamar `http://n8n_qdrant:6333/` desde EasyPanel. |
-| 3 | Colección Qdrant MVP | Crear o verificar colección por cliente, por ejemplo `kb_morroreservas_openai_1536`. |
-| 4 | Upsert FAQ técnica | Insertar una FAQ de prueba con payload multi-tenant. |
-| 5 | Search Qdrant | Recuperar la FAQ y validar score/payload. |
-| 6 | MariaDB mínima | Crear fuente maestra inicial para tenants, agents y faq_items. |
-| 7 | CRUD FAQ | Crear, editar, activar/desactivar FAQs desde la app. |
-| 8 | Reindexación individual | Al editar FAQ, regenerar embedding y upsert en Qdrant. |
-| 9 | API para n8n | Exponer `/api/search` con filtros obligatorios. |
-| 10 | Seguridad y operación | Login, roles, backups, logs y dominio definitivo. |
+| Fase | Objetivo | Resultado esperado | Estado |
+|---|---|---|---|
+| 1 | Esqueleto `api` dockerizado + healthcheck | `GET /health`, MariaDB embebido operativo. | Implementado |
+| 2 | Conectividad Qdrant desde `api` | `GET /api/qdrant/health` OK en EasyPanel. | Pendiente deploy |
+| 3 | Esqueleto `http` + proxy | `dfaq.at-once.cl` sirve UI y proxifica `/api/*`. | Implementado |
+| 4 | Colección Qdrant MVP | Crear/verificar `kb_morroreservas_openai_1536`. | Pendiente |
+| 5 | Upsert FAQ técnica | Insertar FAQ de prueba con payload multi-tenant. | Pendiente |
+| 6 | Search Qdrant | Recuperar FAQ y validar score/payload. | Pendiente |
+| 7 | MariaDB esquema + CRUD | Migraciones y CRUD FAQs desde `http`. | Pendiente |
+| 8 | Reindexación individual | Al editar FAQ, regenerar embedding en `api`. | Pendiente |
+| 9 | API para n8n | `POST /api/search` con filtros obligatorios. | Pendiente |
+| 10 | Seguridad y operación | Login, roles, backups, dominio definitivo. | Pendiente |
 
-### 18.3 Primer incremento programable
+### 18.3 Primer incremento programable (completado en código)
 
-El primer incremento que debe recibir el Programador es:
+Implementado en rama `api` del repositorio `mcandiav/dfaq`:
 
 ```text
-Crear una app mínima dockerizada para EasyPanel que tenga un endpoint de healthcheck y un endpoint técnico que valide conectividad con Qdrant en http://n8n_qdrant:6333/.
+App dockerizada con healthcheck, MariaDB embebido y validación Qdrant.
 ```
 
-Ese incremento debe probar como mínimo:
+Endpoints mínimos:
 
-1. `GET /health` responde OK.
-2. `GET /api/qdrant/health` consulta Qdrant y confirma conectividad.
-3. La URL de Qdrant viene desde `QDRANT_URL`.
-4. No hay URL hardcodeada fuera de `.env.example` o variables EasyPanel.
-5. Los logs salen por stdout/stderr.
+1. `GET /health` — API + estado MariaDB.
+2. `GET /api/db/health` — MariaDB.
+3. `GET /api/qdrant/health` — conectividad Qdrant.
+4. `QDRANT_URL` desde variable de entorno.
+5. Logs por stdout/stderr.
 
-### 18.4 Variables mínimas del primer incremento
+Implementado en rama `http`:
+
+1. `GET /health` — servicio http.
+2. Proxy `/api/*` hacia `dfaq-api` vía `API_UPSTREAM`.
+
+### 18.4 Variables mínimas del primer deploy
+
+**`dfaq-api`:**
 
 ```text
-APP_ENV
+APP_ENV=production
 APP_URL=https://dfaq.at-once.cl
 QDRANT_URL=http://n8n_qdrant:6333/
 QDRANT_COLLECTION_TEMPLATE=kb_<tenant_slug>_openai_1536
+MYSQL_PASSWORD=<secreto>
+DATABASE_URL=mysql://dfaq:<secreto>@127.0.0.1:3306/dfaq
+```
+
+Volumen: `/var/lib/mysql`
+
+**`dfaq-http`:**
+
+```text
+API_UPSTREAM=http://dfaq-api:3000
 ```
 
 ### 18.5 Criterio de aprobación de la primera fase

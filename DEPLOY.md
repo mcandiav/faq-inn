@@ -1,58 +1,148 @@
-# DFAQ
+# DFAQ — Guía de despliegue
 
 Plataforma multiusuario para administrar FAQs de agentes IA.
 
-Repositorio: https://github.com/mcandiav/dfaq
+- Repositorio: https://github.com/mcandiav/dfaq
+- Dominio público: https://dfaq.at-once.cl
+- Documento maestro: [README.md](./README.md)
 
-## Arquitectura de despliegue (2 contenedores)
+---
 
-```text
-dfaq.at-once.cl
-      ↓
-   http  (rama `http`, puerto 80)
-      ↓ proxy /api/*
-   api   (rama `api`, puerto 3000)
-      ├── Fastify API
-      └── MariaDB embebido (volumen /var/lib/mysql)
-      ↓
-   Qdrant (n8n_qdrant:6333)
-```
+## Decisión arquitectónica (V1.5)
 
-| Servicio | Rama Git | Rol |
-|---|---|---|
-| `http` | `http` | Interfaz web + proxy nginx |
-| `api` | `api` | Backend + MariaDB en el mismo contenedor |
+El MVP usa **exactamente 2 contenedores Docker** en EasyPanel:
 
-No se usan 4 contenedores. El worker de indexación se integrará después dentro de `api` o como proceso del mismo contenedor.
+| Contenedor | Rama Git | Equivalente | Rol |
+|---|---|---|---|
+| `http` | `http` | presentación | Interfaz web (nginx) + proxy `/api/*` |
+| `api` | `api` | aplicación + datos | Fastify + **MariaDB embebido** |
 
-## EasyPanel — proyecto recomendado
+**No se despliegan** contenedores separados para MariaDB, worker ni “front/back” adicionales.
 
 ```text
-dfaq
-  ├── dfaq-http   → rama http, directorio http, puerto 80
-  └── dfaq-api    → rama api, directorio api, puerto 3000
+https://dfaq.at-once.cl
+        ↓
+   dfaq-http  (rama http, puerto 80)
+        ↓ proxy /api/*
+   dfaq-api   (rama api, puerto 3000)
+        ├── Fastify
+        └── MariaDB  → volumen /var/lib/mysql
+        ↓
+   Qdrant (n8n_qdrant:6333, externo)
 ```
 
-### Variables `api`
+El worker de indexación se añadirá **como proceso dentro de `api`**, no como tercer contenedor.
+
+---
+
+## Estructura del repositorio
+
+```text
+dfaq/
+├── README.md          # Arquitectura y decisiones
+├── DEPLOY.md          # Esta guía
+├── api/               # Servicio backend (rama api)
+│   ├── Dockerfile
+│   ├── docker/entrypoint.sh
+│   └── src/
+└── http/              # Servicio interfaz (rama http)
+    ├── Dockerfile
+    ├── nginx.conf.template
+    └── public/
+```
+
+| Rama | Uso en EasyPanel |
+|---|---|
+| `main` | Desarrollo integrado (contiene `api/` + `http/`) |
+| `api` | Deploy de `dfaq-api` — directorio raíz: `api` |
+| `http` | Deploy de `dfaq-http` — directorio raíz: `http` |
+
+---
+
+## EasyPanel — proyecto `dfaq`
+
+### 1. Servicio `dfaq-api`
+
+| Campo | Valor |
+|---|---|
+| Fuente | GitHub `mcandiav/dfaq` |
+| Rama | `api` |
+| Directorio raíz / build | `api` |
+| Puerto interno | `3000` |
+| Healthcheck | `GET /health` |
+| Volumen persistente | `/var/lib/mysql` |
+
+**Variables de entorno:**
 
 ```text
 APP_ENV=production
 APP_URL=https://dfaq.at-once.cl
+PORT=3000
 QDRANT_URL=http://n8n_qdrant:6333
+QDRANT_COLLECTION_TEMPLATE=kb_<tenant_slug>_openai_1536
+MYSQL_DATABASE=dfaq
+MYSQL_USER=dfaq
 MYSQL_PASSWORD=<secreto>
+MYSQL_ROOT_PASSWORD=<secreto>
 DATABASE_URL=mysql://dfaq:<secreto>@127.0.0.1:3306/dfaq
 ```
 
-Volumen persistente obligatorio en `api`: `/var/lib/mysql`
+**Endpoints de validación post-deploy:**
 
-### Variables `http`
+- `GET /health` — API + MariaDB
+- `GET /api/db/health` — MariaDB
+- `GET /api/qdrant/health` — Qdrant
+
+### 2. Servicio `dfaq-http`
+
+| Campo | Valor |
+|---|---|
+| Fuente | GitHub `mcandiav/dfaq` |
+| Rama | `http` |
+| Directorio raíz / build | `http` |
+| Puerto interno | `80` |
+| Dominio | `dfaq.at-once.cl` |
+| Healthcheck | `GET /health` |
+
+**Variables de entorno:**
 
 ```text
 API_UPSTREAM=http://dfaq-api:3000
 ```
 
-(`dfaq-api` = nombre interno del App Service api en EasyPanel)
+`dfaq-api` debe coincidir con el **nombre interno** del App Service api en EasyPanel.
 
-## Desarrollo local
+**Validación post-deploy:**
 
-Ver `api/README.md` y `http/README.md`.
+- `GET https://dfaq.at-once.cl/health` → `dfaq-http` OK
+- `GET https://dfaq.at-once.cl/api/health` → proxy hacia `dfaq-api` OK
+
+---
+
+## Orden de despliegue recomendado
+
+1. Desplegar **`dfaq-api`** primero y validar `/api/qdrant/health`.
+2. Si Qdrant no conecta, resolver red hacia `n8n_qdrant:6333` antes de continuar.
+3. Desplegar **`dfaq-http`** con `API_UPSTREAM` apuntando al servicio api.
+4. Publicar dominio `dfaq.at-once.cl` en el servicio `http`.
+
+---
+
+## Desarrollo local (Acer)
+
+Copiar variables desde `api/.env.example` y `http/.env.example`.
+
+- En local, `QDRANT_URL` suele ser `http://127.0.0.1:6333` (Qdrant local o túnel).
+- MariaDB arranca automáticamente dentro del contenedor `api` al usar Docker.
+
+Ver también: `api/README.md` y `http/README.md`.
+
+---
+
+## Criterios de aprobación Fase 1
+
+Desde producción EasyPanel:
+
+1. `dfaq-api` → `/api/qdrant/health` responde `status: ok`.
+2. `dfaq-api` → `/api/db/health` responde `status: ok`.
+3. `dfaq-http` → `/api/health` proxifica correctamente hacia api.
