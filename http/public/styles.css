@@ -378,6 +378,94 @@ code {
   font-size: 0.85rem;
 }
 
+.unanswered-list {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.empty-block {
+  margin: 0;
+  padding: 2rem 1rem;
+  text-align: center;
+  color: #94a3b8;
+  border: 1px dashed #334155;
+  border-radius: 12px;
+}
+
+.unanswered-card {
+  padding: 1rem 1.1rem;
+  border: 1px solid #334155;
+  border-radius: 14px;
+  background: rgba(15, 23, 42, 0.75);
+}
+
+.unanswered-card.is-pending {
+  border-color: #b45309;
+  box-shadow: 0 0 0 1px rgba(180, 83, 9, 0.15);
+}
+
+.unanswered-card-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 0.75rem;
+}
+
+.unanswered-question {
+  margin: 0;
+  font-size: 1.05rem;
+  line-height: 1.5;
+  font-weight: 600;
+}
+
+.unanswered-meta {
+  margin: 0.5rem 0 0;
+  color: #94a3b8;
+  font-size: 0.85rem;
+}
+
+.unanswered-suggested {
+  margin: 0.65rem 0 0;
+  font-size: 0.9rem;
+  color: #cbd5e1;
+}
+
+.unanswered-suggested span {
+  color: #94a3b8;
+}
+
+.unanswered-answer-label {
+  display: block;
+  margin-top: 0.9rem;
+}
+
+.unanswered-answer-label textarea,
+.unanswered-answer {
+  width: 100%;
+  margin-top: 0.35rem;
+  padding: 0.65rem 0.75rem;
+  border: 1px solid #475569;
+  border-radius: 10px;
+  background: #0f172a;
+  color: #e2e8f0;
+  font: inherit;
+  line-height: 1.45;
+  resize: vertical;
+}
+
+.unanswered-actions {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  margin-top: 0.75rem;
+}
+
+.unanswered-row-msg {
+  margin: 0.5rem 0 0;
+  min-height: 1.25rem;
+}
+
 @media (max-width: 720px) {
   .topbar {
     flex-direction: column;

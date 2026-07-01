@@ -3,14 +3,14 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>DFAQ v2.2.0</title>
-    <link rel="stylesheet" href="/styles.css?v=2.2.0" />
+    <title>DFAQ v2.2.1</title>
+    <link rel="stylesheet" href="/styles.css?v=2.2.1" />
   </head>
   <body>
     <div id="app" class="app hidden">
       <header class="topbar">
         <div>
-          <p class="badge" data-app-version>DFAQ v2.2.0</p>
+          <p class="badge" data-app-version>DFAQ v2.2.1</p>
           <h1 id="business-name">—</h1>
           <p class="sub" id="user-email">—</p>
         </div>
@@ -93,25 +93,10 @@
             </div>
           </div>
           <p class="hint">
-            Preguntas que tu agente no pudo responder. Conviértelas en FAQ para entrenar la base de conocimiento.
+            Escribe la respuesta aquí mismo y pulsa <strong>Responderla</strong> para guardar la FAQ e indexarla en Qdrant.
           </p>
           <p class="form-msg" id="unanswered-msg"></p>
-          <div class="table-wrap">
-            <table>
-              <thead>
-                <tr>
-                  <th>Fecha</th>
-                  <th>Pregunta</th>
-                  <th>Contacto</th>
-                  <th>Score</th>
-                  <th>FAQ sugerida</th>
-                  <th>Estado</th>
-                  <th></th>
-                </tr>
-              </thead>
-              <tbody id="unanswered-tbody"></tbody>
-            </table>
-          </div>
+          <div id="unanswered-list" class="unanswered-list"></div>
         </section>
 
         <section id="view-profile" class="view hidden">
@@ -183,7 +168,7 @@
 
     <div id="login-screen" class="login-screen">
       <form id="login-form" class="card login-card">
-        <p class="badge" data-app-version>DFAQ v2.2.0</p>
+        <p class="badge" data-app-version>DFAQ v2.2.1</p>
         <h1>Iniciar sesión</h1>
         <p class="lead">Administra las respuestas de tu negocio.</p>
         <label>
@@ -234,36 +219,6 @@
       </form>
     </dialog>
 
-    <dialog id="convert-dialog">
-      <form id="convert-form" method="dialog" class="form">
-        <h3>Convertir en FAQ</h3>
-        <input type="hidden" id="convert-unanswered-id" />
-        <label>
-          Pregunta
-          <textarea id="convert-question" rows="2" required></textarea>
-        </label>
-        <label>
-          Respuesta
-          <textarea id="convert-answer" rows="4" required placeholder="Escribe la respuesta que debe dar el agente"></textarea>
-        </label>
-        <label>
-          Categoría
-          <input type="text" id="convert-category" />
-        </label>
-        <label>
-          Keywords
-          <input type="text" id="convert-keywords" placeholder="opcional" />
-        </label>
-        <div class="dialog-actions">
-          <div class="dialog-actions-right">
-            <button type="button" class="btn ghost" id="convert-cancel">Cancelar</button>
-            <button type="submit" class="btn primary" id="convert-save">Crear FAQ e indexar</button>
-          </div>
-        </div>
-        <p class="form-msg" id="convert-msg"></p>
-      </form>
-    </dialog>
-
-    <script src="/app.js?v=2.2.0"></script>
+    <script src="/app.js?v=2.2.1"></script>
   </body>
 </html>
