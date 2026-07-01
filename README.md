@@ -531,6 +531,8 @@ Esto mejora la recuperación semántica ante preguntas formuladas de distintas m
 
 La app debería exponer una API de búsqueda para que n8n o cualquier agente no tenga que conocer los detalles internos de Qdrant.
 
+**Configuración del nodo HTTP Request en n8n:** [docs/N8N-SEARCH.md](docs/N8N-SEARCH.md)
+
 Endpoint conceptual:
 
 ```http

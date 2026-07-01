@@ -8,6 +8,42 @@ import {
   resolvePointId,
 } from './qdrant.js';
 
+export async function deleteAllTenantPoints(config, tenantSlug) {
+  const collection = resolveCollectionName(
+    config.qdrantCollectionTemplate,
+    tenantSlug
+  );
+
+  const { response: getResponse } = await qdrantRequest(
+    config,
+    'GET',
+    `/collections/${encodeURIComponent(collection)}`
+  );
+
+  if (!getResponse.ok) {
+    return { collection, deleted: false, reason: 'collection_not_found' };
+  }
+
+  const { response, body } = await qdrantRequest(
+    config,
+    'POST',
+    `/collections/${encodeURIComponent(collection)}/points/delete?wait=true`,
+    {
+      filter: {
+        must: [{ key: 'tenant_id', match: { value: tenantSlug } }],
+      },
+    }
+  );
+
+  if (!response.ok) {
+    const error = new Error('No se pudieron borrar los puntos Qdrant del tenant');
+    error.detail = body;
+    throw error;
+  }
+
+  return { collection, deleted: true };
+}
+
 export async function deleteFaqPoints(config, collection, tenantSlug, faqUid, extraPointIds = []) {
   const ids = new Set();
 

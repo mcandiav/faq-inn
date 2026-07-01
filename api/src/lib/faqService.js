@@ -1,4 +1,9 @@
-import { indexFaqItem, newFaqUid, removeFaqFromQdrant } from './indexer.js';
+import {
+  deleteAllTenantPoints,
+  indexFaqItem,
+  newFaqUid,
+  removeFaqFromQdrant,
+} from './indexer.js';
 
 export async function getDefaultAgent(pool, tenantId) {
   const [rows] = await pool.query(
@@ -127,11 +132,14 @@ export async function reindexFaqRecord(pool, config, faq) {
 
 export async function reindexTenantFaqs(pool, config, user) {
   const tenantId = user.tenant_id;
-  if (!tenantId) {
+  const tenantSlug = user.tenant_slug;
+  if (!tenantId || !tenantSlug) {
     const error = new Error('Solo clientes pueden reindexar');
     error.statusCode = 403;
     throw error;
   }
+
+  const purge = await deleteAllTenantPoints(config, tenantSlug);
 
   const [rows] = await pool.query(
     `SELECT f.id, f.faq_uid, f.question, f.answer, f.category, f.keywords,
@@ -156,12 +164,12 @@ export async function reindexTenantFaqs(pool, config, user) {
     }
   }
 
-  return { total: rows.length, reindexed, errors };
+  return { total: rows.length, reindexed, errors, purge };
 }
 
 export async function deleteTenantFaqs(pool, config, tenantId, tenantSlug) {
   const [rows] = await pool.query(
-    `SELECT id, faq_uid FROM faq_items WHERE tenant_id = ?`,
+    `SELECT id, faq_uid, qdrant_point_id FROM faq_items WHERE tenant_id = ?`,
     [tenantId]
   );
 
@@ -171,11 +179,18 @@ export async function deleteTenantFaqs(pool, config, tenantId, tenantSlug) {
 
   await pool.query('DELETE FROM faq_items WHERE tenant_id = ?', [tenantId]);
 
-  for (const faq of rows) {
-    try {
-      await removeFaqFromQdrant(config, tenantSlug, faq.faq_uid);
-    } catch {
-      /* ignore qdrant cleanup errors */
+  try {
+    await deleteAllTenantPoints(config, tenantSlug);
+  } catch {
+    for (const faq of rows) {
+      try {
+        await removeFaqFromQdrant(config, tenantSlug, faq.faq_uid, [
+          faq.id,
+          faq.qdrant_point_id,
+        ]);
+      } catch {
+        /* ignore qdrant cleanup errors */
+      }
     }
   }
 
