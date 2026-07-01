@@ -882,3 +882,51 @@ code {
   border-color: #1d4ed8;
   color: #bfdbfe;
 }
+
+.topbar-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-shrink: 0;
+}
+
+.lang-picker {
+  display: flex;
+  gap: 0.3rem;
+  align-items: center;
+}
+
+.lang-picker-login {
+  position: fixed;
+  top: calc(0.75rem + env(safe-area-inset-top, 0px));
+  right: calc(0.75rem + env(safe-area-inset-right, 0px));
+  z-index: 50;
+}
+
+.lang-flag {
+  display: grid;
+  place-items: center;
+  min-width: 2.5rem;
+  min-height: 2.25rem;
+  padding: 0.2rem 0.35rem;
+  border: 2px solid transparent;
+  border-radius: 10px;
+  background: rgba(15, 23, 42, 0.9);
+  font-size: 1.35rem;
+  line-height: 1;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.lang-flag:hover {
+  background: rgba(51, 65, 85, 0.85);
+}
+
+.lang-flag.active {
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 1px rgba(59, 130, 246, 0.35);
+}
+
+.login-screen {
+  position: relative;
+}

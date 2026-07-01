@@ -1,4 +1,4 @@
-const APP_VERSION = '2.3.1';
+const APP_VERSION = '2.4.0';
 const apiBase = window.DFAQ_API_URL || '/api';
 const VIEW_STORAGE_KEY = 'dfaq-current-view';
 const VALID_VIEWS = ['dashboard', 'unanswered', 'profile', 'admin'];
@@ -164,7 +164,19 @@ async function openView(name) {
 
 function formatDate(value) {
   if (!value) return '—';
-  return new Date(value).toLocaleString('es-CL');
+  return new Date(value).toLocaleString(getLocale());
+}
+
+function statusPillActive(active) {
+  return active
+    ? `<span class="pill ok">${escapeHtml(t('status.active'))}</span>`
+    : `<span class="pill off">${escapeHtml(t('status.inactive'))}</span>`;
+}
+
+function statusPillIndexed(indexed) {
+  return indexed
+    ? `<span class="pill ok">${escapeHtml(t('status.indexed'))}</span>`
+    : `<span class="pill warn">${escapeHtml(t('status.pendingIndex'))}</span>`;
 }
 
 function truncate(text, max = 80) {
@@ -177,7 +189,7 @@ function renderHeader() {
   const isAdmin = user?.role === 'admin_global';
   const business =
     user?.tenant?.name?.trim() ||
-    (isAdmin ? 'Administración global' : 'Mi negocio');
+    (isAdmin ? t('profile.globalAdmin') : t('profile.myBusiness'));
 
   $('#business-name').textContent = business;
   $('#user-email').textContent = user?.email || '';
@@ -205,8 +217,8 @@ function renderProfile() {
     businessInput.disabled = false;
     businessInput.value = user.tenant?.name || '';
     businessInput.placeholder = user.tenant?.slug
-      ? `Ej. ${user.tenant.slug}`
-      : 'Ej. MorroReservas';
+      ? t('profile.businessExample', { name: user.tenant.slug })
+      : t('profile.businessPlaceholder');
     slugWrap?.classList.remove('hidden');
     const slugInput = $('#profile-slug');
     if (slugInput) {
@@ -214,7 +226,7 @@ function renderProfile() {
     }
   } else {
     businessInput.disabled = true;
-    businessInput.value = 'Administración global';
+    businessInput.value = t('profile.globalAdmin');
     slugWrap?.classList.add('hidden');
   }
 
@@ -255,17 +267,17 @@ function faqCardHtml(faq, index) {
       <div class="faq-card-head">
         <span class="faq-card-num">#${index + 1}</span>
         <div class="faq-card-badges">
-          ${faq.active ? '<span class="pill ok">Activa</span>' : '<span class="pill off">Inactiva</span>'}
-          ${faq.indexed_at ? '<span class="pill ok">Indexada</span>' : '<span class="pill warn">Pendiente</span>'}
+          ${statusPillActive(faq.active)}
+          ${statusPillIndexed(faq.indexed_at)}
         </div>
       </div>
-      <p class="faq-card-label">Pregunta</p>
+      <p class="faq-card-label">${escapeHtml(t('table.question'))}</p>
       <p class="faq-card-text">${escapeHtml(faq.question)}</p>
-      <p class="faq-card-label">Respuesta</p>
+      <p class="faq-card-label">${escapeHtml(t('table.answer'))}</p>
       <p class="faq-card-text">${escapeHtml(faq.answer)}</p>
       <div class="faq-card-actions row-actions">
-        <button type="button" class="btn" data-edit="${faq.id}">Editar</button>
-        <button type="button" class="btn danger" data-delete="${faq.id}">Eliminar</button>
+        <button type="button" class="btn" data-edit="${faq.id}">${escapeHtml(t('btn.edit'))}</button>
+        <button type="button" class="btn danger" data-delete="${faq.id}">${escapeHtml(t('btn.delete'))}</button>
       </div>
     </article>
   `;
@@ -285,33 +297,31 @@ function renderFaqs() {
     clientActions.classList.add('hidden');
     replaceWrap.classList.add('hidden');
     $('#faq-count').textContent = '';
-    $('#dashboard-hint').textContent =
-      'Como administrador, crea posadas en Admin. Los clientes editan sus FAQs.';
+    $('#dashboard-hint').textContent = t('dashboard.hintAdmin');
     tbody.innerHTML =
-      '<tr><td colspan="6" class="empty">Sin FAQs en esta vista.</td></tr>';
+      `<tr><td colspan="6" class="empty">${escapeHtml(t('dashboard.emptyAdmin'))}</td></tr>`;
     if (cards) {
-      cards.innerHTML = '<p class="empty-block">Sin FAQs en esta vista.</p>';
+      cards.innerHTML = `<p class="empty-block">${escapeHtml(t('dashboard.emptyAdmin'))}</p>`;
     }
     return;
   }
 
   clientActions.classList.remove('hidden');
   replaceWrap.classList.remove('hidden');
-  $('#dashboard-hint').textContent =
-    'Columna A: pregunta, columna B: respuesta. Formatos: .xlsx, .xls, .csv. Al guardar o importar, cada FAQ se indexa en Qdrant.';
+  $('#dashboard-hint').textContent = t('dashboard.hint');
 
   const total = state.faqs.length;
   $('#faq-count').textContent = total
-    ? `${total} FAQ${total === 1 ? '' : 's'} en total`
-    : 'Sin FAQs todavía';
+    ? total === 1
+      ? t('dashboard.countOne')
+      : t('dashboard.count', { n: total })
+    : t('dashboard.none');
 
   if (total === 0) {
-    const emptyMsg =
-      '<tr><td colspan="6" class="empty">Sin FAQs. Importa un Excel o crea la primera.</td></tr>';
-    tbody.innerHTML = emptyMsg;
+    const emptyText = escapeHtml(t('dashboard.empty'));
+    tbody.innerHTML = `<tr><td colspan="6" class="empty">${emptyText}</td></tr>`;
     if (cards) {
-      cards.innerHTML =
-        '<p class="empty-block">Sin FAQs. Importa un Excel o crea la primera.</p>';
+      cards.innerHTML = `<p class="empty-block">${emptyText}</p>`;
     }
     return;
   }
@@ -322,11 +332,11 @@ function renderFaqs() {
       <td class="num">${index + 1}</td>
       <td class="cell-text" title="${escapeAttr(faq.question)}">${escapeHtml(faq.question)}</td>
       <td class="cell-text" title="${escapeAttr(faq.answer)}">${escapeHtml(faq.answer)}</td>
-      <td>${faq.active ? '<span class="pill ok">Activa</span>' : '<span class="pill off">Inactiva</span>'}</td>
-      <td>${faq.indexed_at ? '<span class="pill ok">Indexada</span>' : '<span class="pill warn">Pendiente</span>'}</td>
+      <td>${statusPillActive(faq.active)}</td>
+      <td>${statusPillIndexed(faq.indexed_at)}</td>
       <td class="row-actions">
-        <button type="button" class="btn small" data-edit="${faq.id}">Editar</button>
-        <button type="button" class="btn small danger" data-delete="${faq.id}">Eliminar</button>
+        <button type="button" class="btn small" data-edit="${faq.id}">${escapeHtml(t('btn.edit'))}</button>
+        <button type="button" class="btn small danger" data-delete="${faq.id}">${escapeHtml(t('btn.delete'))}</button>
       </td>
     `;
     tbody.appendChild(tr);
@@ -346,14 +356,15 @@ function renderFaqs() {
 
 function statusLabel(status) {
   const map = {
-    pending: ['Pendiente', 'warn'],
-    converted_to_faq: ['Convertida', 'ok'],
-    ignored: ['Ignorada', 'off'],
-    duplicate: ['Duplicada', 'off'],
-    resolved_manually: ['Resuelta', 'ok'],
+    pending: ['status.pending', 'warn'],
+    converted_to_faq: ['status.converted', 'ok'],
+    ignored: ['status.ignored', 'off'],
+    duplicate: ['status.duplicate', 'off'],
+    resolved_manually: ['status.resolved', 'ok'],
   };
-  const [label, kind] = map[status] || [status, 'off'];
-  return `<span class="pill ${kind}">${label}</span>`;
+  const [key, kind] = map[status] || [status, 'off'];
+  const label = typeof key === 'string' && key.startsWith('status.') ? t(key) : key;
+  return `<span class="pill ${kind}">${escapeHtml(label)}</span>`;
 }
 
 function renderUnanswered() {
@@ -362,7 +373,7 @@ function renderUnanswered() {
 
   if (state.user?.role !== 'client') {
     $('#unanswered-count').textContent = '';
-    list.innerHTML = '<p class="empty-block">Vista solo para clientes.</p>';
+    list.innerHTML = `<p class="empty-block">${escapeHtml(t('unanswered.clientsOnly'))}</p>`;
     return;
   }
 
@@ -385,12 +396,11 @@ function renderUnanswered() {
   }
 
   $('#unanswered-count').textContent = items.length
-    ? `${items.length} registro(s) — ${pending} pendiente(s)`
-    : 'Sin registros con este filtro';
+    ? t('unanswered.count', { n: items.length, p: pending })
+    : t('unanswered.emptyFilter');
 
   if (!items.length) {
-    list.innerHTML =
-      '<p class="empty-block">No hay preguntas sin respuesta con este filtro.</p>';
+    list.innerHTML = `<p class="empty-block">${escapeHtml(t('unanswered.emptyList'))}</p>`;
     return;
   }
 
@@ -407,11 +417,11 @@ function renderUnanswered() {
       </div>
       <dl class="unanswered-facts">
         <div class="unanswered-facts-row">
-          <dt>Fecha y hora</dt>
+          <dt>${escapeHtml(t('unanswered.dateTime'))}</dt>
           <dd>${escapeHtml(formatDate(item.created_at))}</dd>
         </div>
         <div class="unanswered-facts-row">
-          <dt>Teléfono</dt>
+          <dt>${escapeHtml(t('unanswered.phone'))}</dt>
           <dd>${escapeHtml(phone)}</dd>
         </div>
     `;
@@ -419,7 +429,7 @@ function renderUnanswered() {
     if (item.status !== 'pending') {
       body += `
         <div class="unanswered-facts-row">
-          <dt>Consulta</dt>
+          <dt>${escapeHtml(t('unanswered.query'))}</dt>
           <dd class="unanswered-question">${escapeHtml(item.question)}</dd>
         </div>
       `;
@@ -431,7 +441,7 @@ function renderUnanswered() {
       body += `
         <div class="unanswered-consulta-edit">
           <label class="unanswered-field-label">
-            Consulta
+            ${escapeHtml(t('unanswered.query'))}
             <textarea
               class="unanswered-question-input"
               rows="2"
@@ -439,7 +449,7 @@ function renderUnanswered() {
             >${escapeHtml(item.question)}</textarea>
           </label>
           <button type="button" class="btn small ghost" data-save-question="${item.id}">
-            Guardar consulta
+            ${escapeHtml(t('btn.saveQuestion'))}
           </button>
         </div>
       `;
@@ -448,24 +458,24 @@ function renderUnanswered() {
     if (item.status === 'pending') {
       body += `
         <label class="unanswered-field-label">
-          Tu respuesta
+          ${escapeHtml(t('unanswered.yourAnswer'))}
           <textarea
             class="unanswered-answer"
             rows="4"
-            placeholder="Escribe aquí la respuesta que debe dar el agente…"
+            placeholder="${escapeAttr(t('unanswered.answerPlaceholder'))}"
             data-answer-for="${item.id}"
           ></textarea>
         </label>
         <div class="unanswered-actions">
-          <button type="button" class="btn primary" data-respond="${item.id}">Responderla</button>
-          <button type="button" class="btn danger" data-delete-unanswered="${item.id}">Borrar</button>
+          <button type="button" class="btn primary" data-respond="${item.id}">${escapeHtml(t('btn.respond'))}</button>
+          <button type="button" class="btn danger" data-delete-unanswered="${item.id}">${escapeHtml(t('btn.delete'))}</button>
         </div>
         <p class="form-msg unanswered-row-msg" data-msg-for="${item.id}"></p>
       `;
     } else {
       body += `
         <div class="unanswered-actions">
-          <button type="button" class="btn danger" data-delete-unanswered="${item.id}">Borrar</button>
+          <button type="button" class="btn danger" data-delete-unanswered="${item.id}">${escapeHtml(t('btn.delete'))}</button>
         </div>
       `;
     }
@@ -501,7 +511,7 @@ async function respondUnanswered(id) {
 
   if (!answer) {
     if (rowMsg) {
-      rowMsg.textContent = 'Escribe una respuesta antes de guardar.';
+      rowMsg.textContent = t('msg.writeAnswer');
       rowMsg.className = 'form-msg error unanswered-row-msg';
     }
     textarea?.focus();
@@ -513,7 +523,7 @@ async function respondUnanswered(id) {
     btn.disabled = true;
   }
   if (rowMsg) {
-    rowMsg.textContent = 'Guardando FAQ e indexando en Qdrant…';
+    rowMsg.textContent = t('msg.savingFaq');
     rowMsg.className = 'form-msg unanswered-row-msg';
   }
 
@@ -527,7 +537,7 @@ async function respondUnanswered(id) {
     });
 
     const listMsg = $('#unanswered-msg');
-    listMsg.textContent = 'Respuesta guardada e indexada en Qdrant.';
+    listMsg.textContent = t('msg.savedIndexed');
     listMsg.className = 'form-msg ok';
 
     await refreshUnanswered();
@@ -564,7 +574,7 @@ async function saveUnansweredQuestion(id) {
 
   if (!question) {
     if (rowMsg) {
-      rowMsg.textContent = 'La consulta no puede quedar vacía.';
+      rowMsg.textContent = t('msg.queryEmpty');
       rowMsg.className = 'form-msg error unanswered-row-msg';
     }
     questionInput?.focus();
@@ -576,7 +586,7 @@ async function saveUnansweredQuestion(id) {
     btn.disabled = true;
   }
   if (rowMsg) {
-    rowMsg.textContent = 'Guardando consulta…';
+    rowMsg.textContent = t('msg.savingQuery');
     rowMsg.className = 'form-msg unanswered-row-msg';
   }
 
@@ -592,7 +602,7 @@ async function saveUnansweredQuestion(id) {
     }
 
     if (rowMsg) {
-      rowMsg.textContent = 'Consulta guardada.';
+      rowMsg.textContent = t('msg.querySaved');
       rowMsg.className = 'form-msg ok unanswered-row-msg';
     }
   } catch (error) {
@@ -613,20 +623,18 @@ async function deleteUnanswered(id) {
     return;
   }
 
-  const ok = window.confirm(
-    `¿Borrar esta pregunta?\n\n"${truncate(item.question, 80)}"\n\nSe eliminará de forma permanente.`
-  );
+  const ok = window.confirm(t('msg.deleteQuestionConfirm', { q: truncate(item.question, 80) }));
   if (!ok) {
     return;
   }
 
   const msg = $('#unanswered-msg');
-  msg.textContent = 'Borrando…';
+  msg.textContent = t('msg.deleting');
   msg.className = 'form-msg';
 
   try {
     await api(`/unanswered/${id}`, { method: 'DELETE' });
-    msg.textContent = 'Pregunta borrada.';
+    msg.textContent = t('msg.questionDeleted');
     msg.classList.add('ok');
     await refreshUnanswered();
   } catch (error) {
@@ -644,20 +652,20 @@ function renderAdminTenants(tenants) {
   }
 
   if (!tenants.length) {
-    tbody.innerHTML = '<tr><td colspan="4" class="empty">Sin posadas.</td></tr>';
+    tbody.innerHTML = `<tr><td colspan="4" class="empty">${escapeHtml(t('admin.empty'))}</td></tr>`;
     if (cards) {
-      cards.innerHTML = '<p class="empty-block">Sin posadas.</p>';
+      cards.innerHTML = `<p class="empty-block">${escapeHtml(t('admin.empty'))}</p>`;
     }
     return;
   }
 
-  for (const t of tenants) {
+  for (const tenant of tenants) {
     const tr = document.createElement('tr');
     tr.innerHTML = `
-      <td><code>${escapeHtml(t.slug)}</code></td>
-      <td>${escapeHtml(t.name || '—')}</td>
-      <td>${escapeHtml(t.client_email || '—')}</td>
-      <td>${escapeHtml(t.agent_slug || '—')}</td>
+      <td><code>${escapeHtml(tenant.slug)}</code></td>
+      <td>${escapeHtml(tenant.name || '—')}</td>
+      <td>${escapeHtml(tenant.client_email || '—')}</td>
+      <td>${escapeHtml(tenant.agent_slug || '—')}</td>
     `;
     tbody.appendChild(tr);
 
@@ -666,20 +674,20 @@ function renderAdminTenants(tenants) {
       card.className = 'admin-card';
       card.innerHTML = `
         <div class="admin-card-head">
-          <p class="admin-card-slug"><code>${escapeHtml(t.slug)}</code></p>
+          <p class="admin-card-slug"><code>${escapeHtml(tenant.slug)}</code></p>
         </div>
         <dl class="admin-card-body">
           <div class="admin-card-row">
-            <dt>Negocio</dt>
-            <dd>${escapeHtml(t.name || '—')}</dd>
+            <dt>${escapeHtml(t('admin.cardBusiness'))}</dt>
+            <dd>${escapeHtml(tenant.name || '—')}</dd>
           </div>
           <div class="admin-card-row">
-            <dt>Email</dt>
-            <dd>${escapeHtml(t.client_email || '—')}</dd>
+            <dt>${escapeHtml(t('admin.cardEmail'))}</dt>
+            <dd>${escapeHtml(tenant.client_email || '—')}</dd>
           </div>
           <div class="admin-card-row">
-            <dt>Agente</dt>
-            <dd>${escapeHtml(t.agent_slug || '—')}</dd>
+            <dt>${escapeHtml(t('admin.cardAgent'))}</dt>
+            <dd>${escapeHtml(tenant.agent_slug || '—')}</dd>
           </div>
         </dl>
       `;
@@ -732,7 +740,7 @@ async function refreshFaqs() {
 
 async function importFaqsFromFile(file) {
   const msg = $('#import-msg');
-  msg.textContent = 'Importando e indexando… puede tardar unos segundos.';
+  msg.textContent = t('msg.importing');
   msg.className = 'form-msg';
 
   const formData = new FormData();
@@ -744,13 +752,13 @@ async function importFaqsFromFile(file) {
   try {
     const data = await apiUpload('/faqs/import', formData);
     const imp = data.import || {};
-    let text = data.message || 'Importación completada.';
+    let text = data.message || t('msg.importDone');
 
     if (imp.deleted) {
-      text += ` (${imp.deleted} eliminadas antes de importar)`;
+      text += t('msg.importDeleted', { n: imp.deleted });
     }
     if (imp.errors?.length) {
-      text += ` — ${imp.errors.length} fila(s) con error.`;
+      text += t('msg.importErrors', { n: imp.errors.length });
     }
 
     msg.textContent = text;
@@ -771,7 +779,7 @@ function openFaqDialog(id) {
   const dialog = $('#faq-dialog');
   const faq = state.faqs.find((f) => f.id === id);
 
-  $('#faq-dialog-title').textContent = id ? 'Editar FAQ' : 'Nueva FAQ';
+  $('#faq-dialog-title').textContent = id ? t('faq.edit') : t('faq.new');
   $('#faq-id').value = id || '';
   $('#faq-question').value = faq?.question || '';
   $('#faq-answer').value = faq?.answer || '';
@@ -787,20 +795,18 @@ async function deleteFaq(id) {
   const faqId = Number(id);
   const faq = state.faqs.find((f) => Number(f.id) === faqId);
   if (!faq) {
-    window.alert('No se encontró la FAQ en la lista. Recarga la página e intenta de nuevo.');
+    window.alert(t('msg.faqNotFound'));
     return;
   }
 
   const preview = truncate(faq.question, 80);
-  const ok = window.confirm(
-    `¿Eliminar esta FAQ?\n\n"${preview}"\n\nSe borrará de la base de datos y de Qdrant.`
-  );
+  const ok = window.confirm(t('msg.deleteFaqConfirm', { q: preview }));
   if (!ok) {
     return;
   }
 
   const msg = $('#import-msg');
-  msg.textContent = 'Eliminando…';
+  msg.textContent = t('msg.deletingFaq');
   msg.className = 'form-msg';
 
   try {
@@ -809,7 +815,7 @@ async function deleteFaq(id) {
       $('#faq-dialog').close();
     }
     await refreshFaqs();
-    msg.textContent = data.warning || 'FAQ eliminada.';
+    msg.textContent = data.warning || t('msg.faqDeleted');
     msg.className = data.warning ? 'form-msg warn' : 'form-msg ok';
   } catch (error) {
     msg.textContent = error.message;
@@ -821,9 +827,7 @@ async function deleteFaq(id) {
 async function reindexFaqs() {
   const total = state.faqs.length;
   const ok = window.confirm(
-    total
-      ? `¿Sincronizar Qdrant con las ${total} FAQ(s) actuales?\n\nSe borrarán puntos huérfanos en Qdrant y se reindexará todo.`
-      : '¿Limpiar Qdrant? No hay FAQs en MariaDB; se eliminarán todos los puntos del tenant.'
+    total ? t('msg.reindexConfirm', { n: total }) : t('msg.reindexEmpty')
   );
   if (!ok) {
     return;
@@ -831,14 +835,14 @@ async function reindexFaqs() {
 
   const msg = $('#import-msg');
   const btn = $('#btn-reindex-faqs');
-  msg.textContent = 'Sincronizando Qdrant… puede tardar unos segundos.';
+  msg.textContent = t('msg.syncing');
   msg.className = 'form-msg';
   btn.disabled = true;
 
   try {
     const data = await api('/faqs/reindex', { method: 'POST' });
     await refreshFaqs();
-    msg.textContent = data.message || 'Qdrant sincronizado.';
+    msg.textContent = data.message || t('msg.synced');
     msg.classList.add('ok');
   } catch (error) {
     msg.textContent = error.message;
@@ -861,8 +865,8 @@ $('#login-password-toggle')?.addEventListener('click', () => {
   input.type = show ? 'text' : 'password';
   eye.classList.toggle('hidden', show);
   eyeOff.classList.toggle('hidden', !show);
-  btn.setAttribute('aria-label', show ? 'Ocultar contraseña' : 'Mostrar contraseña');
-  btn.title = show ? 'Ocultar contraseña' : 'Mostrar contraseña';
+  btn.setAttribute('aria-label', show ? t('login.hidePassword') : t('login.showPassword'));
+  btn.title = show ? t('login.hidePassword') : t('login.showPassword');
 });
 
 $('#login-form').addEventListener('submit', async (event) => {
@@ -953,7 +957,7 @@ $('#faq-form').addEventListener('submit', async (event) => {
   event.preventDefault();
   const msg = $('#faq-msg');
   const saveBtn = $('#faq-save');
-  msg.textContent = 'Guardando e indexando…';
+  msg.textContent = t('msg.savingIndexing');
   msg.className = 'form-msg';
   saveBtn.disabled = true;
 
@@ -1009,7 +1013,7 @@ $('#profile-form').addEventListener('submit', async (event) => {
     });
     state.user = data.user;
     renderHeader();
-    msg.textContent = 'Cambios guardados.';
+    msg.textContent = t('msg.profileSaved');
     msg.classList.add('ok');
     $('#profile-current-password').value = '';
     $('#profile-new-password').value = '';
@@ -1035,7 +1039,7 @@ $('#admin-tenant-form').addEventListener('submit', async (event) => {
         agent_slug: $('#admin-agent-slug').value.trim() || undefined,
       }),
     });
-    msg.textContent = 'Posada creada. El cliente puede ingresar con su email.';
+    msg.textContent = t('msg.tenantCreated');
     msg.classList.add('ok');
     $('#admin-tenant-form').reset();
     await refreshAdmin();
@@ -1046,4 +1050,22 @@ $('#admin-tenant-form').addEventListener('submit', async (event) => {
 });
 
 loadDeployVersion();
+
+mountLangPickers();
+applyI18n();
+
+window.onLangChange = () => {
+  const loginPassword = $('#login-password');
+  const loginToggle = $('#login-password-toggle');
+  if (loginPassword && loginToggle) {
+    const visible = loginPassword.type === 'text';
+    loginToggle.setAttribute('aria-label', visible ? t('login.hidePassword') : t('login.showPassword'));
+    loginToggle.title = visible ? t('login.hidePassword') : t('login.showPassword');
+  }
+  if (state.user) {
+    renderHeader();
+    refreshViewData(state.currentView);
+  }
+};
+
 loadSession();
