@@ -65,5 +65,10 @@ export function loadConfig() {
       process.env.EMBEDDING_DIMENSION ||
         (isNvidia ? nvidiaDefaults.dimension : openaiDefaults.dimension)
     ),
+    sessionSecret:
+      process.env.SESSION_SECRET ||
+      (process.env.APP_ENV === 'production'
+        ? required('SESSION_SECRET', process.env.SESSION_SECRET)
+        : 'dfaq-dev-session-secret'),
   };
 }
