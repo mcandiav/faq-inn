@@ -6,6 +6,7 @@
 
 | Fecha | Versión | Cambio realizado | Motivo | Impacto | Sección afectada |
 |---|---|---|---|---|---|
+| 2026-07-01 | V1.8 | Embeddings productivos migrados a NVIDIA API (`baai/bge-m3`, 1024 dims). | Miguel provee API key gratuita de build.nvidia.com; se prioriza costo cero y soporte multilingüe sin depender de OpenAI. | Colección Qdrant productiva pasa a `kb_<tenant_slug>_nvidia_1024`; OpenAI queda como alternativa vía `EMBEDDING_PROVIDER=openai`. | Estrategia embeddings, Qdrant, DEPLOY, variables api |
 | 2026-06-30 | V1.6 | Documentación alineada con arquitectura de 2 contenedores (`api` + `http`), ramas Git y MariaDB embebido. | Consolidar en README y DEPLOY la decisión V1.5 ya implementada en código. | Secciones 3, 4, 15, 16, 17 y 18 reflejan el despliegue real; repositorio `mcandiav/dfaq`. | README, DEPLOY.md |
 | 2026-06-30 | V1.5 | Arquitectura reducida a 2 servicios Docker (`api` + `http`) con ramas Git homónimas; MariaDB embebido en `api`. | Miguel prefiere 2 contenedores (api/http) en lugar de 4 (web, api, worker, mariadb). | EasyPanel despliega `dfaq-api` desde rama `api` y `dfaq-http` desde rama `http`; MariaDB persiste en volumen `/var/lib/mysql` dentro de `api`. | DEPLOY.md, estructura repositorio |
 | 2026-06-30 | V1.4 | Se define dominio público MVP `dfaq.at-once.cl`. | Miguel define el subdominio que se usará para publicar la aplicación en EasyPanel. | La arquitectura de despliegue queda con `APP_URL=https://dfaq.at-once.cl`; EasyPanel/Cloudflare/Traefik deberán publicar la app en ese dominio. | Arquitectura de despliegue en EasyPanel |
@@ -105,7 +106,7 @@ API + MariaDB (api)
         ↓
 Indexación / embeddings (proceso en api)
         ↓
-OpenAI Embeddings
+NVIDIA API — baai/bge-m3 (alternativa: OpenAI)
         ↓
 Qdrant
         ↓
@@ -137,7 +138,8 @@ n8n / ChatWoot / Agente IA
 | API Fastify | Autenticación, CRUD, búsqueda e integración. | `api` |
 | MariaDB | Fuente maestra de tenants, usuarios, agentes, colecciones y FAQs. | `api` (embebido) |
 | Indexación | Genera embeddings y actualiza Qdrant. | `api` (proceso futuro) |
-| OpenAI Embeddings | Servicio elegido para vectores multilingües. | externo |
+| NVIDIA API Embeddings | Proveedor productivo: `baai/bge-m3` vía build.nvidia.com. | externo |
+| OpenAI Embeddings | Alternativa opcional (`EMBEDDING_PROVIDER=openai`). | externo |
 | Qdrant | Índice vectorial de búsqueda semántica. | `n8n_qdrant` (existente) |
 | n8n | Orquestador de agentes y canales. | existente |
 | ChatWoot | Canal de conversación del agente. | existente |
@@ -326,17 +328,24 @@ Embedding_OpenAI
 
 Esa colección no debe considerarse nombre productivo.
 
-Formato productivo recomendado para colecciones por cliente:
+Formato productivo vigente (V1.8):
 
 ```text
-kb_<tenant_slug>_openai_1536
+kb_<tenant_slug>_nvidia_1024
 ```
 
 Ejemplos:
 
 ```text
+kb_morroreservas_nvidia_1024
+kb_clinica_x_nvidia_1024
+```
+
+Formato histórico POC n8n (OpenAI, no mezclar con productivo):
+
+```text
+kb_<tenant_slug>_openai_1536
 kb_morroreservas_openai_1536
-kb_clinica_x_openai_1536
 ```
 
 Reglas de nombre:
@@ -385,33 +394,69 @@ Esto evita resultados incorrectos si en una operación futura se migra, duplica 
 
 ## 8. Estrategia de embeddings
 
-### 8.1 Decisión inicial
+### 8.1 Decisión productiva vigente (V1.8)
 
-Para la primera etapa se usará:
+Para DFAQ en producción se usa:
+
+```text
+Proveedor: NVIDIA API (build.nvidia.com)
+Modelo: baai/bge-m3
+Dimensión: 1024
+Distancia Qdrant: Cosine
+Colección: kb_<tenant_slug>_nvidia_1024
+```
+
+Motivo:
+
+- Tier gratuito de desarrollo en NVIDIA NIM API.
+- Modelo **multilingüe** (100+ idiomas; español, portugués e inglés).
+- API compatible con formato OpenAI (`POST /v1/embeddings`).
+- Sin dependencia de clave OpenAI de pago para el MVP.
+
+Variables en `dfaq-api`:
+
+```text
+EMBEDDING_PROVIDER=nvidia
+NVIDIA_API_KEY=<secreto>
+NVIDIA_API_BASE=https://integrate.api.nvidia.com/v1
+NVIDIA_EMBEDDING_MODEL=baai/bge-m3
+EMBEDDING_DIMENSION=1024
+QDRANT_COLLECTION_TEMPLATE=kb_<tenant_slug>_nvidia_1024
+```
+
+### 8.2 Decisión histórica POC n8n (OpenAI)
+
+La prueba de concepto en n8n validó:
 
 ```text
 Proveedor: OpenAI
 Modelo: text-embedding-3-small
 Dimensión: 1536
-Distancia Qdrant: Cosine
+Colección POC: Embedding_OpenAI
 ```
 
-Motivo:
+Esa evidencia sigue siendo válida para n8n, pero **no se mezcla** con vectores NVIDIA en la misma colección.
 
-- Buen soporte multilingüe para español, portugués e inglés.
-- Integración nativa disponible en n8n.
-- Bajo volumen inicial.
-- Costo marginal para FAQs pequeñas.
-- Menos incertidumbre operativa que modelos locales no validados.
+### 8.3 Alternativa OpenAI en DFAQ
 
-### 8.2 Alternativas evaluadas
+Si se configura `EMBEDDING_PROVIDER=openai`, DFAQ vuelve a usar OpenAI:
+
+```text
+OPENAI_API_KEY=<secreto>
+OPENAI_EMBEDDING_MODEL=text-embedding-3-small
+EMBEDDING_DIMENSION=1536
+QDRANT_COLLECTION_TEMPLATE=kb_<tenant_slug>_openai_1536
+```
+
+### 8.4 Otras alternativas evaluadas
 
 | Alternativa | Estado | Observación |
 |---|---|---|
-| FastEmbed / `fast-multilingual-e5-large` | No adoptado inicialmente | La colección `Claude` muestra este embedding, pero el nodo `Embeddings Ollama` de n8n no lo soporta directamente. |
-| Ollama / `nomic-embed-text` | Evaluado | Disponible en la UI de n8n/Ollama, pero no fue elegido como primera opción multilingüe. |
-| Ollama / `mxbai-embed-large` | Evaluado | Disponible en la UI de n8n/Ollama, candidato para prueba local posterior. |
-| OpenAI / `text-embedding-3-small` | Adoptado para prueba | Validado con Qdrant y n8n. |
+| FastEmbed / `fast-multilingual-e5-large` | No adoptado | Colección `Claude` en Qdrant; n8n Ollama no lo soporta directamente. |
+| Ollama / `nomic-embed-text` | Evaluado | Disponible en `n8n_ollama`; posible etapa posterior local. |
+| Ollama / `mxbai-embed-large` | Evaluado | Candidato para prueba local posterior. |
+| OpenAI / `text-embedding-3-small` | POC n8n validada | Alternativa en DFAQ vía `EMBEDDING_PROVIDER=openai`. |
+| NVIDIA / `baai/bge-m3` | **Adoptado en DFAQ** | Multilingüe, tier gratuito NVIDIA API. |
 
 ---
 
@@ -657,8 +702,9 @@ Antes de convertir esto en plataforma productiva falta validar:
 | Ramas Git de despliegue | `http` (interfaz) y `api` (backend + BD). |
 | Framework API | Node.js + Fastify (Fase 1 implementada). |
 | Framework interfaz | Pendiente; placeholder nginx en rama `http`. |
-| Colección Qdrant productiva | `kb_<tenant_slug>_openai_1536`. |
-| Modelo de embeddings | OpenAI `text-embedding-3-small` (inicial). |
+| Colección Qdrant productiva | `kb_<tenant_slug>_nvidia_1024` |
+| Modelo de embeddings DFAQ | NVIDIA `baai/bge-m3` (1024 dims). OpenAI alternativo. |
+| POC n8n embeddings | OpenAI `text-embedding-3-small` en `Embedding_OpenAI` (histórico). |
 | API para n8n | Pendiente contrato final (`POST /api/search`). |
 | Multi-tenant | Lógico con filtros `tenant_id` + `agent_id`. |
 | Worker de indexación | Proceso lógico futuro **dentro de `api`**, no contenedor aparte. |
@@ -767,23 +813,22 @@ http://n8n_qdrant:6333/
 
 Esta URL debe configurarse como `QDRANT_URL` en los servicios de la app que necesiten indexar o buscar.
 
-La colección de prueba validada fue:
+Colección productiva vigente para MVP:
 
 ```text
-Embedding_OpenAI
-```
-
-Esa colección no debe considerarse nombre productivo.
-
-Colección productiva recomendada para MVP:
-
-```text
-kb_<tenant_slug>_openai_1536
+kb_<tenant_slug>_nvidia_1024
 ```
 
 Ejemplo inicial para MorroReservas:
 
 ```text
+kb_morroreservas_nvidia_1024
+```
+
+Colección histórica POC n8n (OpenAI, no reutilizar para DFAQ productivo):
+
+```text
+Embedding_OpenAI
 kb_morroreservas_openai_1536
 ```
 
@@ -830,7 +875,7 @@ dfaq-api
         ├── MariaDB (127.0.0.1:3306, embebido)
         └── (futuro) worker indexación
         ↓
-OpenAI Embeddings
+NVIDIA API — baai/bge-m3
         ↓
 Qdrant (n8n_qdrant:6333)
         ↓
@@ -849,13 +894,25 @@ MYSQL_DATABASE=dfaq
 MYSQL_USER=dfaq
 MYSQL_PASSWORD
 MYSQL_ROOT_PASSWORD
+EMBEDDING_PROVIDER=nvidia
+EMBEDDING_DIMENSION=1024
+NVIDIA_API_KEY
+NVIDIA_API_BASE=https://integrate.api.nvidia.com/v1
+NVIDIA_EMBEDDING_MODEL=baai/bge-m3
 JWT_SECRET
-OPENAI_API_KEY
-OPENAI_EMBEDDING_MODEL
 QDRANT_URL=http://n8n_qdrant:6333/
 QDRANT_API_KEY
-QDRANT_COLLECTION_TEMPLATE=kb_<tenant_slug>_openai_1536
+QDRANT_COLLECTION_TEMPLATE=kb_<tenant_slug>_nvidia_1024
 N8N_ALLOWED_TOKEN
+```
+
+Alternativa OpenAI (solo si `EMBEDDING_PROVIDER=openai`):
+
+```text
+OPENAI_API_KEY
+OPENAI_EMBEDDING_MODEL=text-embedding-3-small
+EMBEDDING_DIMENSION=1536
+QDRANT_COLLECTION_TEMPLATE=kb_<tenant_slug>_openai_1536
 ```
 
 **Servicio `dfaq-http` (rama `http`):**
@@ -955,9 +1012,9 @@ Sin Qdrant funcionando no hay MVP útil.
 | 1 | Esqueleto `api` dockerizado + healthcheck | `GET /health`, MariaDB embebido operativo. | Implementado |
 | 2 | Conectividad Qdrant desde `api` | `GET /api/qdrant/health` OK en EasyPanel. | Pendiente deploy |
 | 3 | Esqueleto `http` + proxy | `dfaq.at-once.cl` sirve UI y proxifica `/api/*`. | Implementado |
-| 4 | Colección Qdrant MVP | Crear/verificar `kb_morroreservas_openai_1536`. | Pendiente |
-| 5 | Upsert FAQ técnica | Insertar FAQ de prueba con payload multi-tenant. | Pendiente |
-| 6 | Search Qdrant | Recuperar FAQ y validar score/payload. | Pendiente |
+| 4 | Colección Qdrant MVP | Crear/verificar `kb_morroreservas_nvidia_1024`. | Pendiente |
+| 5 | Upsert FAQ técnica | Insertar FAQ WiFi con embedding NVIDIA. | Pendiente |
+| 6 | Search Qdrant | `POST /api/search` multilingüe. | Pendiente |
 | 7 | MariaDB esquema + CRUD | Migraciones y CRUD FAQs desde `http`. | Pendiente |
 | 8 | Reindexación individual | Al editar FAQ, regenerar embedding en `api`. | Pendiente |
 | 9 | API para n8n | `POST /api/search` con filtros obligatorios. | Pendiente |
@@ -992,7 +1049,11 @@ Implementado en rama `http`:
 APP_ENV=production
 APP_URL=https://dfaq.at-once.cl
 QDRANT_URL=http://n8n_qdrant:6333/
-QDRANT_COLLECTION_TEMPLATE=kb_<tenant_slug>_openai_1536
+EMBEDDING_PROVIDER=nvidia
+EMBEDDING_DIMENSION=1024
+NVIDIA_API_KEY=<secreto>
+NVIDIA_EMBEDDING_MODEL=baai/bge-m3
+QDRANT_COLLECTION_TEMPLATE=kb_<tenant_slug>_nvidia_1024
 MYSQL_PASSWORD=<secreto>
 DATABASE_URL=mysql://dfaq:<secreto>@127.0.0.1:3306/dfaq
 ```
