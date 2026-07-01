@@ -2,6 +2,7 @@
 set -eu
 
 API_UPSTREAM="${API_UPSTREAM:-http://dfaq-api:3000}"
+API_UPSTREAM="${API_UPSTREAM%/}"
 export API_UPSTREAM
 
 envsubst '${API_UPSTREAM}' < /etc/nginx/templates/default.conf.template > /etc/nginx/conf.d/default.conf
