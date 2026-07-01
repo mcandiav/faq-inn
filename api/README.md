@@ -33,7 +33,7 @@ Parte de la arquitectura: `dfaq-api` + `dfaq-http` + MariaDB compartido. Ver [DE
 | GET | `/api/qdrant/health` | Conectividad Qdrant |
 | POST | `/api/qdrant/collections/ensure` | Crear/verificar colección tenant |
 | POST | `/api/qdrant/faq/upsert-test` | Upsert FAQ WiFi de prueba |
-| POST | `/api/search` | Búsqueda semántica |
+| POST | `/api/search` | Búsqueda semántica (consumo n8n) — ver [docs/N8N-SEARCH.md](../docs/N8N-SEARCH.md) |
 | POST | `/api/auth/login` | Login (cookie) |
 | GET | `/api/auth/me` | Sesión actual |
 | PATCH | `/api/auth/profile` | Nombre negocio / contraseña |

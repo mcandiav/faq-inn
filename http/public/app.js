@@ -260,8 +260,10 @@ function openFaqDialog(id) {
 }
 
 async function deleteFaq(id) {
-  const faq = state.faqs.find((f) => f.id === id);
+  const faqId = Number(id);
+  const faq = state.faqs.find((f) => Number(f.id) === faqId);
   if (!faq) {
+    window.alert('No se encontró la FAQ en la lista. Recarga la página e intenta de nuevo.');
     return;
   }
 
@@ -273,14 +275,52 @@ async function deleteFaq(id) {
     return;
   }
 
+  const msg = $('#import-msg');
+  msg.textContent = 'Eliminando…';
+  msg.className = 'form-msg';
+
   try {
-    await api(`/faqs/${id}`, { method: 'DELETE' });
-    if ($('#faq-dialog').open && Number($('#faq-id').value) === id) {
+    const data = await api(`/faqs/${faqId}`, { method: 'DELETE' });
+    if ($('#faq-dialog').open && Number($('#faq-id').value) === faqId) {
       $('#faq-dialog').close();
     }
     await refreshFaqs();
+    msg.textContent = data.warning || 'FAQ eliminada.';
+    msg.className = data.warning ? 'form-msg warn' : 'form-msg ok';
   } catch (error) {
+    msg.textContent = error.message;
+    msg.classList.add('error');
     window.alert(error.message);
+  }
+}
+
+async function reindexFaqs() {
+  const total = state.faqs.length;
+  const ok = window.confirm(
+    total
+      ? `¿Sincronizar Qdrant con las ${total} FAQ(s) actuales?\n\nSe borrarán puntos huérfanos en Qdrant y se reindexará todo.`
+      : '¿Limpiar Qdrant? No hay FAQs en MariaDB; se eliminarán todos los puntos del tenant.'
+  );
+  if (!ok) {
+    return;
+  }
+
+  const msg = $('#import-msg');
+  const btn = $('#btn-reindex-faqs');
+  msg.textContent = 'Sincronizando Qdrant… puede tardar unos segundos.';
+  msg.className = 'form-msg';
+  btn.disabled = true;
+
+  try {
+    const data = await api('/faqs/reindex', { method: 'POST' });
+    await refreshFaqs();
+    msg.textContent = data.message || 'Qdrant sincronizado.';
+    msg.classList.add('ok');
+  } catch (error) {
+    msg.textContent = error.message;
+    msg.classList.add('error');
+  } finally {
+    btn.disabled = false;
   }
 }
 
@@ -333,6 +373,8 @@ $$('[data-view]').forEach((btn) => {
 });
 
 $('#btn-new-faq').addEventListener('click', () => openFaqDialog(null));
+
+$('#btn-reindex-faqs').addEventListener('click', () => reindexFaqs());
 
 $('#faq-import-file').addEventListener('change', async (event) => {
   const file = event.target.files?.[0];
