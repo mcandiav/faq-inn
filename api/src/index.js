@@ -14,6 +14,7 @@ import { searchRoutes } from './routes/search.js';
 import { authRoutes } from './routes/auth.js';
 import { adminRoutes } from './routes/admin.js';
 import { faqRoutes } from './routes/faqs.js';
+import { unansweredRoutes } from './routes/unanswered.js';
 
 const config = loadConfig();
 
@@ -46,6 +47,7 @@ await searchRoutes(app, config);
 await authRoutes(app, config);
 await adminRoutes(app, config);
 await faqRoutes(app, config);
+await unansweredRoutes(app, config);
 
 try {
   await app.listen({ port: config.port, host: config.host });

@@ -6,7 +6,7 @@ COPY nginx.conf.template /etc/nginx/templates/default.conf.template
 COPY docker/entrypoint.sh /entrypoint.sh
 COPY public /usr/share/nginx/html
 
-RUN chmod +x /entrypoint.sh
+RUN sed -i 's/\r$//' /entrypoint.sh && chmod +x /entrypoint.sh
 
 ENV API_UPSTREAM=http://dfaq-api:3000
 

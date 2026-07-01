@@ -119,5 +119,6 @@ export function loadConfig() {
       (process.env.APP_ENV === 'production'
         ? required('SESSION_SECRET', process.env.SESSION_SECRET)
         : 'dfaq-dev-session-secret'),
+    n8nAllowedToken: process.env.N8N_ALLOWED_TOKEN || '',
   };
 }

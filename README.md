@@ -6,6 +6,7 @@
 
 | Fecha | Versión | Cambio realizado | Motivo | Impacto | Sección afectada |
 |---|---|---|---|---|---|
+| 2026-07-01 | V1.9 | Se incorpora módulo de preguntas sin respuesta administrado por DFAQ. | El flujo n8n MorroReservas ya validó que las preguntas sin respuesta deben guardarse en una fuente propia del producto, no en NocoDB. | DFAQ deberá exponer endpoint para recibir preguntas sin respuesta, persistirlas en MariaDB y permitir que el cliente las convierta en nuevas FAQ desde la app. | Objetivo, API para agentes, modelo de datos, plan MVP |
 | 2026-07-01 | V1.8 | Embeddings productivos migrados a NVIDIA API (`baai/bge-m3`, 1024 dims). | Miguel provee API key gratuita de build.nvidia.com; se prioriza costo cero y soporte multilingüe sin depender de OpenAI. | Colección Qdrant productiva pasa a `kb_<tenant_slug>_nvidia_1024`; OpenAI queda como alternativa vía `EMBEDDING_PROVIDER=openai`. | Estrategia embeddings, Qdrant, DEPLOY, variables api |
 | 2026-06-30 | V1.6 | Documentación alineada con arquitectura de 2 contenedores (`api` + `http`), ramas Git y MariaDB embebido. | Consolidar en README y DEPLOY la decisión V1.5 ya implementada en código. | Secciones 3, 4, 15, 16, 17 y 18 reflejan el despliegue real; repositorio `mcandiav/dfaq`. | README, DEPLOY.md |
 | 2026-06-30 | V1.5 | Arquitectura reducida a 2 servicios Docker (`api` + `http`) con ramas Git homónimas; MariaDB embebido en `api`. | Miguel prefiere 2 contenedores (api/http) en lugar de 4 (web, api, worker, mariadb). | EasyPanel despliega `dfaq-api` desde rama `api` y `dfaq-http` desde rama `http`; MariaDB persiste en volumen `/var/lib/mysql` dentro de `api`. | DEPLOY.md, estructura repositorio |
@@ -22,6 +23,8 @@
 Construir una aplicación web multiusuario y multicliente para administrar preguntas y respuestas utilizadas por agentes IA.
 
 La aplicación debe permitir que cada cliente vea, cree, edite, active, desactive y mejore sus propias respuestas desde una interfaz web, sin tener que tocar directamente Qdrant, n8n ni configuraciones técnicas.
+
+Además, la aplicación debe permitir que cada cliente revise las preguntas que su agente no pudo responder, las administre desde la misma interfaz y las convierta en nuevas FAQ entrenables sin depender de NocoDB ni de tablas externas.
 
 El objetivo funcional es que cada agente pueda consultar una base de conocimiento controlada, editable y semánticamente buscable.
 
@@ -279,6 +282,51 @@ started_at
 finished_at
 ```
 
+### 6.9 `unanswered_questions`
+
+Tabla oficial para registrar preguntas que un agente no pudo responder con una FAQ útil.
+
+Esta tabla reemplaza el uso de NocoDB como repositorio operativo de preguntas sin respuesta. n8n no debe escribir directo en MariaDB; debe enviar la pregunta a la API de DFAQ, y la API debe validar tenant/agente y persistir el registro.
+
+Campos mínimos:
+
+```text
+id
+tenant_id
+agent_id
+tenant_slug
+channel
+remote_id
+contact_name
+question
+language
+score
+suggested_faq_id
+suggested_faq_question
+status
+created_at
+updated_at
+converted_faq_id
+resolved_by
+resolved_at
+```
+
+Estados iniciales:
+
+```text
+pending
+converted_to_faq
+ignored
+duplicate
+resolved_manually
+```
+
+Regla funcional:
+
+```text
+Una pregunta sin respuesta debe poder convertirse desde la interfaz web en una nueva FAQ del mismo tenant/agente, generando su embedding e indexación en Qdrant.
+```
+
 ---
 
 ## 7. Estrategia Qdrant
@@ -533,6 +581,8 @@ La app debería exponer una API de búsqueda para que n8n o cualquier agente no 
 
 **Configuración del nodo HTTP Request en n8n:** [docs/N8N-SEARCH.md](docs/N8N-SEARCH.md)
 
+### 11.1 Búsqueda semántica
+
 Endpoint conceptual:
 
 ```http
@@ -562,6 +612,63 @@ Respuesta conceptual:
     }
   ]
 }
+```
+
+### 11.2 Registro de preguntas sin respuesta
+
+DFAQ debe exponer un endpoint para que n8n registre preguntas sin respuesta sin escribir directamente en MariaDB ni depender de NocoDB.
+
+Endpoint requerido:
+
+```http
+POST /api/unanswered
+```
+
+Uso esperado desde Docker interno:
+
+```text
+POST http://dfaq-api:3000/api/unanswered
+```
+
+Alternativa pública operativa si corresponde:
+
+```text
+POST https://dfaq.at-once.cl/api/unanswered
+```
+
+Body mínimo esperado:
+
+```json
+{
+  "tenant_id": "morroreservas",
+  "agent_id": "principal",
+  "tenant_slug": "morroreservas",
+  "channel": "chatwoot",
+  "remote_id": "cliente-whatsapp-id",
+  "contact_name": "Nombre Cliente",
+  "question": "Tem girafas na ilha?",
+  "language": "pt-BR",
+  "score": 0.48335898,
+  "suggested_faq_id": "f7e0a56d-8a4a-4e07-a26a-2d6b590f20c2",
+  "suggested_faq_question": "Como chegar à ilha?"
+}
+```
+
+Respuesta mínima esperada:
+
+```json
+{
+  "ok": true,
+  "id": 123,
+  "status": "pending"
+}
+```
+
+Regla de responsabilidad:
+
+```text
+n8n solo llama la API.
+DFAQ valida tenant/agente, inserta en MariaDB y expone la pregunta en la interfaz web del cliente.
 ```
 
 ---
@@ -707,7 +814,7 @@ Antes de convertir esto en plataforma productiva falta validar:
 | Colección Qdrant productiva | `kb_<tenant_slug>_nvidia_1024` |
 | Modelo de embeddings DFAQ | NVIDIA `baai/bge-m3` (1024 dims). OpenAI alternativo. |
 | POC n8n embeddings | OpenAI `text-embedding-3-small` en `Embedding_OpenAI` (histórico). |
-| API para n8n | Pendiente contrato final (`POST /api/search`). |
+| API para n8n | Contratos requeridos: `POST /api/search` para búsqueda y `POST /api/unanswered` para preguntas sin respuesta. |
 | Multi-tenant | Lógico con filtros `tenant_id` + `agent_id`. |
 | Worker de indexación | Proceso lógico futuro **dentro de `api`**, no contenedor aparte. |
 
@@ -725,6 +832,8 @@ Fase 1 (esqueleto `api` + validación Qdrant/MariaDB) **implementada en código*
 6. Implementar pantallas reales en `http`.
 7. Integrar worker de indexación dentro de `api`.
 8. Exponer `POST /api/search` para n8n.
+9. Exponer `POST /api/unanswered` para reemplazar NocoDB como registro de preguntas sin respuesta.
+10. Implementar pantalla de preguntas sin respuesta para que el cliente pueda convertirlas en FAQ entrenables.
 
 Guía de despliegue: [DEPLOY.md](./DEPLOY.md).
 
@@ -1020,7 +1129,8 @@ Sin Qdrant funcionando no hay MVP útil.
 | 7 | MariaDB esquema + CRUD | Migraciones y CRUD FAQs desde `http`. | Pendiente |
 | 8 | Reindexación individual | Al editar FAQ, regenerar embedding en `api`. | Pendiente |
 | 9 | API para n8n | `POST /api/search` con filtros obligatorios. | Pendiente |
-| 10 | Seguridad y operación | Login, roles, backups, dominio definitivo. | Pendiente |
+| 10 | Preguntas sin respuesta | `POST /api/unanswered`, tabla `unanswered_questions` y pantalla para convertir preguntas en FAQ. | Pendiente |
+| 11 | Seguridad y operación | Login, roles, backups, dominio definitivo. | Pendiente |
 
 ### 18.3 Primer incremento programable (completado en código)
 
