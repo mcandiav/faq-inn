@@ -89,7 +89,7 @@ export async function searchRoutes(app, config) {
       );
       const faq = { ...TEST_FAQ, ...(request.body?.faq || {}) };
       const text = buildVectorizableText(faq);
-      const vector = await createEmbedding(text, config);
+      const vector = await createEmbedding(text, config, { inputType: 'passage' });
       const pointId = faqPointId(faq.faq_id);
 
       const { response, body } = await qdrantRequest(
@@ -135,7 +135,7 @@ export async function searchRoutes(app, config) {
       };
     } catch (error) {
       app.log.error({ err: error }, 'FAQ upsert test failed');
-      reply.code(error.message.includes('OPENAI_API_KEY') ? 503 : 500);
+      reply.code(error.message.includes('API_KEY') ? 503 : 500);
       return {
         status: 'error',
         error: error.message,
@@ -161,7 +161,7 @@ export async function searchRoutes(app, config) {
         config.qdrantCollectionTemplate,
         slug
       );
-      const vector = await createEmbedding(query, config);
+      const vector = await createEmbedding(query, config, { inputType: 'query' });
 
       const { response, body } = await qdrantRequest(
         config,
@@ -199,7 +199,7 @@ export async function searchRoutes(app, config) {
       };
     } catch (error) {
       app.log.error({ err: error }, 'Search failed');
-      reply.code(error.message.includes('OPENAI_API_KEY') ? 503 : 500);
+      reply.code(error.message.includes('API_KEY') ? 503 : 500);
       return {
         status: 'error',
         error: error.message,

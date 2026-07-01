@@ -24,6 +24,11 @@ try {
       appEnv: config.appEnv,
       appUrl: config.appUrl,
       qdrantUrl: config.qdrantUrl,
+      embeddingProvider: config.embeddingProvider,
+      embeddingModel:
+        config.embeddingProvider === 'nvidia'
+          ? config.nvidiaEmbeddingModel
+          : config.openaiEmbeddingModel,
       databaseUrl: config.databaseUrl.replace(/:([^:@]+)@/, ':***@'),
     },
     'dfaq-api started'
