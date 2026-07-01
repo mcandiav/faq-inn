@@ -1,4 +1,4 @@
-const APP_VERSION = '2.2.4';
+const APP_VERSION = '2.2.6';
 const apiBase = window.DFAQ_API_URL || '/api';
 
 const state = { user: null, faqs: [], unanswered: [] };
@@ -111,16 +111,57 @@ function renderHeader() {
   $('#nav-admin').classList.toggle('hidden', !isAdmin);
   $('#nav-unanswered').classList.toggle('hidden', isAdmin);
 
+  renderProfile();
+}
+
+function renderProfile() {
+  const user = state.user;
+  const emailEl = $('#profile-email');
   const businessInput = $('#profile-business');
-  if (user?.role === 'client') {
-    businessInput.disabled = false;
-    businessInput.value = user?.tenant?.name || '';
-  } else {
-    businessInput.disabled = true;
-    businessInput.value = '';
+  const slugWrap = $('#profile-slug-wrap');
+
+  if (!user || !emailEl || !businessInput) {
+    return;
   }
 
-  $('#profile-email').value = user?.email || '';
+  emailEl.value = user.email || '';
+
+  if (user.role === 'client') {
+    businessInput.disabled = false;
+    businessInput.value = user.tenant?.name || '';
+    businessInput.placeholder = user.tenant?.slug
+      ? `Ej. ${user.tenant.slug}`
+      : 'Ej. MorroReservas';
+    slugWrap?.classList.remove('hidden');
+    const slugInput = $('#profile-slug');
+    if (slugInput) {
+      slugInput.value = user.tenant?.slug || '—';
+    }
+  } else {
+    businessInput.disabled = true;
+    businessInput.value = 'Administración global';
+    slugWrap?.classList.add('hidden');
+  }
+
+  const currentPassword = $('#profile-current-password');
+  const newPassword = $('#profile-new-password');
+  const profileMsg = $('#profile-msg');
+  if (currentPassword) currentPassword.value = '';
+  if (newPassword) newPassword.value = '';
+  if (profileMsg) {
+    profileMsg.textContent = '';
+    profileMsg.className = 'form-msg';
+  }
+}
+
+async function refreshProfile() {
+  try {
+    const data = await api('/auth/me');
+    state.user = data.user;
+    renderHeader();
+  } catch {
+    renderProfile();
+  }
 }
 
 function renderFaqs() {
@@ -236,13 +277,31 @@ function renderUnanswered() {
         ${statusLabel(item.status)}
       </div>
       <dl class="unanswered-facts">
-        <div><dt>Fecha y hora</dt><dd>${escapeHtml(formatDate(item.created_at))}</dd></div>
+        <div class="unanswered-facts-row">
+          <dt>Fecha y hora</dt>
+          <dd>${escapeHtml(formatDate(item.created_at))}</dd>
+        </div>
+        <div class="unanswered-facts-row">
+          <dt>Teléfono</dt>
+          <dd>${escapeHtml(phone)}</dd>
+        </div>
     `;
+
+    if (item.status !== 'pending') {
+      body += `
+        <div class="unanswered-facts-row">
+          <dt>Consulta</dt>
+          <dd class="unanswered-question">${escapeHtml(item.question)}</dd>
+        </div>
+      `;
+    }
+
+    body += `</dl>`;
 
     if (item.status === 'pending') {
       body += `
         <div class="unanswered-consulta-edit">
-          <label class="unanswered-answer-label">
+          <label class="unanswered-field-label">
             Consulta
             <textarea
               class="unanswered-question-input"
@@ -255,24 +314,15 @@ function renderUnanswered() {
           </button>
         </div>
       `;
-    } else {
-      body += `
-        <div><dt>Consulta</dt><dd class="unanswered-question">${escapeHtml(item.question)}</dd></div>
-      `;
     }
-
-    body += `
-        <div><dt>Teléfono</dt><dd>${escapeHtml(phone)}</dd></div>
-      </dl>
-    `;
 
     if (item.status === 'pending') {
       body += `
-        <label class="unanswered-answer-label">
+        <label class="unanswered-field-label">
           Tu respuesta
           <textarea
             class="unanswered-answer"
-            rows="3"
+            rows="4"
             placeholder="Escribe aquí la respuesta que debe dar el agente…"
             data-answer-for="${item.id}"
           ></textarea>
@@ -687,6 +737,7 @@ $$('[data-view]').forEach((btn) => {
     setView(view);
     if (view === 'dashboard') await refreshFaqs();
     if (view === 'unanswered') await refreshUnanswered();
+    if (view === 'profile') await refreshProfile();
     if (view === 'admin') await refreshAdmin();
   });
 });

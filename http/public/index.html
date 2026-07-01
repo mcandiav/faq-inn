@@ -3,14 +3,14 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>DFAQ v2.2.4</title>
-    <link rel="stylesheet" href="/styles.css?v=2.2.4" />
+    <title>DFAQ v2.2.6</title>
+    <link rel="stylesheet" href="/styles.css?v=2.2.6" />
   </head>
   <body>
     <div id="app" class="app hidden">
       <header class="topbar">
         <div>
-          <p class="badge" data-app-version>DFAQ v2.2.4</p>
+          <p class="badge" data-app-version>DFAQ v2.2.6</p>
           <h1 id="business-name">—</h1>
           <p class="sub" id="user-email">—</p>
         </div>
@@ -110,6 +110,10 @@
               Nombre del negocio
               <input type="text" id="profile-business" placeholder="Ej. MorroReservas" />
             </label>
+            <label id="profile-slug-wrap" class="hidden">
+              Slug técnico (Qdrant / n8n)
+              <input type="text" id="profile-slug" disabled />
+            </label>
             <fieldset>
               <legend>Cambiar contraseña</legend>
               <label>
@@ -168,7 +172,7 @@
 
     <div id="login-screen" class="login-screen">
       <form id="login-form" class="card login-card">
-        <p class="badge" data-app-version>DFAQ v2.2.4</p>
+        <p class="badge" data-app-version>DFAQ v2.2.6</p>
         <h1>Iniciar sesión</h1>
         <p class="lead">Administra las respuestas de tu negocio.</p>
         <label>
@@ -219,6 +223,6 @@
       </form>
     </dialog>
 
-    <script src="/app.js?v=2.2.4"></script>
+    <script src="/app.js?v=2.2.6"></script>
   </body>
 </html>

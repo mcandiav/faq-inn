@@ -68,9 +68,10 @@ export async function authRoutes(app, config) {
   });
 
   app.get('/api/auth/me', { preHandler: [app.authenticate] }, async (request) => {
+    const refreshed = await fetchUserByEmail(pool, request.user.email);
     return {
       status: 'ok',
-      user: publicUser(request.user),
+      user: publicUser(refreshed || request.user),
     };
   });
 
