@@ -1,4 +1,4 @@
-const APP_VERSION = '2.2.0';
+const APP_VERSION = '2.2.1';
 const apiBase = window.DFAQ_API_URL || '/api';
 
 const state = { user: null, faqs: [], unanswered: [] };
@@ -194,13 +194,12 @@ function statusLabel(status) {
 }
 
 function renderUnanswered() {
-  const tbody = $('#unanswered-tbody');
-  tbody.innerHTML = '';
+  const list = $('#unanswered-list');
+  list.innerHTML = '';
 
   if (state.user?.role !== 'client') {
     $('#unanswered-count').textContent = '';
-    tbody.innerHTML =
-      '<tr><td colspan="7" class="empty">Vista solo para clientes.</td></tr>';
+    list.innerHTML = '<p class="empty-block">Vista solo para clientes.</p>';
     return;
   }
 
@@ -220,46 +219,124 @@ function renderUnanswered() {
     : 'Sin registros con este filtro';
 
   if (!items.length) {
-    tbody.innerHTML =
-      '<tr><td colspan="7" class="empty">No hay preguntas sin respuesta con este filtro.</td></tr>';
+    list.innerHTML =
+      '<p class="empty-block">No hay preguntas sin respuesta con este filtro.</p>';
     return;
   }
 
   items.forEach((item) => {
-    const tr = document.createElement('tr');
-    const canAct = item.status === 'pending';
+    const card = document.createElement('article');
+    card.className = `unanswered-card${item.status === 'pending' ? ' is-pending' : ''}`;
+    card.dataset.id = String(item.id);
+
     const suggested = item.suggested_faq_question
-      ? escapeHtml(truncate(item.suggested_faq_question, 60))
+      ? escapeHtml(item.suggested_faq_question)
       : item.suggested_faq_id
         ? `<code>${escapeHtml(item.suggested_faq_id)}</code>`
-        : '—';
+        : '';
 
-    tr.innerHTML = `
-      <td class="nowrap">${formatDate(item.created_at)}</td>
-      <td class="cell-text" title="${escapeAttr(item.question)}">${escapeHtml(item.question)}</td>
-      <td>${escapeHtml(item.contact_name || item.remote_id || '—')}</td>
-      <td>${item.score != null ? Number(item.score).toFixed(3) : '—'}</td>
-      <td class="cell-text">${suggested}</td>
-      <td>${statusLabel(item.status)}</td>
-      <td class="row-actions">
-        ${
-          canAct
-            ? `<button type="button" class="btn small primary" data-convert="${item.id}">Convertir</button>
-               <button type="button" class="btn small" data-ignore="${item.id}">Ignorar</button>`
-            : '—'
-        }
-      </td>
+    const metaParts = [
+      formatDate(item.created_at),
+      item.contact_name || item.remote_id || null,
+      item.score != null ? `score ${Number(item.score).toFixed(3)}` : null,
+    ].filter(Boolean);
+
+    let body = `
+      <div class="unanswered-card-head">
+        <p class="unanswered-question">${escapeHtml(item.question)}</p>
+        ${statusLabel(item.status)}
+      </div>
+      <p class="unanswered-meta">${metaParts.map(escapeHtml).join(' · ')}</p>
     `;
-    tbody.appendChild(tr);
+
+    if (suggested) {
+      body += `<p class="unanswered-suggested"><span>FAQ sugerida:</span> ${suggested}</p>`;
+    }
+
+    if (item.status === 'pending') {
+      body += `
+        <label class="unanswered-answer-label">
+          Tu respuesta
+          <textarea
+            class="unanswered-answer"
+            rows="3"
+            placeholder="Escribe aquí la respuesta que debe dar el agente…"
+            data-answer-for="${item.id}"
+          ></textarea>
+        </label>
+        <div class="unanswered-actions">
+          <button type="button" class="btn primary" data-respond="${item.id}">Responderla</button>
+          <button type="button" class="btn ghost" data-ignore="${item.id}">Ignorar</button>
+        </div>
+        <p class="form-msg unanswered-row-msg" data-msg-for="${item.id}"></p>
+      `;
+    }
+
+    card.innerHTML = body;
+    list.appendChild(card);
   });
 
-  tbody.querySelectorAll('[data-convert]').forEach((btn) => {
-    btn.addEventListener('click', () => openConvertDialog(Number(btn.dataset.convert)));
+  list.querySelectorAll('[data-respond]').forEach((btn) => {
+    btn.addEventListener('click', () => respondUnanswered(Number(btn.dataset.respond)));
   });
 
-  tbody.querySelectorAll('[data-ignore]').forEach((btn) => {
+  list.querySelectorAll('[data-ignore]').forEach((btn) => {
     btn.addEventListener('click', () => ignoreUnanswered(Number(btn.dataset.ignore)));
   });
+}
+
+async function respondUnanswered(id) {
+  const item = state.unanswered.find((row) => row.id === id);
+  if (!item) {
+    return;
+  }
+
+  const textarea = document.querySelector(`[data-answer-for="${id}"]`);
+  const rowMsg = document.querySelector(`[data-msg-for="${id}"]`);
+  const answer = textarea?.value.trim() || '';
+
+  if (!answer) {
+    if (rowMsg) {
+      rowMsg.textContent = 'Escribe una respuesta antes de guardar.';
+      rowMsg.className = 'form-msg error unanswered-row-msg';
+    }
+    textarea?.focus();
+    return;
+  }
+
+  const btn = document.querySelector(`[data-respond="${id}"]`);
+  if (btn) {
+    btn.disabled = true;
+  }
+  if (rowMsg) {
+    rowMsg.textContent = 'Guardando FAQ e indexando en Qdrant…';
+    rowMsg.className = 'form-msg unanswered-row-msg';
+  }
+
+  try {
+    await api(`/unanswered/${id}/convert`, {
+      method: 'POST',
+      body: JSON.stringify({
+        question: item.question,
+        answer,
+      }),
+    });
+
+    const listMsg = $('#unanswered-msg');
+    listMsg.textContent = 'Respuesta guardada e indexada en Qdrant.';
+    listMsg.className = 'form-msg ok';
+
+    await refreshUnanswered();
+    await refreshFaqs();
+  } catch (error) {
+    if (rowMsg) {
+      rowMsg.textContent = error.message;
+      rowMsg.className = 'form-msg error unanswered-row-msg';
+    }
+    if (btn) {
+      btn.disabled = false;
+    }
+  }
 }
 
 async function refreshUnanswered() {
@@ -274,21 +351,6 @@ async function refreshUnanswered() {
   const data = await api(`/unanswered${query}`);
   state.unanswered = data.items || [];
   renderUnanswered();
-}
-
-function openConvertDialog(id) {
-  const item = state.unanswered.find((row) => row.id === id);
-  if (!item) {
-    return;
-  }
-
-  $('#convert-unanswered-id').value = id;
-  $('#convert-question').value = item.question || '';
-  $('#convert-answer').value = '';
-  $('#convert-category').value = '';
-  $('#convert-keywords').value = '';
-  $('#convert-msg').textContent = '';
-  $('#convert-dialog').showModal();
 }
 
 async function ignoreUnanswered(id) {
@@ -615,43 +677,6 @@ $('#faq-form').addEventListener('submit', async (event) => {
 });
 
 $('#unanswered-filter').addEventListener('change', () => refreshUnanswered());
-
-$('#convert-cancel').addEventListener('click', () => $('#convert-dialog').close());
-
-$('#convert-form').addEventListener('submit', async (event) => {
-  event.preventDefault();
-  const msg = $('#convert-msg');
-  const saveBtn = $('#convert-save');
-  msg.textContent = 'Creando FAQ e indexando…';
-  msg.className = 'form-msg';
-  saveBtn.disabled = true;
-
-  const id = $('#convert-unanswered-id').value;
-  const payload = {
-    question: $('#convert-question').value.trim(),
-    answer: $('#convert-answer').value.trim(),
-    category: $('#convert-category').value.trim(),
-    keywords: $('#convert-keywords').value.trim(),
-  };
-
-  try {
-    await api(`/unanswered/${id}/convert`, {
-      method: 'POST',
-      body: JSON.stringify(payload),
-    });
-    $('#convert-dialog').close();
-    const listMsg = $('#unanswered-msg');
-    listMsg.textContent = 'FAQ creada e indexada correctamente.';
-    listMsg.className = 'form-msg ok';
-    await refreshUnanswered();
-    await refreshFaqs();
-  } catch (error) {
-    msg.textContent = error.message;
-    msg.classList.add('error');
-  } finally {
-    saveBtn.disabled = false;
-  }
-});
 
 $('#profile-form').addEventListener('submit', async (event) => {
   event.preventDefault();
