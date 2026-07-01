@@ -3,6 +3,7 @@ import {
   deleteUnanswered,
   listUnansweredForUser,
   registerUnanswered,
+  updateUnanswered,
   updateUnansweredStatus,
 } from '../lib/unansweredService.js';
 
@@ -70,19 +71,14 @@ export async function unansweredRoutes(app, config) {
         return { status: 'error', error: 'Solo clientes pueden administrar preguntas' };
       }
 
-      const status = request.body?.status;
-      if (!status) {
+      const body = request.body || {};
+      if (body.status === undefined && body.question === undefined && body.consulta === undefined) {
         reply.code(400);
-        return { status: 'error', error: 'status es obligatorio' };
+        return { status: 'error', error: 'question o status es obligatorio' };
       }
 
       try {
-        const updated = await updateUnansweredStatus(
-          pool,
-          request.params.id,
-          user,
-          status
-        );
+        const updated = await updateUnanswered(pool, request.params.id, user, body);
         return { status: 'ok', item: updated };
       } catch (error) {
         const code = error.statusCode || 500;

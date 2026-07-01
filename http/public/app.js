@@ -1,4 +1,4 @@
-const APP_VERSION = '2.2.3';
+const APP_VERSION = '2.2.4';
 const apiBase = window.DFAQ_API_URL || '/api';
 
 const state = { user: null, faqs: [], unanswered: [] };
@@ -237,7 +237,31 @@ function renderUnanswered() {
       </div>
       <dl class="unanswered-facts">
         <div><dt>Fecha y hora</dt><dd>${escapeHtml(formatDate(item.created_at))}</dd></div>
+    `;
+
+    if (item.status === 'pending') {
+      body += `
+        <div class="unanswered-consulta-edit">
+          <label class="unanswered-answer-label">
+            Consulta
+            <textarea
+              class="unanswered-question-input"
+              rows="2"
+              data-question-for="${item.id}"
+            >${escapeHtml(item.question)}</textarea>
+          </label>
+          <button type="button" class="btn small ghost" data-save-question="${item.id}">
+            Guardar consulta
+          </button>
+        </div>
+      `;
+    } else {
+      body += `
         <div><dt>Consulta</dt><dd class="unanswered-question">${escapeHtml(item.question)}</dd></div>
+      `;
+    }
+
+    body += `
         <div><dt>Teléfono</dt><dd>${escapeHtml(phone)}</dd></div>
       </dl>
     `;
@@ -275,6 +299,10 @@ function renderUnanswered() {
     btn.addEventListener('click', () => respondUnanswered(Number(btn.dataset.respond)));
   });
 
+  list.querySelectorAll('[data-save-question]').forEach((btn) => {
+    btn.addEventListener('click', () => saveUnansweredQuestion(Number(btn.dataset.saveQuestion)));
+  });
+
   list.querySelectorAll('[data-delete-unanswered]').forEach((btn) => {
     btn.addEventListener('click', () => deleteUnanswered(Number(btn.dataset.deleteUnanswered)));
   });
@@ -287,8 +315,10 @@ async function respondUnanswered(id) {
   }
 
   const textarea = document.querySelector(`[data-answer-for="${id}"]`);
+  const questionInput = document.querySelector(`[data-question-for="${id}"]`);
   const rowMsg = document.querySelector(`[data-msg-for="${id}"]`);
   const answer = textarea?.value.trim() || '';
+  const question = questionInput?.value.trim() || item.question;
 
   if (!answer) {
     if (rowMsg) {
@@ -312,7 +342,7 @@ async function respondUnanswered(id) {
     await api(`/unanswered/${id}/convert`, {
       method: 'POST',
       body: JSON.stringify({
-        question: item.question,
+        question,
         answer,
       }),
     });
@@ -346,6 +376,56 @@ async function refreshUnanswered() {
   const data = await api(`/unanswered${query}`);
   state.unanswered = data.items || [];
   renderUnanswered();
+}
+
+async function saveUnansweredQuestion(id) {
+  const questionInput = document.querySelector(`[data-question-for="${id}"]`);
+  const rowMsg = document.querySelector(`[data-msg-for="${id}"]`);
+  const question = questionInput?.value.trim() || '';
+
+  if (!question) {
+    if (rowMsg) {
+      rowMsg.textContent = 'La consulta no puede quedar vacía.';
+      rowMsg.className = 'form-msg error unanswered-row-msg';
+    }
+    questionInput?.focus();
+    return;
+  }
+
+  const btn = document.querySelector(`[data-save-question="${id}"]`);
+  if (btn) {
+    btn.disabled = true;
+  }
+  if (rowMsg) {
+    rowMsg.textContent = 'Guardando consulta…';
+    rowMsg.className = 'form-msg unanswered-row-msg';
+  }
+
+  try {
+    await api(`/unanswered/${id}`, {
+      method: 'PATCH',
+      body: JSON.stringify({ question }),
+    });
+
+    const item = state.unanswered.find((row) => row.id === id);
+    if (item) {
+      item.question = question;
+    }
+
+    if (rowMsg) {
+      rowMsg.textContent = 'Consulta guardada.';
+      rowMsg.className = 'form-msg ok unanswered-row-msg';
+    }
+  } catch (error) {
+    if (rowMsg) {
+      rowMsg.textContent = error.message;
+      rowMsg.className = 'form-msg error unanswered-row-msg';
+    }
+  } finally {
+    if (btn) {
+      btn.disabled = false;
+    }
+  }
 }
 
 async function deleteUnanswered(id) {
