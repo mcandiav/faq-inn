@@ -10,7 +10,7 @@ RUN apk add --no-cache gettext wget
 COPY http/nginx.conf.template /etc/nginx/templates/default.conf.template
 COPY http/docker/entrypoint.sh /entrypoint.sh
 COPY http/public /usr/share/nginx/html
-RUN chmod +x /entrypoint.sh \
+RUN sed -i 's/\r$//' /entrypoint.sh && chmod +x /entrypoint.sh \
   && printf '%.7s\n' "${GIT_SHA}" > /usr/share/nginx/html/git-commit.txt
 
 ENV API_UPSTREAM=http://dfaq-api:3000
