@@ -2,28 +2,49 @@
 <html lang="es">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>DFAQ v2.2.6</title>
-    <link rel="stylesheet" href="/styles.css?v=2.2.6" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, viewport-fit=cover"
+    />
+    <meta name="theme-color" content="#0a1628" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <link rel="icon" type="image/png" sizes="512x512" href="/favicon.png" />
+    <link rel="apple-touch-icon" href="/favicon.png" />
+    <title>DFAQ v2.4.3</title>
+    <link rel="stylesheet" href="/styles.css?v=2.4.3" />
   </head>
   <body>
     <div id="app" class="app hidden">
       <header class="topbar">
-        <div>
-          <p class="badge" data-app-version>DFAQ v2.2.6</p>
-          <h1 id="business-name">—</h1>
-          <p class="sub" id="user-email">—</p>
+        <div class="topbar-head">
+          <div class="topbar-brand">
+            <div class="topbar-brand-row">
+              <img src="/favicon.png" alt="" class="app-logo-icon" width="40" height="40" />
+              <div class="topbar-brand-text">
+                <p class="badge" data-app-version>DFAQ v2.4.3</p>
+                <h1 id="business-name">—</h1>
+                <p class="sub" id="user-email">—</p>
+              </div>
+            </div>
+          </div>
+          <div class="topbar-actions">
+            <div class="lang-picker" data-lang-picker id="lang-picker-app"></div>
+            <button type="button" class="btn ghost small topbar-logout" id="btn-logout-mobile" data-i18n="nav.logout">
+              Salir
+            </button>
+          </div>
         </div>
         <nav class="topnav">
-          <button type="button" class="btn ghost" data-view="dashboard">FAQs</button>
+          <button type="button" class="btn ghost" data-view="dashboard" data-i18n="nav.faqs">FAQs</button>
           <button type="button" class="btn ghost hidden" id="nav-unanswered" data-view="unanswered">
-            Sin respuesta <span class="nav-badge hidden" id="unanswered-badge">0</span>
+            <span data-i18n="nav.unanswered">Sin respuesta</span>
+            <span class="nav-badge hidden" id="unanswered-badge">0</span>
           </button>
-          <button type="button" class="btn ghost" data-view="profile">Mi cuenta</button>
-          <button type="button" class="btn ghost hidden" id="nav-admin" data-view="admin">
+          <button type="button" class="btn ghost" data-view="profile" data-i18n="nav.profile">Mi cuenta</button>
+          <button type="button" class="btn ghost hidden" id="nav-admin" data-view="admin" data-i18n="nav.admin">
             Admin
           </button>
-          <button type="button" class="btn ghost" id="btn-logout">Salir</button>
+          <button type="button" class="btn ghost" id="btn-logout" data-i18n="nav.logout">Salir</button>
         </nav>
       </header>
 
@@ -31,12 +52,12 @@
         <section id="view-dashboard" class="view">
           <div class="toolbar">
             <div>
-              <h2>Preguntas y respuestas</h2>
+              <h2 data-i18n="dashboard.title">Preguntas y respuestas</h2>
               <p class="faq-count" id="faq-count"></p>
             </div>
             <div class="toolbar-actions hidden" id="faq-client-actions">
               <label class="btn ghost file-btn">
-                Importar Excel
+                <span data-i18n="dashboard.import">Importar Excel</span>
                 <input
                   type="file"
                   id="faq-import-file"
@@ -44,55 +65,56 @@
                   hidden
                 />
               </label>
-              <button type="button" class="btn ghost" id="btn-reindex-faqs">
+              <button type="button" class="btn ghost" id="btn-reindex-faqs" data-i18n="dashboard.reindex">
                 Sincronizar Qdrant
               </button>
-              <button type="button" class="btn primary" id="btn-new-faq">Nueva FAQ</button>
+              <button type="button" class="btn primary" id="btn-new-faq" data-i18n="dashboard.newFaq">Nueva FAQ</button>
             </div>
           </div>
           <p class="hint" id="dashboard-hint"></p>
           <label class="checkbox import-replace hidden" id="import-replace-wrap">
             <input type="checkbox" id="import-replace" />
-            Reemplazar todas las FAQs al importar
+            <span data-i18n="dashboard.replaceAll">Reemplazar todas las FAQs al importar</span>
           </label>
           <p class="form-msg" id="import-msg"></p>
-          <div class="table-wrap">
+          <div class="table-wrap faq-desktop-only">
             <table>
               <thead>
                 <tr>
                   <th>#</th>
-                  <th>Pregunta</th>
-                  <th>Respuesta</th>
-                  <th>Estado</th>
-                  <th>Índice</th>
+                  <th data-i18n="table.question">Pregunta</th>
+                  <th data-i18n="table.answer">Respuesta</th>
+                  <th data-i18n="table.status">Estado</th>
+                  <th data-i18n="table.index">Índice</th>
                   <th></th>
                 </tr>
               </thead>
               <tbody id="faq-tbody"></tbody>
             </table>
           </div>
+          <div id="faq-cards" class="faq-cards faq-mobile-only" aria-live="polite"></div>
         </section>
 
         <section id="view-unanswered" class="view hidden">
           <div class="toolbar">
             <div>
-              <h2>Preguntas sin respuesta</h2>
+              <h2 data-i18n="unanswered.title">Preguntas sin respuesta</h2>
               <p class="faq-count" id="unanswered-count"></p>
             </div>
             <div class="toolbar-actions">
               <label>
-                Estado
+                <span data-i18n="unanswered.filter">Estado</span>
                 <select id="unanswered-filter" class="select-inline">
-                  <option value="">Todas</option>
-                  <option value="pending" selected>Pendientes</option>
-                  <option value="converted_to_faq">Convertidas</option>
-                  <option value="ignored">Ignoradas</option>
-                  <option value="resolved_manually">Resueltas manual</option>
+                  <option value="" data-i18n="unanswered.filterAll">Todas</option>
+                  <option value="pending" selected data-i18n="unanswered.filterPending">Pendientes</option>
+                  <option value="converted_to_faq" data-i18n="unanswered.filterConverted">Convertidas</option>
+                  <option value="ignored" data-i18n="unanswered.filterIgnored">Ignoradas</option>
+                  <option value="resolved_manually" data-i18n="unanswered.filterResolved">Resueltas manual</option>
                 </select>
               </label>
             </div>
           </div>
-          <p class="hint">
+          <p class="hint" id="unanswered-hint" data-i18n="unanswered.hint" data-i18n-html="true">
             Escribe la respuesta aquí mismo y pulsa <strong>Responderla</strong> para guardar la FAQ e indexarla en Qdrant.
           </p>
           <p class="form-msg" id="unanswered-msg"></p>
@@ -100,129 +122,203 @@
         </section>
 
         <section id="view-profile" class="view hidden">
-          <h2>Mi cuenta</h2>
+          <h2 data-i18n="profile.title">Mi cuenta</h2>
           <form id="profile-form" class="form card-inner">
             <label>
-              Email (login)
-              <input type="email" id="profile-email" disabled />
+              <span data-i18n="profile.email">Email (login)</span>
+              <input type="email" id="profile-email" autocomplete="username" required />
             </label>
+            <p class="hint profile-email-hint" data-i18n="profile.emailHint">
+              Para cambiar el email debes ingresar tu contraseña actual abajo.
+            </p>
             <label>
-              Nombre del negocio
-              <input type="text" id="profile-business" placeholder="Ej. MorroReservas" />
+              <span data-i18n="profile.business">Nombre del negocio</span>
+              <input type="text" id="profile-business" data-i18n-placeholder="profile.businessPlaceholder" placeholder="Ej. MorroReservas" />
             </label>
             <label id="profile-slug-wrap" class="hidden">
-              Slug técnico (Qdrant / n8n)
+              <span data-i18n="profile.slug">Slug técnico (Qdrant / n8n)</span>
               <input type="text" id="profile-slug" disabled />
             </label>
             <fieldset>
-              <legend>Cambiar contraseña</legend>
+              <legend data-i18n="profile.changePassword">Cambiar contraseña</legend>
               <label>
-                Contraseña actual
+                <span data-i18n="profile.currentPassword">Contraseña actual</span>
                 <input type="password" id="profile-current-password" autocomplete="current-password" />
               </label>
               <label>
-                Nueva contraseña
+                <span data-i18n="profile.newPassword">Nueva contraseña</span>
                 <input type="password" id="profile-new-password" autocomplete="new-password" />
               </label>
             </fieldset>
-            <button type="submit" class="btn primary">Guardar cambios</button>
+            <button type="submit" class="btn primary" data-i18n="btn.save">Guardar cambios</button>
+            <button type="button" class="btn ghost block profile-logout" id="btn-logout-profile" data-i18n="nav.logout">
+              Salir
+            </button>
             <p class="form-msg" id="profile-msg"></p>
           </form>
         </section>
 
         <section id="view-admin" class="view hidden">
-          <h2>Administrar posadas</h2>
+          <h2 data-i18n="admin.title">Administrar posadas</h2>
           <form id="admin-tenant-form" class="form card-inner">
-            <h3>Nueva posada</h3>
+            <h3 data-i18n="admin.newTenant">Nueva posada</h3>
             <label>
-              Slug técnico (para Qdrant / n8n)
+              <span data-i18n="admin.slug">Slug técnico (para Qdrant / n8n)</span>
               <input type="text" id="admin-slug" placeholder="morroreservas" required />
             </label>
             <label>
-              Email del cliente (login)
+              <span data-i18n="admin.clientEmail">Email del cliente (login)</span>
               <input type="email" id="admin-email" placeholder="reservas@ejemplo.cl" required />
             </label>
             <label>
-              Contraseña inicial
+              <span data-i18n="admin.initialPassword">Contraseña inicial</span>
               <input type="password" id="admin-password" minlength="8" required />
             </label>
             <label>
-              Slug del agente (opcional)
+              <span data-i18n="admin.agentSlug">Slug del agente (opcional)</span>
               <input type="text" id="admin-agent-slug" placeholder="principal" />
             </label>
-            <button type="submit" class="btn primary">Crear posada</button>
+            <button type="submit" class="btn primary" data-i18n="btn.createTenant">Crear posada</button>
             <p class="form-msg" id="admin-msg"></p>
           </form>
-          <div class="table-wrap">
+          <div class="table-wrap admin-desktop-only">
             <table>
               <thead>
                 <tr>
-                  <th>Slug</th>
-                  <th>Nombre negocio</th>
-                  <th>Email cliente</th>
-                  <th>Agente</th>
+                  <th data-i18n="table.slug">Slug</th>
+                  <th data-i18n="table.businessName">Nombre negocio</th>
+                  <th data-i18n="table.clientEmail">Email cliente</th>
+                  <th data-i18n="table.agent">Agente</th>
                 </tr>
               </thead>
               <tbody id="admin-tbody"></tbody>
             </table>
           </div>
+          <div id="admin-cards" class="admin-cards admin-mobile-only" aria-live="polite"></div>
         </section>
       </main>
+
+      <nav class="bottomnav" id="bottom-nav" data-i18n="nav.aria" data-i18n-attr="aria-label">
+        <button type="button" class="bottomnav-item active" data-view="dashboard">
+          <span class="bottomnav-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24"><path d="M4 6h16v2H4V6zm0 5h16v2H4v-2zm0 5h16v2H4v-2z"/></svg>
+          </span>
+          <span class="bottomnav-label" data-i18n="nav.faqs">FAQs</span>
+        </button>
+        <button type="button" class="bottomnav-item hidden" id="bottom-nav-unanswered" data-view="unanswered">
+          <span class="bottomnav-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24"><path d="M12 2a7 7 0 0 0-7 7c0 5.25 7 13 7 13s7-7.75 7-13a7 7 0 0 0-7-7zm0 9.5A2.5 2.5 0 1 1 12 6a2.5 2.5 0 0 1 0 5.5z"/></svg>
+          </span>
+          <span class="bottomnav-label" data-i18n="nav.unansweredShort">Sin resp.</span>
+          <span class="nav-badge hidden" id="bottom-unanswered-badge">0</span>
+        </button>
+        <button type="button" class="bottomnav-item" data-view="profile">
+          <span class="bottomnav-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24"><path d="M12 12a5 5 0 1 0-5-5 5 5 0 0 0 5 5zm0 2c-4.42 0-8 2.24-8 5v1h16v-1c0-2.76-3.58-5-8-5z"/></svg>
+          </span>
+          <span class="bottomnav-label" data-i18n="nav.profileShort">Cuenta</span>
+        </button>
+        <button type="button" class="bottomnav-item hidden" id="bottom-nav-admin" data-view="admin">
+          <span class="bottomnav-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24"><path d="M12 1 3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4zm0 10.99h7c-.53 4.12-3.28 7.79-7 8.94V12H5V6.3l7-3.11v8.8z"/></svg>
+          </span>
+          <span class="bottomnav-label" data-i18n="nav.admin">Admin</span>
+        </button>
+      </nav>
     </div>
 
     <div id="login-screen" class="login-screen">
+      <div class="lang-picker lang-picker-login" data-lang-picker id="lang-picker-login"></div>
+      <div class="login-brand">
+        <img
+          src="/logo-at-once-ai.png"
+          alt="AT-Once-AI"
+          class="login-logo"
+          width="320"
+          height="107"
+        />
+        <p class="login-product">DFAQ</p>
+        <p class="badge login-version" data-app-version>DFAQ v2.4.3</p>
+      </div>
       <form id="login-form" class="card login-card">
-        <p class="badge" data-app-version>DFAQ v2.2.6</p>
-        <h1>Iniciar sesión</h1>
-        <p class="lead">Administra las respuestas de tu negocio.</p>
+        <h1 data-i18n="login.title">Iniciar sesión</h1>
+        <p class="lead" data-i18n="login.lead">Administra las respuestas de tu negocio.</p>
         <label>
-          Email
+          <span data-i18n="login.email">Email</span>
           <input type="email" id="login-email" required autocomplete="username" />
         </label>
         <label>
-          Contraseña
-          <input type="password" id="login-password" required autocomplete="current-password" />
+          <span data-i18n="login.password">Contraseña</span>
+          <span class="password-field">
+            <input
+              type="password"
+              id="login-password"
+              required
+              autocomplete="current-password"
+            />
+            <button
+              type="button"
+              class="password-toggle"
+              id="login-password-toggle"
+              data-i18n="login.showPassword"
+              data-i18n-attr="aria-label"
+              aria-label="Mostrar contraseña"
+              title="Mostrar contraseña"
+            >
+              <svg class="icon-eye" viewBox="0 0 24 24" aria-hidden="true">
+                <path
+                  d="M12 5C7.27 5 3.47 7.61 2 11.5c1.47 3.89 5.27 6.5 10 6.5s8.53-2.61 10-6.5C20.53 7.61 16.73 5 12 5zm0 11a4.5 4.5 0 1 1 0-9 4.5 4.5 0 0 1 0 9zm0-7a2.5 2.5 0 1 0 0 5 2.5 2.5 0 0 0 0-5z"
+                />
+              </svg>
+              <svg class="icon-eye-off hidden" viewBox="0 0 24 24" aria-hidden="true">
+                <path
+                  d="M3.27 3.27 2 4.54l2.09 2.09C2.8 8.23 1.73 9.77 1 11.5 2.47 15.39 6.27 18 11 18c1.55 0 3-.35 4.28-.97l2.13 2.13 1.27-1.27L3.27 3.27zM11 16c-3.04 0-5.64-1.86-6.77-4.5.52-1.22 1.4-2.25 2.52-2.97l1.76 1.76A4.48 4.48 0 0 0 11 16zm7.23-4.5c-.35-.93-.9-1.76-1.6-2.45l1.43 1.43c.7.8 1.25 1.73 1.6 2.66-.52 1.22-1.4 2.25-2.52 2.97l-1.43-1.43c.7-.69 1.25-1.52 1.6-2.45zM11 8.5a3.01 3.01 0 0 1 2.83 2.03L9.47 5.67A3.01 3.01 0 0 1 11 8.5z"
+                />
+              </svg>
+            </button>
+          </span>
         </label>
-        <button type="submit" class="btn primary block">Entrar</button>
+        <button type="submit" class="btn primary block" data-i18n="login.submit">Entrar</button>
         <p class="form-msg" id="login-msg"></p>
       </form>
     </div>
 
     <dialog id="faq-dialog">
       <form id="faq-form" method="dialog" class="form">
-        <h3 id="faq-dialog-title">Editar FAQ</h3>
+        <h3 id="faq-dialog-title" data-i18n="faq.edit">Editar FAQ</h3>
         <input type="hidden" id="faq-id" />
         <label>
-          Pregunta
+          <span data-i18n="table.question">Pregunta</span>
           <textarea id="faq-question" rows="2" required></textarea>
         </label>
         <label>
-          Respuesta
+          <span data-i18n="table.answer">Respuesta</span>
           <textarea id="faq-answer" rows="4" required></textarea>
         </label>
         <label>
-          Categoría
+          <span data-i18n="faq.category">Categoría</span>
           <input type="text" id="faq-category" />
         </label>
         <label>
-          Keywords
-          <input type="text" id="faq-keywords" placeholder="wifi, internet, reserva" />
+          <span data-i18n="faq.keywords">Keywords</span>
+          <input type="text" id="faq-keywords" data-i18n-placeholder="faq.keywordsPlaceholder" placeholder="wifi, internet, reserva" />
         </label>
         <label class="checkbox">
           <input type="checkbox" id="faq-active" checked />
-          Activa
+          <span data-i18n="faq.active">Activa</span>
         </label>
         <div class="dialog-actions">
-          <button type="button" class="btn danger hidden" id="faq-delete">Eliminar</button>
+          <button type="button" class="btn danger hidden" id="faq-delete" data-i18n="btn.delete">Eliminar</button>
           <div class="dialog-actions-right">
-            <button type="button" class="btn ghost" id="faq-cancel">Cancelar</button>
-            <button type="submit" class="btn primary" id="faq-save">Guardar e indexar</button>
+            <button type="button" class="btn ghost" id="faq-cancel" data-i18n="btn.cancel">Cancelar</button>
+            <button type="submit" class="btn primary" id="faq-save" data-i18n="btn.saveIndex">Guardar e indexar</button>
           </div>
         </div>
         <p class="form-msg" id="faq-msg"></p>
       </form>
     </dialog>
 
-    <script src="/app.js?v=2.2.6"></script>
+    <script src="/i18n.js?v=2.4.3"></script>
+    <script src="/app.js?v=2.4.3"></script>
   </body>
 </html>
