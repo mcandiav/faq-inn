@@ -1,4 +1,4 @@
-const APP_VERSION = '2.4.2';
+const APP_VERSION = '2.4.3';
 const apiBase = window.DFAQ_API_URL || '/api';
 const VIEW_STORAGE_KEY = 'dfaq-current-view';
 const VALID_VIEWS = ['dashboard', 'unanswered', 'profile', 'admin'];
@@ -211,6 +211,7 @@ function renderProfile() {
     return;
   }
 
+  emailEl.disabled = false;
   emailEl.value = user.email || '';
 
   if (user.role === 'client') {
@@ -997,6 +998,10 @@ $('#profile-form').addEventListener('submit', async (event) => {
   msg.className = 'form-msg';
 
   const body = {};
+  const email = $('#profile-email').value.trim().toLowerCase();
+  if (email) {
+    body.email = email;
+  }
   if (state.user?.role === 'client') {
     body.business_name = $('#profile-business').value.trim();
   }
