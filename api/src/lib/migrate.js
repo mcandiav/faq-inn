@@ -57,6 +57,39 @@ CREATE TABLE IF NOT EXISTS faq_items (
   CONSTRAINT fk_faq_tenant FOREIGN KEY (tenant_id) REFERENCES tenants (id) ON DELETE CASCADE,
   CONSTRAINT fk_faq_agent FOREIGN KEY (agent_id) REFERENCES agents (id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS unanswered_questions (
+  id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  tenant_id BIGINT UNSIGNED NOT NULL,
+  agent_id BIGINT UNSIGNED NOT NULL,
+  tenant_slug VARCHAR(64) NOT NULL,
+  channel VARCHAR(64) NOT NULL DEFAULT '',
+  remote_id VARCHAR(255) NOT NULL DEFAULT '',
+  contact_name VARCHAR(255) NOT NULL DEFAULT '',
+  question TEXT NOT NULL,
+  language VARCHAR(16) NOT NULL DEFAULT 'es',
+  score DECIMAL(10, 8) NULL,
+  suggested_faq_id VARCHAR(64) NULL,
+  suggested_faq_question TEXT NULL,
+  status ENUM(
+    'pending',
+    'converted_to_faq',
+    'ignored',
+    'duplicate',
+    'resolved_manually'
+  ) NOT NULL DEFAULT 'pending',
+  converted_faq_id BIGINT UNSIGNED NULL,
+  resolved_by BIGINT UNSIGNED NULL,
+  resolved_at TIMESTAMP NULL,
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  KEY idx_unanswered_tenant_status (tenant_id, status),
+  KEY idx_unanswered_agent (agent_id),
+  CONSTRAINT fk_unanswered_tenant FOREIGN KEY (tenant_id) REFERENCES tenants (id) ON DELETE CASCADE,
+  CONSTRAINT fk_unanswered_agent FOREIGN KEY (agent_id) REFERENCES agents (id) ON DELETE CASCADE,
+  CONSTRAINT fk_unanswered_faq FOREIGN KEY (converted_faq_id) REFERENCES faq_items (id) ON DELETE SET NULL,
+  CONSTRAINT fk_unanswered_resolver FOREIGN KEY (resolved_by) REFERENCES users (id) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 `;
 
 export async function runMigrations(pool, config) {

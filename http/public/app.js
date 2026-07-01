@@ -1,9 +1,44 @@
+const APP_VERSION = '2.2.0';
 const apiBase = window.DFAQ_API_URL || '/api';
 
-const state = { user: null, faqs: [] };
+const state = { user: null, faqs: [], unanswered: [] };
 
 const $ = (sel) => document.querySelector(sel);
 const $$ = (sel) => document.querySelectorAll(sel);
+
+function versionLabel(gitCommit) {
+  const base = `DFAQ v${APP_VERSION}`;
+  const hash = gitCommit?.trim();
+  if (hash && hash !== 'unknown') {
+    return `${base} @${hash}`;
+  }
+  return base;
+}
+
+function applyAppVersion(gitCommit) {
+  const label = versionLabel(gitCommit);
+  document.title = label;
+  $$('[data-app-version]').forEach((el) => {
+    el.textContent = label;
+  });
+}
+
+async function loadDeployVersion() {
+  try {
+    const response = await fetch(`${apiBase}/health`, {
+      credentials: 'same-origin',
+      headers: { Accept: 'application/json' },
+    });
+    if (!response.ok) {
+      applyAppVersion();
+      return;
+    }
+    const data = await response.json();
+    applyAppVersion(data.git?.commit);
+  } catch {
+    applyAppVersion();
+  }
+}
 
 async function api(path, options = {}) {
   const response = await fetch(`${apiBase}${path}`, {
@@ -74,6 +109,7 @@ function renderHeader() {
   $('#business-name').textContent = business;
   $('#user-email').textContent = user?.email || '';
   $('#nav-admin').classList.toggle('hidden', !isAdmin);
+  $('#nav-unanswered').classList.toggle('hidden', isAdmin);
 
   const businessInput = $('#profile-business');
   if (user?.role === 'client') {
@@ -145,6 +181,147 @@ function renderFaqs() {
   });
 }
 
+function statusLabel(status) {
+  const map = {
+    pending: ['Pendiente', 'warn'],
+    converted_to_faq: ['Convertida', 'ok'],
+    ignored: ['Ignorada', 'off'],
+    duplicate: ['Duplicada', 'off'],
+    resolved_manually: ['Resuelta', 'ok'],
+  };
+  const [label, kind] = map[status] || [status, 'off'];
+  return `<span class="pill ${kind}">${label}</span>`;
+}
+
+function renderUnanswered() {
+  const tbody = $('#unanswered-tbody');
+  tbody.innerHTML = '';
+
+  if (state.user?.role !== 'client') {
+    $('#unanswered-count').textContent = '';
+    tbody.innerHTML =
+      '<tr><td colspan="7" class="empty">Vista solo para clientes.</td></tr>';
+    return;
+  }
+
+  const items = state.unanswered;
+  const pending = items.filter((item) => item.status === 'pending').length;
+  const badge = $('#unanswered-badge');
+
+  if (pending > 0) {
+    badge.textContent = String(pending);
+    badge.classList.remove('hidden');
+  } else {
+    badge.classList.add('hidden');
+  }
+
+  $('#unanswered-count').textContent = items.length
+    ? `${items.length} registro(s) — ${pending} pendiente(s)`
+    : 'Sin registros con este filtro';
+
+  if (!items.length) {
+    tbody.innerHTML =
+      '<tr><td colspan="7" class="empty">No hay preguntas sin respuesta con este filtro.</td></tr>';
+    return;
+  }
+
+  items.forEach((item) => {
+    const tr = document.createElement('tr');
+    const canAct = item.status === 'pending';
+    const suggested = item.suggested_faq_question
+      ? escapeHtml(truncate(item.suggested_faq_question, 60))
+      : item.suggested_faq_id
+        ? `<code>${escapeHtml(item.suggested_faq_id)}</code>`
+        : '—';
+
+    tr.innerHTML = `
+      <td class="nowrap">${formatDate(item.created_at)}</td>
+      <td class="cell-text" title="${escapeAttr(item.question)}">${escapeHtml(item.question)}</td>
+      <td>${escapeHtml(item.contact_name || item.remote_id || '—')}</td>
+      <td>${item.score != null ? Number(item.score).toFixed(3) : '—'}</td>
+      <td class="cell-text">${suggested}</td>
+      <td>${statusLabel(item.status)}</td>
+      <td class="row-actions">
+        ${
+          canAct
+            ? `<button type="button" class="btn small primary" data-convert="${item.id}">Convertir</button>
+               <button type="button" class="btn small" data-ignore="${item.id}">Ignorar</button>`
+            : '—'
+        }
+      </td>
+    `;
+    tbody.appendChild(tr);
+  });
+
+  tbody.querySelectorAll('[data-convert]').forEach((btn) => {
+    btn.addEventListener('click', () => openConvertDialog(Number(btn.dataset.convert)));
+  });
+
+  tbody.querySelectorAll('[data-ignore]').forEach((btn) => {
+    btn.addEventListener('click', () => ignoreUnanswered(Number(btn.dataset.ignore)));
+  });
+}
+
+async function refreshUnanswered() {
+  if (state.user?.role !== 'client') {
+    state.unanswered = [];
+    renderUnanswered();
+    return;
+  }
+
+  const status = $('#unanswered-filter')?.value || '';
+  const query = status ? `?status=${encodeURIComponent(status)}` : '';
+  const data = await api(`/unanswered${query}`);
+  state.unanswered = data.items || [];
+  renderUnanswered();
+}
+
+function openConvertDialog(id) {
+  const item = state.unanswered.find((row) => row.id === id);
+  if (!item) {
+    return;
+  }
+
+  $('#convert-unanswered-id').value = id;
+  $('#convert-question').value = item.question || '';
+  $('#convert-answer').value = '';
+  $('#convert-category').value = '';
+  $('#convert-keywords').value = '';
+  $('#convert-msg').textContent = '';
+  $('#convert-dialog').showModal();
+}
+
+async function ignoreUnanswered(id) {
+  const item = state.unanswered.find((row) => row.id === id);
+  if (!item) {
+    return;
+  }
+
+  const ok = window.confirm(
+    `¿Ignorar esta pregunta?\n\n"${truncate(item.question, 80)}"`
+  );
+  if (!ok) {
+    return;
+  }
+
+  const msg = $('#unanswered-msg');
+  msg.textContent = 'Actualizando…';
+  msg.className = 'form-msg';
+
+  try {
+    await api(`/unanswered/${id}`, {
+      method: 'PATCH',
+      body: JSON.stringify({ status: 'ignored' }),
+    });
+    msg.textContent = 'Pregunta ignorada.';
+    msg.classList.add('ok');
+    await refreshUnanswered();
+  } catch (error) {
+    msg.textContent = error.message;
+    msg.classList.add('error');
+  }
+}
+
 function renderAdminTenants(tenants) {
   const tbody = $('#admin-tbody');
   tbody.innerHTML = '';
@@ -186,6 +363,9 @@ async function loadSession() {
     renderHeader();
     setView('dashboard');
     await refreshFaqs();
+    if (state.user.role === 'client') {
+      await refreshUnanswered();
+    }
     if (state.user.role === 'admin_global') {
       await refreshAdmin();
     }
@@ -343,6 +523,9 @@ $('#login-form').addEventListener('submit', async (event) => {
     renderHeader();
     setView('dashboard');
     await refreshFaqs();
+    if (state.user.role === 'client') {
+      await refreshUnanswered();
+    }
     if (state.user.role === 'admin_global') {
       await refreshAdmin();
     }
@@ -360,6 +543,7 @@ $('#btn-logout').addEventListener('click', async () => {
   }
   state.user = null;
   state.faqs = [];
+  state.unanswered = [];
   showLogin();
 });
 
@@ -368,6 +552,7 @@ $$('[data-view]').forEach((btn) => {
     const view = btn.dataset.view;
     setView(view);
     if (view === 'dashboard') await refreshFaqs();
+    if (view === 'unanswered') await refreshUnanswered();
     if (view === 'admin') await refreshAdmin();
   });
 });
@@ -420,6 +605,45 @@ $('#faq-form').addEventListener('submit', async (event) => {
       await api('/faqs', { method: 'POST', body: JSON.stringify(payload) });
     }
     $('#faq-dialog').close();
+    await refreshFaqs();
+  } catch (error) {
+    msg.textContent = error.message;
+    msg.classList.add('error');
+  } finally {
+    saveBtn.disabled = false;
+  }
+});
+
+$('#unanswered-filter').addEventListener('change', () => refreshUnanswered());
+
+$('#convert-cancel').addEventListener('click', () => $('#convert-dialog').close());
+
+$('#convert-form').addEventListener('submit', async (event) => {
+  event.preventDefault();
+  const msg = $('#convert-msg');
+  const saveBtn = $('#convert-save');
+  msg.textContent = 'Creando FAQ e indexando…';
+  msg.className = 'form-msg';
+  saveBtn.disabled = true;
+
+  const id = $('#convert-unanswered-id').value;
+  const payload = {
+    question: $('#convert-question').value.trim(),
+    answer: $('#convert-answer').value.trim(),
+    category: $('#convert-category').value.trim(),
+    keywords: $('#convert-keywords').value.trim(),
+  };
+
+  try {
+    await api(`/unanswered/${id}/convert`, {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    });
+    $('#convert-dialog').close();
+    const listMsg = $('#unanswered-msg');
+    listMsg.textContent = 'FAQ creada e indexada correctamente.';
+    listMsg.className = 'form-msg ok';
+    await refreshUnanswered();
     await refreshFaqs();
   } catch (error) {
     msg.textContent = error.message;
@@ -489,4 +713,5 @@ $('#admin-tenant-form').addEventListener('submit', async (event) => {
   }
 });
 
+loadDeployVersion();
 loadSession();

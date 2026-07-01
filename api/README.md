@@ -34,6 +34,10 @@ Parte de la arquitectura: `dfaq-api` + `dfaq-http` + MariaDB compartido. Ver [DE
 | POST | `/api/qdrant/collections/ensure` | Crear/verificar colección tenant |
 | POST | `/api/qdrant/faq/upsert-test` | Upsert FAQ WiFi de prueba |
 | POST | `/api/search` | Búsqueda semántica (consumo n8n) — ver [docs/N8N-SEARCH.md](../docs/N8N-SEARCH.md) |
+| POST | `/api/unanswered` | Registro de preguntas sin respuesta (n8n) |
+| GET | `/api/unanswered` | Listado para cliente autenticado |
+| PATCH | `/api/unanswered/:id` | Cambiar estado (`ignored`, `resolved_manually`, `pending`) |
+| POST | `/api/unanswered/:id/convert` | Convertir pregunta en FAQ e indexar en Qdrant |
 | POST | `/api/auth/login` | Login (cookie) |
 | GET | `/api/auth/me` | Sesión actual |
 | PATCH | `/api/auth/profile` | Nombre negocio / contraseña |

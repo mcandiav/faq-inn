@@ -3,19 +3,22 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>DFAQ</title>
-    <link rel="stylesheet" href="/styles.css?v=2.1.4" />
+    <title>DFAQ v2.2.0</title>
+    <link rel="stylesheet" href="/styles.css?v=2.2.0" />
   </head>
   <body>
     <div id="app" class="app hidden">
       <header class="topbar">
         <div>
-          <p class="badge">DFAQ</p>
+          <p class="badge" data-app-version>DFAQ v2.2.0</p>
           <h1 id="business-name">—</h1>
           <p class="sub" id="user-email">—</p>
         </div>
         <nav class="topnav">
           <button type="button" class="btn ghost" data-view="dashboard">FAQs</button>
+          <button type="button" class="btn ghost hidden" id="nav-unanswered" data-view="unanswered">
+            Sin respuesta <span class="nav-badge hidden" id="unanswered-badge">0</span>
+          </button>
           <button type="button" class="btn ghost" data-view="profile">Mi cuenta</button>
           <button type="button" class="btn ghost hidden" id="nav-admin" data-view="admin">
             Admin
@@ -66,6 +69,47 @@
                 </tr>
               </thead>
               <tbody id="faq-tbody"></tbody>
+            </table>
+          </div>
+        </section>
+
+        <section id="view-unanswered" class="view hidden">
+          <div class="toolbar">
+            <div>
+              <h2>Preguntas sin respuesta</h2>
+              <p class="faq-count" id="unanswered-count"></p>
+            </div>
+            <div class="toolbar-actions">
+              <label>
+                Estado
+                <select id="unanswered-filter" class="select-inline">
+                  <option value="">Todas</option>
+                  <option value="pending" selected>Pendientes</option>
+                  <option value="converted_to_faq">Convertidas</option>
+                  <option value="ignored">Ignoradas</option>
+                  <option value="resolved_manually">Resueltas manual</option>
+                </select>
+              </label>
+            </div>
+          </div>
+          <p class="hint">
+            Preguntas que tu agente no pudo responder. Conviértelas en FAQ para entrenar la base de conocimiento.
+          </p>
+          <p class="form-msg" id="unanswered-msg"></p>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Fecha</th>
+                  <th>Pregunta</th>
+                  <th>Contacto</th>
+                  <th>Score</th>
+                  <th>FAQ sugerida</th>
+                  <th>Estado</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody id="unanswered-tbody"></tbody>
             </table>
           </div>
         </section>
@@ -139,7 +183,7 @@
 
     <div id="login-screen" class="login-screen">
       <form id="login-form" class="card login-card">
-        <p class="badge">DFAQ</p>
+        <p class="badge" data-app-version>DFAQ v2.2.0</p>
         <h1>Iniciar sesión</h1>
         <p class="lead">Administra las respuestas de tu negocio.</p>
         <label>
@@ -190,6 +234,36 @@
       </form>
     </dialog>
 
-    <script src="/app.js?v=2.1.4"></script>
+    <dialog id="convert-dialog">
+      <form id="convert-form" method="dialog" class="form">
+        <h3>Convertir en FAQ</h3>
+        <input type="hidden" id="convert-unanswered-id" />
+        <label>
+          Pregunta
+          <textarea id="convert-question" rows="2" required></textarea>
+        </label>
+        <label>
+          Respuesta
+          <textarea id="convert-answer" rows="4" required placeholder="Escribe la respuesta que debe dar el agente"></textarea>
+        </label>
+        <label>
+          Categoría
+          <input type="text" id="convert-category" />
+        </label>
+        <label>
+          Keywords
+          <input type="text" id="convert-keywords" placeholder="opcional" />
+        </label>
+        <div class="dialog-actions">
+          <div class="dialog-actions-right">
+            <button type="button" class="btn ghost" id="convert-cancel">Cancelar</button>
+            <button type="submit" class="btn primary" id="convert-save">Crear FAQ e indexar</button>
+          </div>
+        </div>
+        <p class="form-msg" id="convert-msg"></p>
+      </form>
+    </dialog>
+
+    <script src="/app.js?v=2.2.0"></script>
   </body>
 </html>
