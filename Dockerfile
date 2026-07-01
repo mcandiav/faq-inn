@@ -1,38 +1,21 @@
-# EasyPanel usa el repositorio como contexto de build en la raíz.
-# Este Dockerfile construye el servicio `api` desde el subdirectorio api/.
+# Dockerfile para el servicio `http` cuando EasyPanel usa la raíz del repo.
+# En la rama `http`, este archivo se publica como /Dockerfile.
 
-FROM node:20-bookworm-slim
+FROM nginx:1.27-alpine
 
-RUN apt-get update \
-  && apt-get install -y --no-install-recommends \
-    mariadb-server \
-    mariadb-client \
-    wget \
-    ca-certificates \
-  && rm -rf /var/lib/apt/lists/*
+RUN apk add --no-cache gettext wget
 
-WORKDIR /app
+COPY http/nginx.conf.template /etc/nginx/templates/default.conf.template
+COPY http/docker/entrypoint.sh /entrypoint.sh
+COPY http/public /usr/share/nginx/html
 
-COPY api/package.json ./
-RUN npm install --omit=dev
-
-COPY api/src ./src
-COPY api/docker/entrypoint.sh /entrypoint.sh
 RUN chmod +x /entrypoint.sh
 
-ENV NODE_ENV=production
-ENV HOST=0.0.0.0
-ENV PORT=3000
-ENV MYSQL_DATABASE=dfaq
-ENV MYSQL_USER=dfaq
-ENV MYSQL_PASSWORD=dfaq
-ENV DATABASE_URL=mysql://dfaq:dfaq@127.0.0.1:3306/dfaq
+ENV API_UPSTREAM=http://dfaq-api:3000
 
-VOLUME ["/var/lib/mysql"]
+EXPOSE 80
 
-EXPOSE 3000
-
-HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
-  CMD wget -qO- http://127.0.0.1:3000/health || exit 1
+HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
+  CMD wget -qO- http://127.0.0.1/health || exit 1
 
 ENTRYPOINT ["/entrypoint.sh"]
