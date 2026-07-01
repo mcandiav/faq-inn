@@ -35,6 +35,8 @@ El worker de indexación se añadirá **como proceso dentro de `api`**, no como 
 
 ---
 
+> **EasyPanel:** el build usa la **raíz del repositorio**. El `Dockerfile` debe estar en `/`, no solo dentro de `api/` o `http/`.
+
 ## Estructura del repositorio
 
 ```text
@@ -67,7 +69,7 @@ dfaq/
 |---|---|
 | Fuente | GitHub `mcandiav/dfaq` |
 | Rama | `api` |
-| Directorio raíz / build | `api` |
+| Dockerfile | `/Dockerfile` en la **raíz del repo** (no `api/Dockerfile`) |
 | Puerto interno | `3000` |
 | Healthcheck | `GET /health` |
 | Volumen persistente | `/var/lib/mysql` |
@@ -99,7 +101,7 @@ DATABASE_URL=mysql://dfaq:<secreto>@127.0.0.1:3306/dfaq
 |---|---|
 | Fuente | GitHub `mcandiav/dfaq` |
 | Rama | `http` |
-| Directorio raíz / build | `http` |
+| Dockerfile | `/Dockerfile` en la **raíz del repo** (rama `http` apunta a build http) |
 | Puerto interno | `80` |
 | Dominio | `dfaq.at-once.cl` |
 | Healthcheck | `GET /health` |
