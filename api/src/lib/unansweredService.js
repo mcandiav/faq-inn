@@ -214,6 +214,52 @@ export async function updateUnansweredStatus(pool, id, user, status) {
   return { id: Number(id), status };
 }
 
+export async function updateUnansweredQuestion(pool, id, user, input = {}) {
+  const question = (input.question || input.consulta)?.trim();
+  if (!question) {
+    const error = new Error('question es obligatoria');
+    error.statusCode = 400;
+    throw error;
+  }
+
+  const row = await getUnansweredForUser(pool, id, user);
+  if (!row) {
+    const error = new Error('Pregunta no encontrada');
+    error.statusCode = 404;
+    throw error;
+  }
+
+  if (row.status !== 'pending') {
+    const error = new Error('Solo se pueden editar preguntas pendientes');
+    error.statusCode = 409;
+    throw error;
+  }
+
+  await pool.query('UPDATE unanswered_questions SET question = ? WHERE id = ?', [
+    question,
+    id,
+  ]);
+
+  return { id: Number(id), question };
+}
+
+export async function updateUnanswered(pool, id, user, body = {}) {
+  const hasQuestion = body.question !== undefined || body.consulta !== undefined;
+  const hasStatus = body.status !== undefined;
+
+  if (!hasQuestion && !hasStatus) {
+    const error = new Error('question o status es obligatorio');
+    error.statusCode = 400;
+    throw error;
+  }
+
+  if (hasStatus) {
+    return updateUnansweredStatus(pool, id, user, body.status);
+  }
+
+  return updateUnansweredQuestion(pool, id, user, body);
+}
+
 export async function deleteUnanswered(pool, id, user) {
   const row = await getUnansweredForUser(pool, id, user);
   if (!row) {
