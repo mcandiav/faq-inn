@@ -198,6 +198,14 @@ textarea {
   font: inherit;
 }
 
+input:disabled,
+textarea:disabled {
+  opacity: 1;
+  color: #e2e8f0;
+  background: #1e293b;
+  -webkit-text-fill-color: #e2e8f0;
+}
+
 textarea {
   resize: vertical;
 }
