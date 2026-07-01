@@ -1,8 +1,8 @@
 # DFAQ — servicio `api`
 
-Backend Fastify con **MariaDB embebido** en el mismo contenedor.
+Backend Fastify conectado a **MariaDB externo** (`bignotti_mariadb` en EasyPanel).
 
-Parte de la arquitectura de 2 servicios: `api` + `http`. Ver [DEPLOY.md](../DEPLOY.md).
+Parte de la arquitectura: `dfaq-api` + `dfaq-http` + MariaDB compartido. Ver [DEPLOY.md](../DEPLOY.md).
 
 ## Rol
 
@@ -10,8 +10,8 @@ Parte de la arquitectura de 2 servicios: `api` + `http`. Ver [DEPLOY.md](../DEPL
 |---|---|
 | Rama Git | `api` |
 | Puerto | `3000` |
-| Base de datos | MariaDB en `127.0.0.1:3306` (mismo contenedor) |
-| Persistencia | Volumen `/var/lib/mysql` |
+| Base de datos | MariaDB `bignotti_mariadb:3306`, base `dfaq` |
+| Persistencia | Volumen en el servicio MariaDB (no en `dfaq-api`) |
 | Qdrant | Externo vía `QDRANT_URL` |
 | Embeddings | NVIDIA API `baai/bge-m3` (por defecto) |
 
@@ -34,6 +34,11 @@ Parte de la arquitectura de 2 servicios: `api` + `http`. Ver [DEPLOY.md](../DEPL
 | POST | `/api/qdrant/collections/ensure` | Crear/verificar colección tenant |
 | POST | `/api/qdrant/faq/upsert-test` | Upsert FAQ WiFi de prueba |
 | POST | `/api/search` | Búsqueda semántica |
+| POST | `/api/auth/login` | Login (cookie) |
+| GET | `/api/auth/me` | Sesión actual |
+| PATCH | `/api/auth/profile` | Nombre negocio / contraseña |
+| GET/POST | `/api/admin/tenants` | Alta posadas (admin) |
+| CRUD | `/api/faqs` | FAQs con reindex inmediato |
 
 ## Embeddings (V1.8)
 
@@ -62,9 +67,6 @@ QDRANT_COLLECTION_TEMPLATE=kb_<tenant_slug>_openai_1536
 
 ## Arranque
 
-El script `docker/entrypoint.sh`:
+El script `docker/entrypoint.sh` ejecuta solo Node. Las migraciones SQL corren al iniciar la API.
 
-1. Espera lock exclusivo de `/var/lib/mysql`.
-2. Inicializa MariaDB si es primera ejecución.
-3. Crea base `dfaq` y usuario.
-4. Arranca la API Node con apagado graceful en SIGTERM.
+Inicialización de la base: automática en el primer arranque con `DB_ADMIN_PASSWORD` (root MariaDB). Ver `src/lib/bootstrapDb.js`.
