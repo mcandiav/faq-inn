@@ -1,13 +1,9 @@
 # EasyPanel usa el repositorio como contexto de build en la raíz.
 # Este Dockerfile construye el servicio `api` desde el subdirectorio api/.
 
-FROM alpine:3.20 AS git-meta
-RUN apk add --no-cache git
-WORKDIR /src
-COPY .git ./.git
-RUN git rev-parse --short HEAD > /git-commit.txt 2>/dev/null || echo unknown > /git-commit.txt
-
 FROM node:20-bookworm-slim
+
+ARG GIT_SHA=unknown
 
 RUN apt-get update \
   && apt-get install -y --no-install-recommends wget ca-certificates \
@@ -20,12 +16,13 @@ RUN npm install --omit=dev
 
 COPY api/src ./src
 COPY api/docker/entrypoint.sh /entrypoint.sh
-COPY --from=git-meta /git-commit.txt /app/.git-commit
-RUN chmod +x /entrypoint.sh
+RUN chmod +x /entrypoint.sh \
+  && printf '%.7s\n' "${GIT_SHA}" > /app/.git-commit
 
 ENV NODE_ENV=production
 ENV HOST=0.0.0.0
 ENV PORT=3000
+ENV DFAQ_GIT_COMMIT=${GIT_SHA}
 
 EXPOSE 3000
 
