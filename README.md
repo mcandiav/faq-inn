@@ -1,10 +1,12 @@
-# FAQ multiusuario
+# FAQ multiusuario (DFAQ)
+
+> **Despliegue:** ver [DEPLOY.md](./DEPLOY.md) — 2 contenedores (`api` + `http`), MariaDB embebido en `api`.
 
 ## Bitácora de cambios
 
 | Fecha | Versión | Cambio realizado | Motivo | Impacto | Sección afectada |
 |---|---|---|---|---|---|
-| 2026-06-30 | V1.4 | Se define dominio público MVP `dfaq.at-once.cl`. | Miguel define el subdominio que se usará para publicar la aplicación en EasyPanel. | La arquitectura de despliegue queda con `APP_URL=https://dfaq.at-once.cl`; EasyPanel/Cloudflare/Traefik deberán publicar la app en ese dominio. | Arquitectura de despliegue en EasyPanel |
+| 2026-06-30 | V1.5 | Arquitectura reducida a 2 servicios Docker (`api` + `http`) con ramas Git homónimas; MariaDB embebido en `api`. | Miguel prefiere 2 contenedores (api/http) en lugar de 4 (web, api, worker, mariadb). | EasyPanel despliega `dfaq-api` desde rama `api` y `dfaq-http` desde rama `http`; MariaDB persiste en volumen `/var/lib/mysql` dentro de `api`. | DEPLOY.md, estructura repositorio |
 | 2026-06-30 | V1.3 | Se define colección Qdrant separada por cliente como estrategia inicial. | Miguel prefiere aislar clientes por colección para simplificar borrado, separación operativa y reducir riesgo de mezcla de datos entre clientes. | El MVP debe crear/verificar una colección por tenant, usando nombres normalizados; se mantiene `tenant_id` y `agent_id` en payload como defensa adicional. | Estrategia Qdrant, Modelo de datos, Plan de programación MVP |
 | 2026-06-30 | V1.2 | Se adelanta Qdrant al inicio del MVP y se registra endpoint interno. | Miguel define que si Qdrant no funciona todo el proyecto es estéril, por lo que debe validarse desde el arranque del desarrollo. | El plan de programación cambia: la primera base técnica debe comprobar conectividad, colección, upsert y search contra `http://n8n_qdrant:6333/` antes del CRUD completo. | Estrategia Qdrant, Arquitectura de despliegue en EasyPanel, Plan de programación MVP |
 | 2026-06-30 | V1.1 | Se define EasyPanel como plataforma obligatoria de despliegue. | Miguel confirma que el programa debe levantarse en EasyPanel y que la arquitectura debe nutrirse de `infra.md`. | La solución queda condicionada a servicios Docker operables desde EasyPanel, con proyecto propio, MariaDB propia y conexión controlada con Qdrant/n8n existentes. | Arquitectura de despliegue en EasyPanel |

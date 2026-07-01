@@ -22,8 +22,9 @@ try {
       appEnv: config.appEnv,
       appUrl: config.appUrl,
       qdrantUrl: config.qdrantUrl,
+      databaseUrl: config.databaseUrl.replace(/:([^:@]+)@/, ':***@'),
     },
-    'faq-api started'
+    'dfaq-api started'
   );
 } catch (error) {
   app.log.error(error);

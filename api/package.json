@@ -1,7 +1,7 @@
 {
-  "name": "faq-api",
-  "version": "0.1.0",
-  "description": "API minima FAQ multiusuario - Fase 1: healthcheck y conectividad Qdrant",
+  "name": "dfaq-api",
+  "version": "0.2.0",
+  "description": "DFAQ API — backend + MariaDB embebido",
   "type": "module",
   "main": "src/index.js",
   "scripts": {
@@ -13,6 +13,7 @@
   },
   "dependencies": {
     "dotenv": "^16.4.7",
-    "fastify": "^5.2.1"
+    "fastify": "^5.2.1",
+    "mysql2": "^3.14.0"
   }
 }
