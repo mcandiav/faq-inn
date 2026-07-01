@@ -73,6 +73,8 @@ Evitar `Co-authored-by:` en commits de deploy (aparece en la misma línea del hi
 
 Tras deploy, verificar commit en producción: `GET https://dfaq.at-once.cl/api/health` → campo `git.commit`.
 
+EasyPanel pasa `GIT_SHA` al build (sin carpeta `.git` en el archive). Los Dockerfiles usan ese build-arg, no `COPY .git`.
+
 
 ## Estructura del repositorio
 
