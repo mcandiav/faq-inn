@@ -411,11 +411,49 @@ code {
   gap: 0.65rem;
 }
 
-.unanswered-facts > div {
+.unanswered-facts > div,
+.unanswered-facts-row {
   display: grid;
-  grid-template-columns: 7.5rem 1fr;
+  grid-template-columns: 7.5rem minmax(0, 1fr);
   gap: 0.5rem;
   align-items: start;
+}
+
+.unanswered-consulta-edit,
+.unanswered-field-label {
+  display: block;
+  width: 100%;
+  margin-top: 0.9rem;
+}
+
+.unanswered-consulta-edit .btn {
+  margin-top: 0.5rem;
+}
+
+.unanswered-field-label textarea,
+.unanswered-question-input,
+.unanswered-answer {
+  display: block;
+  width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+  margin-top: 0.35rem;
+  padding: 0.65rem 0.75rem;
+  border: 1px solid #475569;
+  border-radius: 10px;
+  background: #0f172a;
+  color: #e2e8f0;
+  font: inherit;
+  line-height: 1.45;
+  resize: vertical;
+}
+
+.unanswered-question-input {
+  min-height: 4.5rem;
+}
+
+.unanswered-answer {
+  min-height: 6.5rem;
 }
 
 .unanswered-facts dt {
@@ -431,14 +469,6 @@ code {
 
 .unanswered-facts .unanswered-question {
   font-weight: 600;
-}
-
-.unanswered-consulta-edit {
-  margin-top: 0.75rem;
-}
-
-.unanswered-consulta-edit .btn {
-  margin-top: 0.5rem;
 }
 
 .unanswered-card-head {
@@ -469,26 +499,6 @@ code {
 
 .unanswered-suggested span {
   color: #94a3b8;
-}
-
-.unanswered-answer-label {
-  display: block;
-  margin-top: 0.9rem;
-}
-
-.unanswered-answer-label textarea,
-.unanswered-answer,
-.unanswered-question-input {
-  width: 100%;
-  margin-top: 0.35rem;
-  padding: 0.65rem 0.75rem;
-  border: 1px solid #475569;
-  border-radius: 10px;
-  background: #0f172a;
-  color: #e2e8f0;
-  font: inherit;
-  line-height: 1.45;
-  resize: vertical;
 }
 
 .unanswered-actions {
