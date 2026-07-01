@@ -1,4 +1,4 @@
-const APP_VERSION = '2.2.6';
+const APP_VERSION = '2.2.7';
 const apiBase = window.DFAQ_API_URL || '/api';
 
 const state = { user: null, faqs: [], unanswered: [] };
@@ -687,6 +687,23 @@ async function reindexFaqs() {
     btn.disabled = false;
   }
 }
+
+$('#login-password-toggle')?.addEventListener('click', () => {
+  const input = $('#login-password');
+  const btn = $('#login-password-toggle');
+  const eye = btn?.querySelector('.icon-eye');
+  const eyeOff = btn?.querySelector('.icon-eye-off');
+  if (!input || !btn || !eye || !eyeOff) {
+    return;
+  }
+
+  const show = input.type === 'password';
+  input.type = show ? 'text' : 'password';
+  eye.classList.toggle('hidden', show);
+  eyeOff.classList.toggle('hidden', !show);
+  btn.setAttribute('aria-label', show ? 'Ocultar contraseña' : 'Mostrar contraseña');
+  btn.title = show ? 'Ocultar contraseña' : 'Mostrar contraseña';
+});
 
 $('#login-form').addEventListener('submit', async (event) => {
   event.preventDefault();
