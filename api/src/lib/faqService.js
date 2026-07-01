@@ -1,0 +1,168 @@
+import { indexFaqItem, newFaqUid, removeFaqFromQdrant } from './indexer.js';
+
+export async function getDefaultAgent(pool, tenantId) {
+  const [rows] = await pool.query(
+    `SELECT id, slug, name FROM agents
+     WHERE tenant_id = ? AND status = 'active'
+     ORDER BY id ASC LIMIT 1`,
+    [tenantId]
+  );
+  return rows[0] || null;
+}
+
+export async function createFaqRecord(pool, config, user, faqInput) {
+  const tenantId = user.tenant_id;
+  const tenantSlug = user.tenant_slug;
+
+  if (!tenantId || !tenantSlug) {
+    const error = new Error('Solo clientes pueden crear FAQs');
+    error.statusCode = 403;
+    throw error;
+  }
+
+  const question = faqInput.question?.trim();
+  const answer = faqInput.answer?.trim();
+  const category = faqInput.category?.trim() || '';
+  const keywords = faqInput.keywords?.trim() || '';
+  const language = faqInput.language?.trim() || 'es';
+  const active = faqInput.active !== false;
+
+  if (!question || !answer) {
+    const error = new Error('question y answer son obligatorios');
+    error.statusCode = 400;
+    throw error;
+  }
+
+  let agent = null;
+  if (faqInput.agent_slug) {
+    const [rows] = await pool.query(
+      `SELECT id, slug FROM agents
+       WHERE tenant_id = ? AND slug = ? AND status = 'active'`,
+      [tenantId, faqInput.agent_slug]
+    );
+    agent = rows[0] || null;
+  } else {
+    agent = await getDefaultAgent(pool, tenantId);
+  }
+
+  if (!agent) {
+    const error = new Error('agente no encontrado');
+    error.statusCode = 400;
+    throw error;
+  }
+
+  const faqUid = newFaqUid();
+
+  const [result] = await pool.query(
+    `INSERT INTO faq_items
+     (tenant_id, agent_id, faq_uid, question, answer, category, keywords, language, active)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    [
+      tenantId,
+      agent.id,
+      faqUid,
+      question,
+      answer,
+      category,
+      keywords,
+      language,
+      active ? 1 : 0,
+    ]
+  );
+
+  const faqRow = {
+    faq_uid: faqUid,
+    question,
+    answer,
+    category,
+    keywords,
+    active,
+    agent_slug: agent.slug,
+  };
+
+  const indexed = await indexFaqItem(config, faqRow, tenantSlug);
+
+  await pool.query(
+    `UPDATE faq_items
+     SET qdrant_point_id = ?, embedding_hash = ?, indexed_at = ?
+     WHERE id = ?`,
+    [indexed.point_id, indexed.embedding_hash, indexed.indexed_at, result.insertId]
+  );
+
+  return {
+    id: result.insertId,
+    faq_uid: faqUid,
+    indexed: true,
+    collection: indexed.collection,
+  };
+}
+
+export async function deleteTenantFaqs(pool, config, tenantId, tenantSlug) {
+  const [rows] = await pool.query(
+    `SELECT id, faq_uid FROM faq_items WHERE tenant_id = ?`,
+    [tenantId]
+  );
+
+  if (rows.length === 0) {
+    return 0;
+  }
+
+  await pool.query('DELETE FROM faq_items WHERE tenant_id = ?', [tenantId]);
+
+  for (const faq of rows) {
+    try {
+      await removeFaqFromQdrant(config, tenantSlug, faq.faq_uid);
+    } catch {
+      /* ignore qdrant cleanup errors */
+    }
+  }
+
+  return rows.length;
+}
+
+export async function importFaqRows(pool, config, user, rows, options = {}) {
+  const maxRows = options.maxRows ?? 300;
+
+  if (rows.length === 0) {
+    const error = new Error('El archivo no tiene filas válidas (columna A: pregunta, B: respuesta)');
+    error.statusCode = 400;
+    throw error;
+  }
+
+  if (rows.length > maxRows) {
+    const error = new Error(`Máximo ${maxRows} filas por importación`);
+    error.statusCode = 400;
+    throw error;
+  }
+
+  let deleted = 0;
+  if (options.replace) {
+    deleted = await deleteTenantFaqs(pool, config, user.tenant_id, user.tenant_slug);
+  }
+
+  const created = [];
+  const errors = [];
+
+  for (const row of rows) {
+    try {
+      const faq = await createFaqRecord(pool, config, user, {
+        question: row.question,
+        answer: row.answer,
+      });
+      created.push({ id: faq.id, row: row.row });
+    } catch (error) {
+      errors.push({
+        row: row.row,
+        error: error.message,
+      });
+    }
+  }
+
+  return {
+    total_rows: rows.length,
+    created: created.length,
+    deleted,
+    errors,
+    faq_ids: created.map((item) => item.id),
+  };
+}

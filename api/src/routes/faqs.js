@@ -1,20 +1,14 @@
-import { indexFaqItem, newFaqUid, removeFaqFromQdrant } from '../lib/indexer.js';
+import { indexFaqItem, removeFaqFromQdrant } from '../lib/indexer.js';
+import { createFaqRecord, importFaqRows } from '../lib/faqService.js';
+import { parseSpreadsheetBuffer } from '../lib/parseSpreadsheet.js';
+
+const ALLOWED_EXTENSIONS = new Set(['.xlsx', '.xls', '.csv']);
 
 function tenantScope(user) {
   if (user.role === 'client') {
     return user.tenant_id;
   }
   return null;
-}
-
-async function getDefaultAgent(pool, tenantId) {
-  const [rows] = await pool.query(
-    `SELECT id, slug, name FROM agents
-     WHERE tenant_id = ? AND status = 'active'
-     ORDER BY id ASC LIMIT 1`,
-    [tenantId]
-  );
-  return rows[0] || null;
 }
 
 async function getFaqForUser(pool, faqId, user) {
@@ -35,6 +29,12 @@ async function getFaqForUser(pool, faqId, user) {
 
   const [rows] = await pool.query(sql, params);
   return rows[0] || null;
+}
+
+function fileExtension(filename) {
+  const lower = String(filename || '').toLowerCase();
+  const dot = lower.lastIndexOf('.');
+  return dot >= 0 ? lower.slice(dot) : '';
 }
 
 export async function faqRoutes(app, config) {
@@ -70,10 +70,10 @@ export async function faqRoutes(app, config) {
       params.push(request.query.agent_id);
     }
 
-    sql += ' ORDER BY f.updated_at DESC';
+    sql += ' ORDER BY f.id ASC';
 
     const [rows] = await pool.query(sql, params);
-    return { status: 'ok', faqs: rows };
+    return { status: 'ok', faqs: rows, total: rows.length };
   });
 
   app.get('/api/faqs/:id', { preHandler: [app.authenticate] }, async (request, reply) => {
@@ -88,93 +88,85 @@ export async function faqRoutes(app, config) {
 
   app.post('/api/faqs', { preHandler: [app.authenticate] }, async (request, reply) => {
     const user = request.user;
-    const tenantId = tenantScope(user);
 
-    if (!tenantId) {
+    if (!tenantScope(user)) {
       reply.code(403);
       return { status: 'error', error: 'Solo clientes pueden crear FAQs' };
     }
 
-    const question = request.body?.question?.trim();
-    const answer = request.body?.answer?.trim();
-    const category = request.body?.category?.trim() || '';
-    const keywords = request.body?.keywords?.trim() || '';
-    const language = request.body?.language?.trim() || 'es';
-    const active = request.body?.active !== false;
-
-    if (!question || !answer) {
-      reply.code(400);
-      return { status: 'error', error: 'question y answer son obligatorios' };
-    }
-
-    let agent = null;
-    if (request.body?.agent_slug) {
-      const [rows] = await pool.query(
-        `SELECT id, slug FROM agents
-         WHERE tenant_id = ? AND slug = ? AND status = 'active'`,
-        [tenantId, request.body.agent_slug]
-      );
-      agent = rows[0] || null;
-    } else {
-      agent = await getDefaultAgent(pool, tenantId);
-    }
-
-    if (!agent) {
-      reply.code(400);
-      return { status: 'error', error: 'agente no encontrado' };
-    }
-
-    const faqUid = newFaqUid();
-
-    const [result] = await pool.query(
-      `INSERT INTO faq_items
-       (tenant_id, agent_id, faq_uid, question, answer, category, keywords, language, active)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      [tenantId, agent.id, faqUid, question, answer, category, keywords, language, active ? 1 : 0]
-    );
-
-    const faqRow = {
-      faq_uid: faqUid,
-      question,
-      answer,
-      category,
-      keywords,
-      active,
-      agent_slug: agent.slug,
-    };
-
     try {
-      const indexed = await indexFaqItem(
-        config,
-        faqRow,
-        request.user.tenant_slug
-      );
-
-      await pool.query(
-        `UPDATE faq_items
-         SET qdrant_point_id = ?, embedding_hash = ?, indexed_at = ?
-         WHERE id = ?`,
-        [indexed.point_id, indexed.embedding_hash, indexed.indexed_at, result.insertId]
-      );
-
-      return {
-        status: 'ok',
-        faq: {
-          id: result.insertId,
-          faq_uid: faqUid,
-          indexed: true,
-          collection: indexed.collection,
-        },
-      };
+      const faq = await createFaqRecord(pool, config, user, request.body || {});
+      return { status: 'ok', faq };
     } catch (error) {
-      app.log.error({ err: error }, 'Indexación fallida tras crear FAQ');
-      reply.code(502);
+      const code = error.statusCode || 502;
+      app.log.error({ err: error }, 'Crear FAQ falló');
+      reply.code(code);
       return {
         status: 'error',
-        error: 'FAQ guardada en BD pero falló indexación Qdrant',
-        faq_id: result.insertId,
-        detail: error.message,
+        error: error.message,
+        detail: error.detail,
       };
+    }
+  });
+
+  app.post('/api/faqs/import', { preHandler: [app.authenticate] }, async (request, reply) => {
+    const user = request.user;
+
+    if (!tenantScope(user)) {
+      reply.code(403);
+      return { status: 'error', error: 'Solo clientes pueden importar FAQs' };
+    }
+
+    let buffer = null;
+    let filename = '';
+    let replace = false;
+
+    for await (const part of request.parts()) {
+      if (part.type === 'file') {
+        if (part.fieldname !== 'file') {
+          continue;
+        }
+        filename = part.filename || '';
+        buffer = await part.toBuffer();
+      } else if (part.fieldname === 'replace') {
+        replace = String(part.value).toLowerCase() === 'true';
+      }
+    }
+
+    if (!buffer || buffer.length === 0) {
+      reply.code(400);
+      return { status: 'error', error: 'Archivo requerido' };
+    }
+
+    const ext = fileExtension(filename);
+    if (!ALLOWED_EXTENSIONS.has(ext)) {
+      reply.code(400);
+      return {
+        status: 'error',
+        error: 'Formato no soportado. Usa Excel (.xlsx, .xls) o CSV',
+      };
+    }
+
+    let rows;
+    try {
+      rows = parseSpreadsheetBuffer(buffer, filename);
+    } catch (error) {
+      reply.code(400);
+      return { status: 'error', error: error.message };
+    }
+
+    try {
+      const result = await importFaqRows(pool, config, user, rows, { replace });
+      return {
+        status: 'ok',
+        import: result,
+        message: `${result.created} FAQ(s) importadas e indexadas`,
+      };
+    } catch (error) {
+      const code = error.statusCode || 500;
+      app.log.error({ err: error }, 'Importación de FAQs falló');
+      reply.code(code);
+      return { status: 'error', error: error.message };
     }
   });
 

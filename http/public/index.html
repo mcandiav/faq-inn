@@ -4,7 +4,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>DFAQ</title>
-    <link rel="stylesheet" href="/styles.css?v=1.9" />
+    <link rel="stylesheet" href="/styles.css?v=2.0" />
   </head>
   <body>
     <div id="app" class="app hidden">
@@ -27,17 +27,36 @@
       <main>
         <section id="view-dashboard" class="view">
           <div class="toolbar">
-            <h2>Preguntas y respuestas</h2>
-            <button type="button" class="btn primary" id="btn-new-faq">Nueva FAQ</button>
+            <div>
+              <h2>Preguntas y respuestas</h2>
+              <p class="faq-count" id="faq-count"></p>
+            </div>
+            <div class="toolbar-actions hidden" id="faq-client-actions">
+              <label class="btn ghost file-btn">
+                Importar Excel
+                <input
+                  type="file"
+                  id="faq-import-file"
+                  accept=".xlsx,.xls,.csv"
+                  hidden
+                />
+              </label>
+              <button type="button" class="btn primary" id="btn-new-faq">Nueva FAQ</button>
+            </div>
           </div>
           <p class="hint" id="dashboard-hint"></p>
+          <label class="checkbox import-replace hidden" id="import-replace-wrap">
+            <input type="checkbox" id="import-replace" />
+            Reemplazar todas las FAQs al importar
+          </label>
+          <p class="form-msg" id="import-msg"></p>
           <div class="table-wrap">
             <table>
               <thead>
                 <tr>
+                  <th>#</th>
                   <th>Pregunta</th>
                   <th>Respuesta</th>
-                  <th>Categoría</th>
                   <th>Estado</th>
                   <th>Índice</th>
                   <th></th>
@@ -165,6 +184,6 @@
       </form>
     </dialog>
 
-    <script src="/app.js?v=1.9"></script>
+    <script src="/app.js?v=2.0"></script>
   </body>
 </html>

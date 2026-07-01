@@ -10,7 +10,9 @@ async function api(path, options = {}) {
     credentials: 'same-origin',
     headers: {
       Accept: 'application/json',
-      ...(options.body ? { 'Content-Type': 'application/json' } : {}),
+      ...(options.body && !(options.body instanceof FormData)
+        ? { 'Content-Type': 'application/json' }
+        : {}),
       ...options.headers,
     },
     ...options,
@@ -31,6 +33,10 @@ async function api(path, options = {}) {
   }
 
   return data;
+}
+
+async function apiUpload(path, formData) {
+  return api(path, { method: 'POST', body: formData });
 }
 
 function showLogin() {
@@ -83,37 +89,49 @@ function renderHeader() {
 
 function renderFaqs() {
   const tbody = $('#faq-tbody');
+  const clientActions = $('#faq-client-actions');
+  const replaceWrap = $('#import-replace-wrap');
   tbody.innerHTML = '';
 
   if (state.user?.role === 'admin_global') {
-    $('#btn-new-faq').classList.add('hidden');
+    clientActions.classList.add('hidden');
+    replaceWrap.classList.add('hidden');
+    $('#faq-count').textContent = '';
     $('#dashboard-hint').textContent =
       'Como administrador, crea posadas en Admin. Los clientes editan sus FAQs.';
-    return;
-  }
-
-  $('#btn-new-faq').classList.remove('hidden');
-  $('#dashboard-hint').textContent =
-    'Al guardar, cada FAQ se indexa de inmediato en Qdrant.';
-
-  if (state.faqs.length === 0) {
     tbody.innerHTML =
-      '<tr><td colspan="6" class="empty">Sin FAQs. Crea la primera.</td></tr>';
+      '<tr><td colspan="6" class="empty">Sin FAQs en esta vista.</td></tr>';
     return;
   }
 
-  for (const faq of state.faqs) {
+  clientActions.classList.remove('hidden');
+  replaceWrap.classList.remove('hidden');
+  $('#dashboard-hint').textContent =
+    'Columna A: pregunta, columna B: respuesta. Formatos: .xlsx, .xls, .csv. Al guardar o importar, cada FAQ se indexa en Qdrant.';
+
+  const total = state.faqs.length;
+  $('#faq-count').textContent = total
+    ? `${total} FAQ${total === 1 ? '' : 's'} en total`
+    : 'Sin FAQs todavía';
+
+  if (total === 0) {
+    tbody.innerHTML =
+      '<tr><td colspan="6" class="empty">Sin FAQs. Importa un Excel o crea la primera.</td></tr>';
+    return;
+  }
+
+  state.faqs.forEach((faq, index) => {
     const tr = document.createElement('tr');
     tr.innerHTML = `
-      <td>${escapeHtml(truncate(faq.question, 60))}</td>
-      <td>${escapeHtml(truncate(faq.answer, 80))}</td>
-      <td>${escapeHtml(faq.category || '—')}</td>
+      <td class="num">${index + 1}</td>
+      <td class="cell-text" title="${escapeAttr(faq.question)}">${escapeHtml(faq.question)}</td>
+      <td class="cell-text" title="${escapeAttr(faq.answer)}">${escapeHtml(faq.answer)}</td>
       <td>${faq.active ? '<span class="pill ok">Activa</span>' : '<span class="pill off">Inactiva</span>'}</td>
       <td>${faq.indexed_at ? '<span class="pill ok">Indexada</span>' : '<span class="pill warn">Pendiente</span>'}</td>
       <td><button type="button" class="btn small" data-edit="${faq.id}">Editar</button></td>
     `;
     tbody.appendChild(tr);
-  }
+  });
 
   tbody.querySelectorAll('[data-edit]').forEach((btn) => {
     btn.addEventListener('click', () => openFaqDialog(Number(btn.dataset.edit)));
@@ -149,6 +167,10 @@ function escapeHtml(text) {
     .replaceAll('"', '&quot;');
 }
 
+function escapeAttr(text) {
+  return escapeHtml(text).replaceAll("'", '&#39;');
+}
+
 async function loadSession() {
   try {
     const data = await api('/auth/me');
@@ -175,6 +197,38 @@ async function refreshFaqs() {
   const data = await api('/faqs');
   state.faqs = data.faqs;
   renderFaqs();
+}
+
+async function importFaqsFromFile(file) {
+  const msg = $('#import-msg');
+  msg.textContent = 'Importando e indexando… puede tardar unos segundos.';
+  msg.className = 'form-msg';
+
+  const formData = new FormData();
+  formData.append('file', file);
+  if ($('#import-replace').checked) {
+    formData.append('replace', 'true');
+  }
+
+  try {
+    const data = await apiUpload('/faqs/import', formData);
+    const imp = data.import || {};
+    let text = data.message || 'Importación completada.';
+
+    if (imp.deleted) {
+      text += ` (${imp.deleted} eliminadas antes de importar)`;
+    }
+    if (imp.errors?.length) {
+      text += ` — ${imp.errors.length} fila(s) con error.`;
+    }
+
+    msg.textContent = text;
+    msg.classList.add(imp.errors?.length ? 'warn' : 'ok');
+    await refreshFaqs();
+  } catch (error) {
+    msg.textContent = error.message;
+    msg.classList.add('error');
+  }
 }
 
 async function refreshAdmin() {
@@ -246,6 +300,15 @@ $$('[data-view]').forEach((btn) => {
 });
 
 $('#btn-new-faq').addEventListener('click', () => openFaqDialog(null));
+
+$('#faq-import-file').addEventListener('change', async (event) => {
+  const file = event.target.files?.[0];
+  event.target.value = '';
+  if (!file) {
+    return;
+  }
+  await importFaqsFromFile(file);
+});
 
 $('#faq-cancel').addEventListener('click', () => $('#faq-dialog').close());
 
