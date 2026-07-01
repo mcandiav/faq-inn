@@ -54,6 +54,26 @@ n8n y agentes deben consumir búsqueda vía `POST /api/search` de DFAQ, no inser
 
 > **EasyPanel:** el build usa la **raíz del repositorio**. El `Dockerfile` debe estar en `/`, no solo dentro de `api/` o `http/`.
 
+### Historial de deploy (versión Git visible)
+
+EasyPanel muestra: `Deploy service: <asunto del commit>`.
+
+| Asunto del commit | Lo que ves en EasyPanel |
+|---|---|
+| `[V1.9] merge main: ...` | `[V1.9] merge main: ...` — **sin hash** |
+| `[V2.1@59f69da] feat: import Excel` | `[V2.1@59f69da] feat: import Excel` — **con hash** |
+
+El hash **va en el asunto**, no lo agrega EasyPanel. Tras `git commit`, enmendar:
+
+```powershell
+.\scripts\commit-version.ps1 -Version "2.1" -Message "feat: descripcion corta"
+```
+
+Evitar `Co-authored-by:` en commits de deploy (aparece en la misma línea del historial).
+
+Tras deploy, verificar commit en producción: `GET https://dfaq.at-once.cl/api/health` → campo `git.commit`.
+
+
 ## Estructura del repositorio
 
 ```text

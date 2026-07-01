@@ -1,4 +1,5 @@
 import { checkDatabase, getPool } from '../db.js';
+import { readGitCommit } from '../lib/gitVersion.js';
 
 export async function healthRoutes(app, config) {
   const healthHandler = async () => {
@@ -15,6 +16,7 @@ export async function healthRoutes(app, config) {
       status: database.healthy ? 'ok' : 'degraded',
       service: 'dfaq-api',
       env: config.appEnv,
+      git: { commit: readGitCommit() },
       database,
       timestamp: new Date().toISOString(),
     };

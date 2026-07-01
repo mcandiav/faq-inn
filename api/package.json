@@ -14,8 +14,10 @@
   "dependencies": {
     "@fastify/cookie": "^11.0.2",
     "@fastify/jwt": "^9.0.2",
+    "@fastify/multipart": "^9.0.3",
     "dotenv": "^16.4.7",
     "fastify": "^5.2.1",
-    "mysql2": "^3.14.0"
+    "mysql2": "^3.14.0",
+    "xlsx": "^0.18.5"
   }
 }

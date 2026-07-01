@@ -2,6 +2,7 @@ import 'dotenv/config';
 import Fastify from 'fastify';
 import cookie from '@fastify/cookie';
 import jwt from '@fastify/jwt';
+import multipart from '@fastify/multipart';
 import { loadConfig } from './config.js';
 import { getPool } from './db.js';
 import { ensureDatabase } from './lib/bootstrapDb.js';
@@ -31,6 +32,12 @@ await runMigrations(pool, config);
 
 await app.register(cookie);
 await app.register(jwt, { secret: config.sessionSecret });
+await app.register(multipart, {
+  limits: {
+    fileSize: 10 * 1024 * 1024,
+    files: 1,
+  },
+});
 await registerAuth(app, config);
 
 await healthRoutes(app, config);
