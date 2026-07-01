@@ -1,7 +1,7 @@
 import { checkDatabase, getPool } from '../db.js';
 
 export async function healthRoutes(app, config) {
-  app.get('/health', async () => {
+  const healthHandler = async () => {
     let database = { healthy: false };
 
     try {
@@ -18,7 +18,10 @@ export async function healthRoutes(app, config) {
       database,
       timestamp: new Date().toISOString(),
     };
-  });
+  };
+
+  app.get('/health', healthHandler);
+  app.get('/api/health', healthHandler);
 
   app.get('/api/db/health', async (_request, reply) => {
     try {
