@@ -1,4 +1,4 @@
-const APP_VERSION = '2.2.1';
+const APP_VERSION = '2.2.3';
 const apiBase = window.DFAQ_API_URL || '/api';
 
 const state = { user: null, faqs: [], unanswered: [] };
@@ -229,29 +229,18 @@ function renderUnanswered() {
     card.className = `unanswered-card${item.status === 'pending' ? ' is-pending' : ''}`;
     card.dataset.id = String(item.id);
 
-    const suggested = item.suggested_faq_question
-      ? escapeHtml(item.suggested_faq_question)
-      : item.suggested_faq_id
-        ? `<code>${escapeHtml(item.suggested_faq_id)}</code>`
-        : '';
-
-    const metaParts = [
-      formatDate(item.created_at),
-      item.contact_name || item.remote_id || null,
-      item.score != null ? `score ${Number(item.score).toFixed(3)}` : null,
-    ].filter(Boolean);
+    const phone = item.phone || item.remote_id || '—';
 
     let body = `
       <div class="unanswered-card-head">
-        <p class="unanswered-question">${escapeHtml(item.question)}</p>
         ${statusLabel(item.status)}
       </div>
-      <p class="unanswered-meta">${metaParts.map(escapeHtml).join(' · ')}</p>
+      <dl class="unanswered-facts">
+        <div><dt>Fecha y hora</dt><dd>${escapeHtml(formatDate(item.created_at))}</dd></div>
+        <div><dt>Consulta</dt><dd class="unanswered-question">${escapeHtml(item.question)}</dd></div>
+        <div><dt>Teléfono</dt><dd>${escapeHtml(phone)}</dd></div>
+      </dl>
     `;
-
-    if (suggested) {
-      body += `<p class="unanswered-suggested"><span>FAQ sugerida:</span> ${suggested}</p>`;
-    }
 
     if (item.status === 'pending') {
       body += `
@@ -266,9 +255,15 @@ function renderUnanswered() {
         </label>
         <div class="unanswered-actions">
           <button type="button" class="btn primary" data-respond="${item.id}">Responderla</button>
-          <button type="button" class="btn ghost" data-ignore="${item.id}">Ignorar</button>
+          <button type="button" class="btn danger" data-delete-unanswered="${item.id}">Borrar</button>
         </div>
         <p class="form-msg unanswered-row-msg" data-msg-for="${item.id}"></p>
+      `;
+    } else {
+      body += `
+        <div class="unanswered-actions">
+          <button type="button" class="btn danger" data-delete-unanswered="${item.id}">Borrar</button>
+        </div>
       `;
     }
 
@@ -280,8 +275,8 @@ function renderUnanswered() {
     btn.addEventListener('click', () => respondUnanswered(Number(btn.dataset.respond)));
   });
 
-  list.querySelectorAll('[data-ignore]').forEach((btn) => {
-    btn.addEventListener('click', () => ignoreUnanswered(Number(btn.dataset.ignore)));
+  list.querySelectorAll('[data-delete-unanswered]').forEach((btn) => {
+    btn.addEventListener('click', () => deleteUnanswered(Number(btn.dataset.deleteUnanswered)));
   });
 }
 
@@ -353,29 +348,26 @@ async function refreshUnanswered() {
   renderUnanswered();
 }
 
-async function ignoreUnanswered(id) {
+async function deleteUnanswered(id) {
   const item = state.unanswered.find((row) => row.id === id);
   if (!item) {
     return;
   }
 
   const ok = window.confirm(
-    `¿Ignorar esta pregunta?\n\n"${truncate(item.question, 80)}"`
+    `¿Borrar esta pregunta?\n\n"${truncate(item.question, 80)}"\n\nSe eliminará de forma permanente.`
   );
   if (!ok) {
     return;
   }
 
   const msg = $('#unanswered-msg');
-  msg.textContent = 'Actualizando…';
+  msg.textContent = 'Borrando…';
   msg.className = 'form-msg';
 
   try {
-    await api(`/unanswered/${id}`, {
-      method: 'PATCH',
-      body: JSON.stringify({ status: 'ignored' }),
-    });
-    msg.textContent = 'Pregunta ignorada.';
+    await api(`/unanswered/${id}`, { method: 'DELETE' });
+    msg.textContent = 'Pregunta borrada.';
     msg.classList.add('ok');
     await refreshUnanswered();
   } catch (error) {

@@ -1,5 +1,6 @@
 import {
   convertUnansweredToFaq,
+  deleteUnanswered,
   listUnansweredForUser,
   registerUnanswered,
   updateUnansweredStatus,
@@ -122,6 +123,28 @@ export async function unansweredRoutes(app, config) {
           error: error.message,
           detail: error.detail,
         };
+      }
+    }
+  );
+
+  app.delete(
+    '/api/unanswered/:id',
+    { preHandler: [app.authenticate] },
+    async (request, reply) => {
+      const user = request.user;
+
+      if (user.role !== 'client') {
+        reply.code(403);
+        return { status: 'error', error: 'Solo clientes pueden borrar preguntas' };
+      }
+
+      try {
+        const result = await deleteUnanswered(pool, request.params.id, user);
+        return { status: 'ok', ...result };
+      } catch (error) {
+        const code = error.statusCode || 500;
+        reply.code(code);
+        return { status: 'error', error: error.message };
       }
     }
   );

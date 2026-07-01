@@ -58,12 +58,14 @@ export async function findPendingDuplicate(pool, tenantId, agentId, question) {
 }
 
 export async function registerUnanswered(pool, body) {
-  const question = body.question?.trim();
+  const question = (body.question || body.consulta)?.trim();
   if (!question) {
     const error = new Error('question es obligatoria');
     error.statusCode = 400;
     throw error;
   }
+
+  const phone = String(body.phone || body.telefono || body.remote_id || '').trim();
 
   const { tenant, agent } = await resolveTenantAndAgent(
     pool,
@@ -92,16 +94,17 @@ export async function registerUnanswered(pool, body) {
 
   const [result] = await pool.query(
     `INSERT INTO unanswered_questions
-     (tenant_id, agent_id, tenant_slug, channel, remote_id, contact_name,
+     (tenant_id, agent_id, tenant_slug, channel, remote_id, contact_name, phone,
       question, language, score, suggested_faq_id, suggested_faq_question, status)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending')`,
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending')`,
     [
       tenant.id,
       agent.id,
       tenantSlug,
       body.channel?.trim() || '',
-      body.remote_id?.trim() || '',
+      body.remote_id?.trim() || phone,
       body.contact_name?.trim() || '',
+      phone,
       question,
       body.language?.trim() || 'es',
       body.score != null ? Number(body.score) : null,
@@ -121,7 +124,7 @@ export async function registerUnanswered(pool, body) {
 export async function listUnansweredForUser(pool, user, query = {}) {
   const params = [];
   let sql = `
-    SELECT u.id, u.tenant_slug, u.channel, u.remote_id, u.contact_name,
+    SELECT u.id, u.tenant_slug, u.channel, u.remote_id, u.contact_name, u.phone,
            u.question, u.language, u.score, u.suggested_faq_id,
            u.suggested_faq_question, u.status, u.converted_faq_id,
            u.created_at, u.updated_at, u.resolved_at,
@@ -209,6 +212,19 @@ export async function updateUnansweredStatus(pool, id, user, status) {
   );
 
   return { id: Number(id), status };
+}
+
+export async function deleteUnanswered(pool, id, user) {
+  const row = await getUnansweredForUser(pool, id, user);
+  if (!row) {
+    const error = new Error('Pregunta no encontrada');
+    error.statusCode = 404;
+    throw error;
+  }
+
+  await pool.query('DELETE FROM unanswered_questions WHERE id = ?', [id]);
+
+  return { id: Number(id), deleted: true };
 }
 
 export async function convertUnansweredToFaq(pool, config, id, user, input = {}) {

@@ -405,6 +405,34 @@ code {
   box-shadow: 0 0 0 1px rgba(180, 83, 9, 0.15);
 }
 
+.unanswered-facts {
+  margin: 0.75rem 0 0;
+  display: grid;
+  gap: 0.65rem;
+}
+
+.unanswered-facts > div {
+  display: grid;
+  grid-template-columns: 7.5rem 1fr;
+  gap: 0.5rem;
+  align-items: start;
+}
+
+.unanswered-facts dt {
+  margin: 0;
+  color: #94a3b8;
+  font-size: 0.85rem;
+}
+
+.unanswered-facts dd {
+  margin: 0;
+  line-height: 1.45;
+}
+
+.unanswered-facts .unanswered-question {
+  font-weight: 600;
+}
+
 .unanswered-card-head {
   display: flex;
   justify-content: space-between;
