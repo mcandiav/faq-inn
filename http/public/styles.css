@@ -561,10 +561,324 @@ code {
 @media (max-width: 720px) {
   .topbar {
     flex-direction: column;
+    margin-bottom: 1rem;
+    padding: 0.85rem 1rem;
+  }
+
+  .topbar h1 {
+    font-size: 1.15rem;
+    margin-bottom: 0.25rem;
+  }
+
+  .topbar .sub {
+    font-size: 0.8rem;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    max-width: 100%;
+  }
+
+  .topnav {
+    display: none;
+  }
+
+  .topbar-logout {
+    display: inline-flex;
+    align-items: center;
+  }
+
+  .topbar-head {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 0.5rem;
+    width: 100%;
+  }
+
+  .app {
+    padding: 0.65rem 0.75rem 0;
+    max-width: none;
+  }
+
+  body.app-logged-in {
+    padding-bottom: calc(4.75rem + env(safe-area-inset-bottom, 0px));
   }
 
   .toolbar {
     flex-direction: column;
     align-items: stretch;
   }
+
+  .toolbar-actions {
+    width: 100%;
+  }
+
+  .toolbar-actions .btn,
+  .toolbar-actions .file-btn {
+    flex: 1 1 auto;
+    text-align: center;
+    justify-content: center;
+  }
+
+  .btn,
+  .file-btn {
+    min-height: 2.75rem;
+    padding: 0.6rem 1rem;
+  }
+
+  .btn.small {
+    min-height: 2.5rem;
+    padding: 0.5rem 0.85rem;
+  }
+
+  .faq-desktop-only,
+  .admin-desktop-only {
+    display: none !important;
+  }
+
+  .faq-mobile-only,
+  .admin-mobile-only {
+    display: flex;
+  }
+
+  .faq-cards,
+  .admin-cards {
+    flex-direction: column;
+    gap: 0.85rem;
+  }
+
+  .faq-card,
+  .admin-card {
+    padding: 1rem;
+    border: 1px solid #334155;
+    border-radius: 14px;
+    background: rgba(15, 23, 42, 0.75);
+  }
+
+  .faq-card-head,
+  .admin-card-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 0.5rem;
+    margin-bottom: 0.65rem;
+  }
+
+  .faq-card-num {
+    color: #94a3b8;
+    font-size: 0.85rem;
+    font-weight: 600;
+  }
+
+  .faq-card-badges {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.35rem;
+    justify-content: flex-end;
+  }
+
+  .faq-card-label {
+    margin: 0.5rem 0 0.2rem;
+    color: #94a3b8;
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
+
+  .faq-card-text {
+    margin: 0;
+    line-height: 1.45;
+    white-space: pre-wrap;
+    word-break: break-word;
+  }
+
+  .faq-card-actions {
+    margin-top: 0.85rem;
+  }
+
+  .faq-card-actions .btn {
+    flex: 1;
+  }
+
+  .admin-card-slug {
+    margin: 0;
+    font-size: 0.95rem;
+  }
+
+  .admin-card-row {
+    display: grid;
+    grid-template-columns: 5.5rem minmax(0, 1fr);
+    gap: 0.35rem 0.5rem;
+    margin-top: 0.45rem;
+    font-size: 0.9rem;
+  }
+
+  .admin-card-row dt {
+    margin: 0;
+    color: #94a3b8;
+  }
+
+  .admin-card-row dd {
+    margin: 0;
+    word-break: break-word;
+  }
+
+  .unanswered-facts-row {
+    grid-template-columns: 1fr;
+    gap: 0.15rem;
+  }
+
+  .unanswered-facts dt {
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+  }
+
+  .unanswered-actions .btn {
+    flex: 1 1 calc(50% - 0.25rem);
+    min-width: 0;
+  }
+
+  .unanswered-actions .btn.primary {
+    flex: 1 1 100%;
+  }
+
+  .card,
+  .login-card {
+    padding: 1.35rem;
+    width: min(520px, 100%);
+  }
+
+  .card-inner {
+    padding: 0.85rem;
+  }
+
+  dialog {
+    width: 100%;
+    max-width: 100%;
+    height: 100%;
+    max-height: 100%;
+    margin: 0;
+    border-radius: 0;
+    border-left: none;
+    border-right: none;
+  }
+
+  dialog .form {
+    padding: 1rem;
+    max-height: 100vh;
+    overflow: auto;
+  }
+
+  .dialog-actions {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .dialog-actions-right {
+    margin-left: 0;
+    width: 100%;
+    flex-direction: column;
+  }
+
+  .dialog-actions-right .btn,
+  .dialog-actions .btn.danger {
+    width: 100%;
+  }
+
+  .select-inline {
+    margin-left: 0;
+    width: 100%;
+    min-height: 2.75rem;
+  }
+
+  .toolbar-actions label {
+    width: 100%;
+    margin-bottom: 0;
+  }
+}
+
+@media (min-width: 721px) {
+  .faq-mobile-only,
+  .admin-mobile-only,
+  .bottomnav {
+    display: none !important;
+  }
+}
+
+.bottomnav {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 100;
+  display: flex;
+  justify-content: space-around;
+  gap: 0.25rem;
+  padding: 0.35rem 0.5rem calc(0.35rem + env(safe-area-inset-bottom, 0px));
+  border-top: 1px solid #334155;
+  background: rgba(15, 23, 42, 0.96);
+  backdrop-filter: blur(8px);
+}
+
+.bottomnav-item {
+  position: relative;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.15rem;
+  min-height: 3.25rem;
+  padding: 0.35rem 0.25rem;
+  border: none;
+  border-radius: 10px;
+  background: transparent;
+  color: #94a3b8;
+  font: inherit;
+  font-size: 0.7rem;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.bottomnav-item:hover,
+.bottomnav-item:focus-visible {
+  color: #e2e8f0;
+  background: rgba(51, 65, 85, 0.45);
+  outline: none;
+}
+
+.bottomnav-item.active {
+  color: #93c5fd;
+  background: rgba(29, 78, 216, 0.18);
+}
+
+.bottomnav-icon svg {
+  width: 1.35rem;
+  height: 1.35rem;
+  fill: currentColor;
+}
+
+.bottomnav-item .nav-badge {
+  position: absolute;
+  top: 0.15rem;
+  right: calc(50% - 1.75rem);
+  margin: 0;
+  min-width: 1.1rem;
+  font-size: 0.65rem;
+}
+
+.topbar-logout {
+  display: none;
+}
+
+.btn.active,
+.bottomnav-item.active {
+  font-weight: 600;
+}
+
+.topnav .btn.active {
+  background: rgba(29, 78, 216, 0.25);
+  border-color: #1d4ed8;
+  color: #bfdbfe;
 }

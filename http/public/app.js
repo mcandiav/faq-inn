@@ -1,7 +1,7 @@
-const APP_VERSION = '2.2.7';
+const APP_VERSION = '2.3.0';
 const apiBase = window.DFAQ_API_URL || '/api';
 
-const state = { user: null, faqs: [], unanswered: [] };
+const state = { user: null, faqs: [], unanswered: [], currentView: 'dashboard' };
 
 const $ = (sel) => document.querySelector(sel);
 const $$ = (sel) => document.querySelectorAll(sel);
@@ -75,6 +75,7 @@ async function apiUpload(path, formData) {
 }
 
 function showLogin() {
+  document.body.classList.remove('app-logged-in');
   $('#app').classList.add('hidden');
   $('#login-screen').classList.remove('hidden');
 }
@@ -82,11 +83,23 @@ function showLogin() {
 function showApp() {
   $('#login-screen').classList.add('hidden');
   $('#app').classList.remove('hidden');
+  document.body.classList.add('app-logged-in');
+}
+
+function updateNavActive(view) {
+  $$('[data-view]').forEach((btn) => {
+    if (!btn.dataset.view) {
+      return;
+    }
+    btn.classList.toggle('active', btn.dataset.view === view);
+  });
 }
 
 function setView(name) {
+  state.currentView = name;
   $$('.view').forEach((el) => el.classList.add('hidden'));
   $(`#view-${name}`)?.classList.remove('hidden');
+  updateNavActive(name);
 }
 
 function formatDate(value) {
@@ -110,6 +123,8 @@ function renderHeader() {
   $('#user-email').textContent = user?.email || '';
   $('#nav-admin').classList.toggle('hidden', !isAdmin);
   $('#nav-unanswered').classList.toggle('hidden', isAdmin);
+  $('#bottom-nav-admin')?.classList.toggle('hidden', !isAdmin);
+  $('#bottom-nav-unanswered')?.classList.toggle('hidden', isAdmin);
 
   renderProfile();
 }
@@ -164,11 +179,47 @@ async function refreshProfile() {
   }
 }
 
+function attachFaqActions(root) {
+  root.querySelectorAll('[data-edit]').forEach((btn) => {
+    btn.addEventListener('click', () => openFaqDialog(Number(btn.dataset.edit)));
+  });
+
+  root.querySelectorAll('[data-delete]').forEach((btn) => {
+    btn.addEventListener('click', () => deleteFaq(Number(btn.dataset.delete)));
+  });
+}
+
+function faqCardHtml(faq, index) {
+  return `
+    <article class="faq-card" data-faq-id="${faq.id}">
+      <div class="faq-card-head">
+        <span class="faq-card-num">#${index + 1}</span>
+        <div class="faq-card-badges">
+          ${faq.active ? '<span class="pill ok">Activa</span>' : '<span class="pill off">Inactiva</span>'}
+          ${faq.indexed_at ? '<span class="pill ok">Indexada</span>' : '<span class="pill warn">Pendiente</span>'}
+        </div>
+      </div>
+      <p class="faq-card-label">Pregunta</p>
+      <p class="faq-card-text">${escapeHtml(faq.question)}</p>
+      <p class="faq-card-label">Respuesta</p>
+      <p class="faq-card-text">${escapeHtml(faq.answer)}</p>
+      <div class="faq-card-actions row-actions">
+        <button type="button" class="btn" data-edit="${faq.id}">Editar</button>
+        <button type="button" class="btn danger" data-delete="${faq.id}">Eliminar</button>
+      </div>
+    </article>
+  `;
+}
+
 function renderFaqs() {
   const tbody = $('#faq-tbody');
+  const cards = $('#faq-cards');
   const clientActions = $('#faq-client-actions');
   const replaceWrap = $('#import-replace-wrap');
   tbody.innerHTML = '';
+  if (cards) {
+    cards.innerHTML = '';
+  }
 
   if (state.user?.role === 'admin_global') {
     clientActions.classList.add('hidden');
@@ -178,6 +229,9 @@ function renderFaqs() {
       'Como administrador, crea posadas en Admin. Los clientes editan sus FAQs.';
     tbody.innerHTML =
       '<tr><td colspan="6" class="empty">Sin FAQs en esta vista.</td></tr>';
+    if (cards) {
+      cards.innerHTML = '<p class="empty-block">Sin FAQs en esta vista.</p>';
+    }
     return;
   }
 
@@ -192,8 +246,13 @@ function renderFaqs() {
     : 'Sin FAQs todavía';
 
   if (total === 0) {
-    tbody.innerHTML =
+    const emptyMsg =
       '<tr><td colspan="6" class="empty">Sin FAQs. Importa un Excel o crea la primera.</td></tr>';
+    tbody.innerHTML = emptyMsg;
+    if (cards) {
+      cards.innerHTML =
+        '<p class="empty-block">Sin FAQs. Importa un Excel o crea la primera.</p>';
+    }
     return;
   }
 
@@ -211,15 +270,18 @@ function renderFaqs() {
       </td>
     `;
     tbody.appendChild(tr);
+
+    if (cards) {
+      const card = document.createElement('div');
+      card.innerHTML = faqCardHtml(faq, index);
+      cards.appendChild(card.firstElementChild);
+    }
   });
 
-  tbody.querySelectorAll('[data-edit]').forEach((btn) => {
-    btn.addEventListener('click', () => openFaqDialog(Number(btn.dataset.edit)));
-  });
-
-  tbody.querySelectorAll('[data-delete]').forEach((btn) => {
-    btn.addEventListener('click', () => deleteFaq(Number(btn.dataset.delete)));
-  });
+  attachFaqActions(tbody);
+  if (cards) {
+    attachFaqActions(cards);
+  }
 }
 
 function statusLabel(status) {
@@ -247,12 +309,19 @@ function renderUnanswered() {
   const items = state.unanswered;
   const pending = items.filter((item) => item.status === 'pending').length;
   const badge = $('#unanswered-badge');
+  const bottomBadge = $('#bottom-unanswered-badge');
 
   if (pending > 0) {
-    badge.textContent = String(pending);
+    const pendingText = String(pending);
+    badge.textContent = pendingText;
     badge.classList.remove('hidden');
+    if (bottomBadge) {
+      bottomBadge.textContent = pendingText;
+      bottomBadge.classList.remove('hidden');
+    }
   } else {
     badge.classList.add('hidden');
+    bottomBadge?.classList.add('hidden');
   }
 
   $('#unanswered-count').textContent = items.length
@@ -508,10 +577,17 @@ async function deleteUnanswered(id) {
 
 function renderAdminTenants(tenants) {
   const tbody = $('#admin-tbody');
+  const cards = $('#admin-cards');
   tbody.innerHTML = '';
+  if (cards) {
+    cards.innerHTML = '';
+  }
 
   if (!tenants.length) {
     tbody.innerHTML = '<tr><td colspan="4" class="empty">Sin posadas.</td></tr>';
+    if (cards) {
+      cards.innerHTML = '<p class="empty-block">Sin posadas.</p>';
+    }
     return;
   }
 
@@ -524,6 +600,31 @@ function renderAdminTenants(tenants) {
       <td>${escapeHtml(t.agent_slug || '—')}</td>
     `;
     tbody.appendChild(tr);
+
+    if (cards) {
+      const card = document.createElement('article');
+      card.className = 'admin-card';
+      card.innerHTML = `
+        <div class="admin-card-head">
+          <p class="admin-card-slug"><code>${escapeHtml(t.slug)}</code></p>
+        </div>
+        <dl class="admin-card-body">
+          <div class="admin-card-row">
+            <dt>Negocio</dt>
+            <dd>${escapeHtml(t.name || '—')}</dd>
+          </div>
+          <div class="admin-card-row">
+            <dt>Email</dt>
+            <dd>${escapeHtml(t.client_email || '—')}</dd>
+          </div>
+          <div class="admin-card-row">
+            <dt>Agente</dt>
+            <dd>${escapeHtml(t.agent_slug || '—')}</dd>
+          </div>
+        </dl>
+      `;
+      cards.appendChild(card);
+    }
   }
 }
 
@@ -736,7 +837,7 @@ $('#login-form').addEventListener('submit', async (event) => {
   }
 });
 
-$('#btn-logout').addEventListener('click', async () => {
+async function logout() {
   try {
     await api('/auth/logout', { method: 'POST' });
   } catch {
@@ -746,7 +847,10 @@ $('#btn-logout').addEventListener('click', async () => {
   state.faqs = [];
   state.unanswered = [];
   showLogin();
-});
+}
+
+$('#btn-logout').addEventListener('click', logout);
+$('#btn-logout-mobile')?.addEventListener('click', logout);
 
 $$('[data-view]').forEach((btn) => {
   btn.addEventListener('click', async () => {
