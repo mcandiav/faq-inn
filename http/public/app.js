@@ -1,5 +1,7 @@
-const APP_VERSION = '2.3.0';
+const APP_VERSION = '2.3.1';
 const apiBase = window.DFAQ_API_URL || '/api';
+const VIEW_STORAGE_KEY = 'dfaq-current-view';
+const VALID_VIEWS = ['dashboard', 'unanswered', 'profile', 'admin'];
 
 const state = { user: null, faqs: [], unanswered: [], currentView: 'dashboard' };
 
@@ -95,11 +97,69 @@ function updateNavActive(view) {
   });
 }
 
+function resolveView(name) {
+  const view = VALID_VIEWS.includes(name) ? name : 'dashboard';
+  const user = state.user;
+  if (!user) {
+    return 'dashboard';
+  }
+  if (view === 'admin' && user.role !== 'admin_global') {
+    return 'dashboard';
+  }
+  if (view === 'unanswered' && user.role !== 'client') {
+    return 'dashboard';
+  }
+  return view;
+}
+
+function getRequestedView() {
+  const fromHash = location.hash.replace(/^#/, '').trim();
+  if (VALID_VIEWS.includes(fromHash)) {
+    return fromHash;
+  }
+  try {
+    const stored = sessionStorage.getItem(VIEW_STORAGE_KEY);
+    if (VALID_VIEWS.includes(stored)) {
+      return stored;
+    }
+  } catch {
+    /* ignore */
+  }
+  return 'dashboard';
+}
+
+function rememberView(view) {
+  try {
+    sessionStorage.setItem(VIEW_STORAGE_KEY, view);
+  } catch {
+    /* ignore */
+  }
+}
+
 function setView(name) {
-  state.currentView = name;
+  const view = resolveView(name);
+  state.currentView = view;
   $$('.view').forEach((el) => el.classList.add('hidden'));
-  $(`#view-${name}`)?.classList.remove('hidden');
-  updateNavActive(name);
+  $(`#view-${view}`)?.classList.remove('hidden');
+  updateNavActive(view);
+  rememberView(view);
+}
+
+async function refreshViewData(view) {
+  if (view === 'dashboard') await refreshFaqs();
+  if (view === 'unanswered') await refreshUnanswered();
+  if (view === 'profile') await refreshProfile();
+  if (view === 'admin') await refreshAdmin();
+}
+
+async function openView(name) {
+  const view = resolveView(name);
+  const hash = `#${view}`;
+  setView(view);
+  if (location.hash !== hash) {
+    history.pushState({ view }, '', hash);
+  }
+  await refreshViewData(view);
 }
 
 function formatDate(value) {
@@ -646,13 +706,12 @@ async function loadSession() {
     state.user = data.user;
     showApp();
     renderHeader();
-    setView('dashboard');
-    await refreshFaqs();
-    if (state.user.role === 'client') {
+    const view = resolveView(getRequestedView());
+    setView(view);
+    history.replaceState({ view }, '', `#${view}`);
+    await refreshViewData(view);
+    if (state.user.role === 'client' && view !== 'unanswered') {
       await refreshUnanswered();
-    }
-    if (state.user.role === 'admin_global') {
-      await refreshAdmin();
     }
   } catch {
     showLogin();
@@ -823,13 +882,9 @@ $('#login-form').addEventListener('submit', async (event) => {
     state.user = data.user;
     showApp();
     renderHeader();
-    setView('dashboard');
-    await refreshFaqs();
+    await openView('dashboard');
     if (state.user.role === 'client') {
       await refreshUnanswered();
-    }
-    if (state.user.role === 'admin_global') {
-      await refreshAdmin();
     }
   } catch (error) {
     msg.textContent = error.message;
@@ -846,6 +901,12 @@ async function logout() {
   state.user = null;
   state.faqs = [];
   state.unanswered = [];
+  try {
+    sessionStorage.removeItem(VIEW_STORAGE_KEY);
+  } catch {
+    /* ignore */
+  }
+  history.replaceState(null, '', location.pathname + location.search);
   showLogin();
 }
 
@@ -853,14 +914,16 @@ $('#btn-logout').addEventListener('click', logout);
 $('#btn-logout-mobile')?.addEventListener('click', logout);
 
 $$('[data-view]').forEach((btn) => {
-  btn.addEventListener('click', async () => {
-    const view = btn.dataset.view;
-    setView(view);
-    if (view === 'dashboard') await refreshFaqs();
-    if (view === 'unanswered') await refreshUnanswered();
-    if (view === 'profile') await refreshProfile();
-    if (view === 'admin') await refreshAdmin();
-  });
+  btn.addEventListener('click', () => openView(btn.dataset.view));
+});
+
+window.addEventListener('popstate', () => {
+  if (!state.user) {
+    return;
+  }
+  const view = resolveView(getRequestedView());
+  setView(view);
+  refreshViewData(view);
 });
 
 $('#btn-new-faq').addEventListener('click', () => openFaqDialog(null));
