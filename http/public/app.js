@@ -1,4 +1,4 @@
-const APP_VERSION = '2.4.1';
+const APP_VERSION = '2.4.2';
 const apiBase = window.DFAQ_API_URL || '/api';
 const VIEW_STORAGE_KEY = 'dfaq-current-view';
 const VALID_VIEWS = ['dashboard', 'unanswered', 'profile', 'admin'];
@@ -916,6 +916,7 @@ async function logout() {
 
 $('#btn-logout').addEventListener('click', logout);
 $('#btn-logout-mobile')?.addEventListener('click', logout);
+$('#btn-logout-profile')?.addEventListener('click', logout);
 
 $$('[data-view]').forEach((btn) => {
   btn.addEventListener('click', () => openView(btn.dataset.view));
