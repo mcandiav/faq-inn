@@ -128,13 +128,20 @@ function renderFaqs() {
       <td class="cell-text" title="${escapeAttr(faq.answer)}">${escapeHtml(faq.answer)}</td>
       <td>${faq.active ? '<span class="pill ok">Activa</span>' : '<span class="pill off">Inactiva</span>'}</td>
       <td>${faq.indexed_at ? '<span class="pill ok">Indexada</span>' : '<span class="pill warn">Pendiente</span>'}</td>
-      <td><button type="button" class="btn small" data-edit="${faq.id}">Editar</button></td>
+      <td class="row-actions">
+        <button type="button" class="btn small" data-edit="${faq.id}">Editar</button>
+        <button type="button" class="btn small danger" data-delete="${faq.id}">Eliminar</button>
+      </td>
     `;
     tbody.appendChild(tr);
   });
 
   tbody.querySelectorAll('[data-edit]').forEach((btn) => {
     btn.addEventListener('click', () => openFaqDialog(Number(btn.dataset.edit)));
+  });
+
+  tbody.querySelectorAll('[data-delete]').forEach((btn) => {
+    btn.addEventListener('click', () => deleteFaq(Number(btn.dataset.delete)));
   });
 }
 
@@ -248,7 +255,33 @@ function openFaqDialog(id) {
   $('#faq-keywords').value = faq?.keywords || '';
   $('#faq-active').checked = faq ? Boolean(faq.active) : true;
   $('#faq-msg').textContent = '';
+  $('#faq-delete').classList.toggle('hidden', !id);
   dialog.showModal();
+}
+
+async function deleteFaq(id) {
+  const faq = state.faqs.find((f) => f.id === id);
+  if (!faq) {
+    return;
+  }
+
+  const preview = truncate(faq.question, 80);
+  const ok = window.confirm(
+    `¿Eliminar esta FAQ?\n\n"${preview}"\n\nSe borrará de la base de datos y de Qdrant.`
+  );
+  if (!ok) {
+    return;
+  }
+
+  try {
+    await api(`/faqs/${id}`, { method: 'DELETE' });
+    if ($('#faq-dialog').open && Number($('#faq-id').value) === id) {
+      $('#faq-dialog').close();
+    }
+    await refreshFaqs();
+  } catch (error) {
+    window.alert(error.message);
+  }
 }
 
 $('#login-form').addEventListener('submit', async (event) => {
@@ -311,6 +344,14 @@ $('#faq-import-file').addEventListener('change', async (event) => {
 });
 
 $('#faq-cancel').addEventListener('click', () => $('#faq-dialog').close());
+
+$('#faq-delete').addEventListener('click', async () => {
+  const id = Number($('#faq-id').value);
+  if (!id) {
+    return;
+  }
+  await deleteFaq(id);
+});
 
 $('#faq-form').addEventListener('submit', async (event) => {
   event.preventDefault();

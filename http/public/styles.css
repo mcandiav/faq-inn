@@ -158,6 +158,23 @@ h3 {
   font-size: 0.85rem;
 }
 
+.btn.danger {
+  background: #7f1d1d;
+  border-color: #991b1b;
+  color: #fecaca;
+}
+
+.btn.danger:hover {
+  background: #991b1b;
+}
+
+.row-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  white-space: nowrap;
+}
+
 .btn.block {
   width: 100%;
 }
@@ -317,8 +334,17 @@ dialog .form {
 
 .dialog-actions {
   display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.dialog-actions-right {
+  display: flex;
   justify-content: flex-end;
   gap: 0.5rem;
+  margin-left: auto;
 }
 
 code {

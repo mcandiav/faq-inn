@@ -4,7 +4,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>DFAQ</title>
-    <link rel="stylesheet" href="/styles.css?v=2.0" />
+    <link rel="stylesheet" href="/styles.css?v=2.1.3" />
   </head>
   <body>
     <div id="app" class="app hidden">
@@ -177,13 +177,16 @@
           Activa
         </label>
         <div class="dialog-actions">
-          <button type="button" class="btn ghost" id="faq-cancel">Cancelar</button>
-          <button type="submit" class="btn primary" id="faq-save">Guardar e indexar</button>
+          <button type="button" class="btn danger hidden" id="faq-delete">Eliminar</button>
+          <div class="dialog-actions-right">
+            <button type="button" class="btn ghost" id="faq-cancel">Cancelar</button>
+            <button type="submit" class="btn primary" id="faq-save">Guardar e indexar</button>
+          </div>
         </div>
         <p class="form-msg" id="faq-msg"></p>
       </form>
     </dialog>
 
-    <script src="/app.js?v=2.0"></script>
+    <script src="/app.js?v=2.1.3"></script>
   </body>
 </html>
