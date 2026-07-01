@@ -33,6 +33,22 @@ https://dfaq.at-once.cl
 
 El worker de indexación se añadirá **como proceso dentro de `api`**, no como tercer contenedor.
 
+## Embeddings (V1.8)
+
+DFAQ genera vectores con **NVIDIA API** (`baai/bge-m3`, 1024 dimensiones, multilingüe).
+
+| Variable | Valor producción |
+|---|---|
+| `EMBEDDING_PROVIDER` | `nvidia` |
+| `NVIDIA_API_KEY` | Secreto desde [build.nvidia.com](https://build.nvidia.com) |
+| `NVIDIA_EMBEDDING_MODEL` | `baai/bge-m3` |
+| `EMBEDDING_DIMENSION` | `1024` |
+| `QDRANT_COLLECTION_TEMPLATE` | `kb_<tenant_slug>_nvidia_1024` |
+
+La POC histórica en n8n usó OpenAI (`Embedding_OpenAI`, 1536 dims). **No mezclar** con colecciones NVIDIA.
+
+n8n y agentes deben consumir búsqueda vía `POST /api/search` de DFAQ, no insertar vectores OpenAI en colecciones NVIDIA.
+
 ---
 
 > **EasyPanel:** el build usa la **raíz del repositorio**. El `Dockerfile` debe estar en `/`, no solo dentro de `api/` o `http/`.
@@ -72,7 +88,10 @@ dfaq/
 | Dockerfile | `/Dockerfile` en la **raíz del repo** (no `api/Dockerfile`) |
 | Puerto interno | `3000` |
 | Healthcheck | `GET /health` |
-| Volumen persistente | `/var/lib/mysql` |
+| Volumen persistente | `/var/lib/mysql` (tipo **Volumen**, ruta absoluta `/var/lib/mysql`) |
+| Réplicas | **1 sola instancia** (obligatorio) |
+
+Dos contenedores compartiendo el mismo volumen MariaDB causan errores `Can't lock aria control file` e `Unable to lock ./ibdata1`.
 
 **Variables de entorno:**
 
@@ -81,7 +100,14 @@ APP_ENV=production
 APP_URL=https://dfaq.at-once.cl
 PORT=3000
 QDRANT_URL=http://n8n_qdrant:6333
-QDRANT_COLLECTION_TEMPLATE=kb_<tenant_slug>_openai_1536
+QDRANT_COLLECTION_TEMPLATE=kb_<tenant_slug>_nvidia_1024
+
+# Embeddings NVIDIA (gratuito en build.nvidia.com)
+EMBEDDING_PROVIDER=nvidia
+EMBEDDING_DIMENSION=1024
+NVIDIA_API_KEY=<secreto>
+NVIDIA_API_BASE=https://integrate.api.nvidia.com/v1
+NVIDIA_EMBEDDING_MODEL=baai/bge-m3
 MYSQL_DATABASE=dfaq
 MYSQL_USER=dfaq
 MYSQL_PASSWORD=<secreto>
@@ -94,6 +120,15 @@ DATABASE_URL=mysql://dfaq:<secreto>@127.0.0.1:3306/dfaq
 - `GET /health` — API + MariaDB
 - `GET /api/db/health` — MariaDB
 - `GET /api/qdrant/health` — Qdrant
+- `POST /api/qdrant/collections/ensure` — crear/verificar colección
+- `POST /api/qdrant/faq/upsert-test` — upsert FAQ WiFi (requiere `NVIDIA_API_KEY` u `OPENAI_API_KEY`)
+- `POST /api/search` — búsqueda semántica
+
+**Secuencia fases 4-6:**
+
+1. `POST /api/qdrant/collections/ensure` body `{}` → crea `kb_morroreservas_nvidia_1024`
+2. `POST /api/qdrant/faq/upsert-test` body `{}` → FAQ WiFi con embedding NVIDIA
+3. `POST /api/search` body `{"tenant_id":"morroreservas","agent_id":"chatwoot_reservas","query":"Tem internet bom para trabalhar?"}`
 
 ### 2. Servicio `dfaq-http`
 
@@ -109,10 +144,10 @@ DATABASE_URL=mysql://dfaq:<secreto>@127.0.0.1:3306/dfaq
 **Variables de entorno:**
 
 ```text
-API_UPSTREAM=http://dfaq-api:3000
+API_UPSTREAM=http://n8n_dfaq-api:3000
 ```
 
-`dfaq-api` debe coincidir con el **nombre interno** del App Service api en EasyPanel.
+`n8n_dfaq-api` = nombre interno del App Service api en el proyecto EasyPanel `n8n`.
 
 **Validación post-deploy:**
 

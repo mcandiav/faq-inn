@@ -13,6 +13,7 @@ Parte de la arquitectura de 2 servicios: `api` + `http`. Ver [DEPLOY.md](../DEPL
 | Base de datos | MariaDB en `127.0.0.1:3306` (mismo contenedor) |
 | Persistencia | Volumen `/var/lib/mysql` |
 | Qdrant | Externo vía `QDRANT_URL` |
+| Embeddings | NVIDIA API `baai/bge-m3` (por defecto) |
 
 ## EasyPanel
 
@@ -20,8 +21,8 @@ Parte de la arquitectura de 2 servicios: `api` + `http`. Ver [DEPLOY.md](../DEPL
 |---|---|
 | Repositorio | `mcandiav/dfaq` |
 | Rama | `api` |
-| Directorio raíz | `api` |
-| App Service | `dfaq-api` |
+| Directorio raíz | `/Dockerfile` en raíz del repo |
+| App Service | `dfaq-api` (interno: `n8n_dfaq-api`) |
 
 ## Endpoints
 
@@ -30,21 +31,40 @@ Parte de la arquitectura de 2 servicios: `api` + `http`. Ver [DEPLOY.md](../DEPL
 | GET | `/health` | API + estado MariaDB |
 | GET | `/api/db/health` | MariaDB |
 | GET | `/api/qdrant/health` | Conectividad Qdrant |
+| POST | `/api/qdrant/collections/ensure` | Crear/verificar colección tenant |
+| POST | `/api/qdrant/faq/upsert-test` | Upsert FAQ WiFi de prueba |
+| POST | `/api/search` | Búsqueda semántica |
 
-## Variables (.env.example)
+## Embeddings (V1.8)
 
-MariaDB y Qdrant se configuran por entorno. En EasyPanel usar secretos reales para `MYSQL_PASSWORD`.
+Proveedor por defecto: **NVIDIA API** — modelo multilingüe `baai/bge-m3`.
+
+```text
+EMBEDDING_PROVIDER=nvidia
+EMBEDDING_DIMENSION=1024
+NVIDIA_API_KEY=<secreto>
+NVIDIA_API_BASE=https://integrate.api.nvidia.com/v1
+NVIDIA_EMBEDDING_MODEL=baai/bge-m3
+QDRANT_COLLECTION_TEMPLATE=kb_<tenant_slug>_nvidia_1024
+```
+
+Alternativa OpenAI:
+
+```text
+EMBEDDING_PROVIDER=openai
+OPENAI_API_KEY=<secreto>
+OPENAI_EMBEDDING_MODEL=text-embedding-3-small
+EMBEDDING_DIMENSION=1536
+QDRANT_COLLECTION_TEMPLATE=kb_<tenant_slug>_openai_1536
+```
+
+**Regla:** no mezclar vectores de distinto proveedor/dimensión en la misma colección Qdrant.
 
 ## Arranque
 
 El script `docker/entrypoint.sh`:
 
-1. Inicializa MariaDB si es primera ejecución.
-2. Crea base `dfaq` y usuario.
-3. Arranca la API Node.
-
-## Futuro
-
-- Migraciones de esquema MariaDB.
-- Worker de indexación como proceso adicional en este mismo contenedor.
-- `POST /api/search` para n8n.
+1. Espera lock exclusivo de `/var/lib/mysql`.
+2. Inicializa MariaDB si es primera ejecución.
+3. Crea base `dfaq` y usuario.
+4. Arranca la API Node con apagado graceful en SIGTERM.

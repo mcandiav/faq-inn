@@ -1,37 +1,13 @@
-async function qdrantFetch(config, path) {
-  const headers = { Accept: 'application/json' };
-
-  if (config.qdrantApiKey) {
-    headers['api-key'] = config.qdrantApiKey;
-  }
-
-  const response = await fetch(`${config.qdrantUrl}${path}`, {
-    method: 'GET',
-    headers,
-    signal: AbortSignal.timeout(10_000),
-  });
-
-  const bodyText = await response.text();
-  let body = null;
-
-  if (bodyText) {
-    try {
-      body = JSON.parse(bodyText);
-    } catch {
-      body = bodyText;
-    }
-  }
-
-  return { response, body };
-}
+import { qdrantRequest } from '../lib/qdrant.js';
 
 export async function qdrantRoutes(app, config) {
   app.get('/api/qdrant/health', async (_request, reply) => {
     const startedAt = Date.now();
 
     try {
-      const { response: healthResponse, body: healthBody } = await qdrantFetch(
+      const { response: healthResponse, body: healthBody } = await qdrantRequest(
         config,
+        'GET',
         '/healthz'
       );
 
@@ -55,7 +31,7 @@ export async function qdrantRoutes(app, config) {
 
       try {
         const { response: collectionsResponse, body: collectionsBody } =
-          await qdrantFetch(config, '/collections');
+          await qdrantRequest(config, 'GET', '/collections');
 
         if (collectionsResponse.ok && collectionsBody?.result?.collections) {
           collections = {
