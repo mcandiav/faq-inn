@@ -1,5 +1,5 @@
 import { indexFaqItem, removeFaqFromQdrant } from '../lib/indexer.js';
-import { createFaqRecord, importFaqRows } from '../lib/faqService.js';
+import { createFaqRecord, importFaqRows, reindexTenantFaqs } from '../lib/faqService.js';
 import { parseSpreadsheetBuffer } from '../lib/parseSpreadsheet.js';
 
 const ALLOWED_EXTENSIONS = new Set(['.xlsx', '.xls', '.csv']);
@@ -170,6 +170,28 @@ export async function faqRoutes(app, config) {
     }
   });
 
+  app.post('/api/faqs/reindex', { preHandler: [app.authenticate] }, async (request, reply) => {
+    const user = request.user;
+
+    if (!tenantScope(user)) {
+      reply.code(403);
+      return { status: 'error', error: 'Solo clientes pueden reindexar FAQs' };
+    }
+
+    try {
+      const result = await reindexTenantFaqs(pool, config, user);
+      return {
+        status: 'ok',
+        reindex: result,
+        message: `${result.reindexed} FAQ(s) reindexadas sin duplicados`,
+      };
+    } catch (error) {
+      const code = error.statusCode || 500;
+      reply.code(code);
+      return { status: 'error', error: error.message };
+    }
+  });
+
   app.patch('/api/faqs/:id', { preHandler: [app.authenticate] }, async (request, reply) => {
     const faq = await getFaqForUser(pool, request.params.id, request.user);
     if (!faq) {
@@ -209,7 +231,9 @@ export async function faqRoutes(app, config) {
     );
 
     const faqRow = {
+      id: faq.id,
       faq_uid: faq.faq_uid,
+      qdrant_point_id: faq.qdrant_point_id,
       question,
       answer,
       category,
@@ -257,7 +281,10 @@ export async function faqRoutes(app, config) {
     await pool.query('DELETE FROM faq_items WHERE id = ?', [faq.id]);
 
     try {
-      await removeFaqFromQdrant(config, faq.tenant_slug, faq.faq_uid);
+      await removeFaqFromQdrant(config, faq.tenant_slug, faq.faq_uid, [
+        faq.id,
+        faq.qdrant_point_id,
+      ]);
     } catch (error) {
       app.log.warn({ err: error }, 'No se pudo borrar punto Qdrant');
     }

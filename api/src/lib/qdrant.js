@@ -39,6 +39,15 @@ export function faqPointId(faqId) {
   return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-4${hex.slice(13, 16)}-8${hex.slice(17, 20)}-${hex.slice(20, 32)}`;
 }
 
+/** ID estable en Qdrant: preferimos el id numérico de faq_items. */
+export function resolvePointId(faq) {
+  const dbId = Number(faq?.id);
+  if (Number.isInteger(dbId) && dbId > 0) {
+    return dbId;
+  }
+  return faqPointId(faq?.faq_uid || faq?.faq_id);
+}
+
 export function buildVectorizableText({ question, answer, category, keywords }) {
   return [
     `Pregunta: ${question}`,

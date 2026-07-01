@@ -71,6 +71,7 @@ export async function createFaqRecord(pool, config, user, faqInput) {
   );
 
   const faqRow = {
+    id: result.insertId,
     faq_uid: faqUid,
     question,
     answer,
@@ -95,6 +96,67 @@ export async function createFaqRecord(pool, config, user, faqInput) {
     indexed: true,
     collection: indexed.collection,
   };
+}
+
+export async function reindexFaqRecord(pool, config, faq) {
+  const indexed = await indexFaqItem(
+    config,
+    {
+      id: faq.id,
+      faq_uid: faq.faq_uid,
+      qdrant_point_id: faq.qdrant_point_id,
+      question: faq.question,
+      answer: faq.answer,
+      category: faq.category,
+      keywords: faq.keywords,
+      active: Boolean(faq.active),
+      agent_slug: faq.agent_slug,
+    },
+    faq.tenant_slug
+  );
+
+  await pool.query(
+    `UPDATE faq_items
+     SET qdrant_point_id = ?, embedding_hash = ?, indexed_at = ?
+     WHERE id = ?`,
+    [indexed.point_id, indexed.embedding_hash, indexed.indexed_at, faq.id]
+  );
+
+  return indexed;
+}
+
+export async function reindexTenantFaqs(pool, config, user) {
+  const tenantId = user.tenant_id;
+  if (!tenantId) {
+    const error = new Error('Solo clientes pueden reindexar');
+    error.statusCode = 403;
+    throw error;
+  }
+
+  const [rows] = await pool.query(
+    `SELECT f.id, f.faq_uid, f.question, f.answer, f.category, f.keywords,
+            f.active, f.qdrant_point_id, t.slug AS tenant_slug, a.slug AS agent_slug
+     FROM faq_items f
+     JOIN tenants t ON t.id = f.tenant_id
+     JOIN agents a ON a.id = f.agent_id
+     WHERE f.tenant_id = ?
+     ORDER BY f.id ASC`,
+    [tenantId]
+  );
+
+  const errors = [];
+  let reindexed = 0;
+
+  for (const faq of rows) {
+    try {
+      await reindexFaqRecord(pool, config, faq);
+      reindexed += 1;
+    } catch (error) {
+      errors.push({ id: faq.id, error: error.message });
+    }
+  }
+
+  return { total: rows.length, reindexed, errors };
 }
 
 export async function deleteTenantFaqs(pool, config, tenantId, tenantSlug) {
