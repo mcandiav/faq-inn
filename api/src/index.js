@@ -60,9 +60,13 @@ try {
       qdrantUrl: config.qdrantUrl,
       embeddingProvider: config.embeddingProvider,
       embeddingModel:
-        config.embeddingProvider === 'nvidia'
-          ? config.nvidiaEmbeddingModel
-          : config.openaiEmbeddingModel,
+        config.embeddingProvider === 'ollama'
+          ? config.ollamaEmbeddingModel
+          : config.embeddingProvider === 'nvidia'
+            ? config.nvidiaEmbeddingModel
+            : config.openaiEmbeddingModel,
+      ollamaApiBase:
+        config.embeddingProvider === 'ollama' ? config.ollamaApiBase : undefined,
       databaseUrl: config.databaseUrl.replace(/:([^:@]+)@/, ':***@'),
     },
     'faq-inn-api started'

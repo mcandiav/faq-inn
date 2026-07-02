@@ -13,7 +13,7 @@ Arquitectura: `faq-inn-api` + `faq-inn-http` + `faq-inn_postgres`. Ver [DEPLOY.m
 | Base de datos | PostgreSQL `n8n_faq-inn_postgres:5432`, base `faq-inn` |
 | Tenant dev | `FAQ-INN` / slug `faq-inn` |
 | Qdrant | Externo vía `QDRANT_URL` |
-| Embeddings | NVIDIA API `baai/bge-m3` (por defecto) |
+| Embeddings | Ollama `mxbai-embed-large:latest` (por defecto) vía `OLLAMA_API_BASE` |
 
 ## EasyPanel
 
@@ -44,5 +44,10 @@ TENANT_SLUG=faq-inn
 DB_HOST=n8n_faq-inn_postgres
 DB_NAME=faq-inn
 DB_USER=postgres
+OLLAMA_API_BASE=http://n8n_ollama:11434
+OLLAMA_EMBEDDING_MODEL=mxbai-embed-large:latest
+EMBEDDING_PROVIDER=ollama
+EMBEDDING_DIMENSION=1024
+QDRANT_COLLECTION_TEMPLATE=kb_<tenant_slug>_mxbai_embed_large_1024
 QDRANT_URL=http://n8n_qdrant:6333
 ```

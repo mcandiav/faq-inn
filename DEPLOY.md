@@ -46,14 +46,17 @@ https://inn.at-once.cl
 
 ## Embeddings
 
-FAQ Inn hereda la estrategia NVIDIA de DFAQ:
+FAQ Inn genera vectores con **Ollama** (`mxbai-embed-large:latest`, 1024 dimensiones) en la red interna.
 
 | Variable | Valor |
 |---|---|
-| `EMBEDDING_PROVIDER` | `nvidia` |
-| `NVIDIA_EMBEDDING_MODEL` | `baai/bge-m3` |
+| `EMBEDDING_PROVIDER` | `ollama` |
+| `OLLAMA_API_BASE` | `http://n8n_ollama:11434` |
+| `OLLAMA_EMBEDDING_MODEL` | `mxbai-embed-large:latest` |
 | `EMBEDDING_DIMENSION` | `1024` |
-| `QDRANT_COLLECTION_TEMPLATE` | `kb_<tenant_slug>_nvidia_1024` |
+| `QDRANT_COLLECTION_TEMPLATE` | `kb_<tenant_slug>_mxbai_embed_large_1024` |
+
+Alternativas: `EMBEDDING_PROVIDER=nvidia` o `openai` (cada una con su plantilla de colección).
 
 n8n debe consumir `POST /api/search`; no insertar vectores directo en Qdrant.
 
@@ -111,8 +114,11 @@ DB_NAME=faq-inn
 DB_USER=postgres
 DB_PASSWORD=<desde EasyPanel, no documentar>
 QDRANT_URL=http://n8n_qdrant:6333
-EMBEDDING_PROVIDER=nvidia
-NVIDIA_API_KEY=<secreto>
+EMBEDDING_PROVIDER=ollama
+OLLAMA_API_BASE=http://n8n_ollama:11434
+OLLAMA_EMBEDDING_MODEL=mxbai-embed-large:latest
+EMBEDDING_DIMENSION=1024
+QDRANT_COLLECTION_TEMPLATE=kb_<tenant_slug>_mxbai_embed_large_1024
 SESSION_SECRET=<secreto>
 ADMIN_EMAIL=admin@at-once.cl
 ADMIN_PASSWORD=<secreto>
