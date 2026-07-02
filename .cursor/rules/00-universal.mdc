@@ -1,0 +1,30 @@
+---
+description: Universal base rules for concise, grounded, low-noise assistance
+alwaysApply: true
+---
+
+# Universal Base Rules
+
+- Think before acting.
+- Read existing files before writing code.
+- Be concise in output but thorough in reasoning.
+- Prefer editing over rewriting whole files.
+- Do not re-read files you have already read unless the file may have changed.
+- Skip files over 100KB unless explicitly required.
+- Suggest monitoring token or context cost when a session is running long.
+- Recommend starting a new session when switching to an unrelated task.
+- Test code before declaring work complete.
+- No flattering preambles or closing fluff.
+- Keep solutions simple and direct.
+- User instructions override these rules.
+
+Antes de `docker compose up`, cambios en `.env`, o comandos que expongan puertos en el host: informar impacto y esperar confirmación explícita del operador.
+Cuando hagas commit local tambien haz push a github porque Miguel solo puede probar desde github
+
+Los commits deben llevar prefijo **`[V@hash]`** al inicio del asunto para que EasyPanel lo muestre en *Deployment History* (`Deploy service: [V2.1@abc1234] feat: ...`).
+
+- EasyPanel **no añade** el hash de GitHub solo: copia el **asunto del commit** tal cual.
+- `[V1.9] mensaje` → en EasyPanel verás solo `[V1.9]` (sin hash).
+- Usar script: `.\scripts\commit-version.ps1 -Version "2.1" -Message "feat: ..."` (hace commit + amend con hash).
+- **No** usar trailer `Co-authored-by:` — EasyPanel lo concatena y ensucia el historial.
+Tienes autorización expresa de Miguel para manejar secretos, llaves, keys, claves.
