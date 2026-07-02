@@ -76,7 +76,7 @@ export function loadConfig() {
     apiBase: 'http://127.0.0.1:11434',
     model: 'mxbai-embed-large:latest',
     dimension: 1024,
-    collectionTemplate: 'kb_<tenant_slug>_mxbai_embed_large_1024',
+    collectionTemplate: 'kb_<tenant_slug>_mxbai_1024',
   };
 
   const nvidiaDefaults = {

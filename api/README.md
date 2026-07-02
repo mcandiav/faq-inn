@@ -48,6 +48,6 @@ OLLAMA_API_BASE=http://n8n_ollama:11434
 OLLAMA_EMBEDDING_MODEL=mxbai-embed-large:latest
 EMBEDDING_PROVIDER=ollama
 EMBEDDING_DIMENSION=1024
-QDRANT_COLLECTION_TEMPLATE=kb_<tenant_slug>_mxbai_embed_large_1024
+QDRANT_COLLECTION_TEMPLATE=kb_<tenant_slug>_mxbai_1024
 QDRANT_URL=http://n8n_qdrant:6333
 ```

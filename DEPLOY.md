@@ -54,7 +54,7 @@ FAQ Inn genera vectores con **Ollama** (`mxbai-embed-large:latest`, 1024 dimensi
 | `OLLAMA_API_BASE` | `http://n8n_ollama:11434` |
 | `OLLAMA_EMBEDDING_MODEL` | `mxbai-embed-large:latest` |
 | `EMBEDDING_DIMENSION` | `1024` |
-| `QDRANT_COLLECTION_TEMPLATE` | `kb_<tenant_slug>_mxbai_embed_large_1024` |
+| `QDRANT_COLLECTION_TEMPLATE` | `kb_<tenant_slug>_mxbai_1024` |
 
 Alternativas: `EMBEDDING_PROVIDER=nvidia` o `openai` (cada una con su plantilla de colección).
 
@@ -118,7 +118,7 @@ EMBEDDING_PROVIDER=ollama
 OLLAMA_API_BASE=http://n8n_ollama:11434
 OLLAMA_EMBEDDING_MODEL=mxbai-embed-large:latest
 EMBEDDING_DIMENSION=1024
-QDRANT_COLLECTION_TEMPLATE=kb_<tenant_slug>_mxbai_embed_large_1024
+QDRANT_COLLECTION_TEMPLATE=kb_<tenant_slug>_mxbai_1024
 SESSION_SECRET=<secreto>
 ADMIN_EMAIL=admin@at-once.cl
 ADMIN_PASSWORD=<secreto>
