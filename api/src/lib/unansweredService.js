@@ -316,7 +316,7 @@ export async function convertUnansweredToFaq(pool, config, id, user, input = {})
       category,
       keywords,
       language,
-      active ? 1 : 0,
+      active,
     ]
   );
 

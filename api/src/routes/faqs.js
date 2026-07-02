@@ -227,7 +227,7 @@ export async function faqRoutes(app, config) {
       `UPDATE faq_items
        SET question = ?, answer = ?, category = ?, keywords = ?, active = ?
        WHERE id = ?`,
-      [question, answer, category, keywords, active ? 1 : 0, faq.id]
+      [question, answer, category, keywords, active, faq.id]
     );
 
     const faqRow = {

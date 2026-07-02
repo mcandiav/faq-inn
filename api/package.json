@@ -1,7 +1,7 @@
 {
-  "name": "dfaq-api",
-  "version": "0.2.0",
-  "description": "DFAQ API — backend + MariaDB embebido",
+  "name": "faq-inn-api",
+  "version": "1.0.0",
+  "description": "FAQ Inn API — backend Fastify + PostgreSQL",
   "type": "module",
   "main": "src/index.js",
   "scripts": {
@@ -17,7 +17,7 @@
     "@fastify/multipart": "^9.0.3",
     "dotenv": "^16.4.7",
     "fastify": "^5.2.1",
-    "mysql2": "^3.14.0",
+    "pg": "^8.16.0",
     "xlsx": "^0.18.5"
   }
 }

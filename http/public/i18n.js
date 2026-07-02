@@ -1,4 +1,4 @@
-const LANG_STORAGE_KEY = 'dfaq-lang';
+const LANG_STORAGE_KEY = 'faq-inn-lang';
 const SUPPORTED_LANGS = ['es', 'pt', 'en'];
 
 const LOCALE_MAP = { es: 'es-CL', pt: 'pt-BR', en: 'en-US' };
@@ -88,7 +88,7 @@ const MESSAGES = {
     'profile.email': 'Email (login)',
     'profile.emailHint': 'Para cambiar el email debes ingresar tu contraseña actual abajo.',
     'profile.business': 'Nombre del negocio',
-    'profile.businessPlaceholder': 'Ej. MorroReservas',
+    'profile.businessPlaceholder': 'Ej. Hotel Vista Mar',
     'profile.businessExample': 'Ej. {name}',
     'profile.slug': 'Slug técnico (Qdrant / n8n)',
     'profile.changePassword': 'Cambiar contraseña',
@@ -221,7 +221,7 @@ const MESSAGES = {
     'profile.email': 'Email (login)',
     'profile.emailHint': 'Para alterar o email, informe sua senha atual abaixo.',
     'profile.business': 'Nome do negócio',
-    'profile.businessPlaceholder': 'Ex. MorroReservas',
+    'profile.businessPlaceholder': 'Ex. Hotel Vista Mar',
     'profile.businessExample': 'Ex. {name}',
     'profile.slug': 'Slug técnico (Qdrant / n8n)',
     'profile.changePassword': 'Alterar senha',
@@ -354,7 +354,7 @@ const MESSAGES = {
     'profile.email': 'Email (login)',
     'profile.emailHint': 'To change your email, enter your current password below.',
     'profile.business': 'Business name',
-    'profile.businessPlaceholder': 'E.g. MorroReservas',
+    'profile.businessPlaceholder': 'E.g. Ocean View Hotel',
     'profile.businessExample': 'E.g. {name}',
     'profile.slug': 'Technical slug (Qdrant / n8n)',
     'profile.changePassword': 'Change password',

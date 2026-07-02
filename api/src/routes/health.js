@@ -14,8 +14,15 @@ export async function healthRoutes(app, config) {
 
     return {
       status: database.healthy ? 'ok' : 'degraded',
-      service: 'dfaq-api',
+      service: 'faq-inn-api',
       env: config.appEnv,
+      app: {
+        tenant: config.tenant,
+        tenant_slug: config.tenantSlug,
+        tenant_display_name: config.tenantDisplayName,
+        title: config.appTitle,
+        version: config.appVersion,
+      },
       git: { commit: readGitCommit() },
       database,
       timestamp: new Date().toISOString(),
@@ -28,12 +35,14 @@ export async function healthRoutes(app, config) {
   app.get('/api/db/health', async (_request, reply) => {
     try {
       const pool = getPool(config.databaseUrl);
-      const [rows] = await pool.query('SELECT VERSION() AS version');
+      const [rows] = await pool.query('SELECT version() AS version');
       return {
         status: 'ok',
         database: {
           healthy: true,
+          engine: 'postgresql',
           version: rows[0].version,
+          name: config.dbName,
         },
         timestamp: new Date().toISOString(),
       };
