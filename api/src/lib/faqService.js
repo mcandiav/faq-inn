@@ -71,7 +71,7 @@ export async function createFaqRecord(pool, config, user, faqInput) {
       category,
       keywords,
       language,
-      active ? 1 : 0,
+      active,
     ]
   );
 

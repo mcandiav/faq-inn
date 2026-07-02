@@ -1,221 +1,166 @@
-# DFAQ — Guía de despliegue
+# FAQ Inn — Guía de despliegue
 
-Plataforma multiusuario para administrar FAQs de agentes IA.
+Plataforma SaaS hotelera/multivertical para administrar FAQs de agentes IA.
 
-- Repositorio: https://github.com/mcandiav/dfaq
-- Dominio público: https://dfaq.at-once.cl
+- Repositorio: https://github.com/mcandiav/faq-inn
+- Dominio objetivo: https://inn.at-once.cl
 - Documento maestro: [README.md](./README.md)
 
 ---
 
-## Decisión arquitectónica (V2.0)
+## Arquitectura (V1.0 código)
 
-El MVP usa **2 contenedores de aplicación** + **MariaDB compartido** (igual que Cronómetro / Planificador):
-
-| Contenedor / servicio | Rama Git | Rol |
+| Servicio | Rama Git | Rol |
 |---|---|---|
-| `dfaq-http` | `http` | Interfaz web (nginx) + proxy `/api/*` |
-| `dfaq-api` | `api` | Fastify (stateless — solo Node) |
-| `bignotti_mariadb` | *(existente)* | MariaDB compartido — base `dfaq` |
-
-**No** se embebe MariaDB en `dfaq-api`. Deploy del API = **solo Deploy** (sin Stop manual).
+| `faq-inn-http` | `http` | Interfaz web (nginx) + proxy `/api/*` |
+| `faq-inn-api` | `api` | Fastify (stateless — solo Node) |
+| `faq-inn_postgres` | *(EasyPanel)* | PostgreSQL 17 propio — base `faq-inn` |
+| `n8n_qdrant` | *(existente)* | Índice vectorial |
 
 ```text
-https://dfaq.at-once.cl
+https://inn.at-once.cl
         ↓
-   dfaq-http  (rama http, puerto 80)
+   faq-inn-http  (rama http, puerto 80)
         ↓ proxy /api/*
-   dfaq-api   (rama api, puerto 3000)
-        ↓ TCP 3306
-   bignotti_mariadb  (base dfaq, usuario dfaq_app)
+   faq-inn-api   (rama api, puerto 3000)
+        ↓ TCP 5432 (solo red interna)
+   n8n_faq-inn_postgres  (base faq-inn, usuario postgres)
         ↓
-   Qdrant (n8n_qdrant:6333, externo)
+   n8n_qdrant:6333
 ```
 
-El worker de indexación se añadirá **como proceso dentro de `api`**, no como tercer contenedor.
+**No publicar** PostgreSQL hacia internet. La API se conecta por hostname interno `n8n_faq-inn_postgres:5432`.
 
-## Embeddings (V1.8)
+---
 
-DFAQ genera vectores con **NVIDIA API** (`baai/bge-m3`, 1024 dimensiones, multilingüe).
+## Variables tenant (desarrollo)
 
-| Variable | Valor producción |
+| Variable | Valor dev |
+|---|---|
+| `TENANT` | `FAQ-INN` |
+| `TENANT_SLUG` | `faq-inn` |
+| `APP_TITLE` | `FAQ Inn FAQ-INN` |
+| `DB_NAME` | `faq-inn` |
+
+---
+
+## Embeddings
+
+FAQ Inn hereda la estrategia NVIDIA de DFAQ:
+
+| Variable | Valor |
 |---|---|
 | `EMBEDDING_PROVIDER` | `nvidia` |
-| `NVIDIA_API_KEY` | Secreto desde [build.nvidia.com](https://build.nvidia.com) |
 | `NVIDIA_EMBEDDING_MODEL` | `baai/bge-m3` |
 | `EMBEDDING_DIMENSION` | `1024` |
 | `QDRANT_COLLECTION_TEMPLATE` | `kb_<tenant_slug>_nvidia_1024` |
 
-La POC histórica en n8n usó OpenAI (`Embedding_OpenAI`, 1536 dims). **No mezclar** con colecciones NVIDIA.
-
-n8n y agentes deben consumir búsqueda vía `POST /api/search` de DFAQ, no insertar vectores OpenAI en colecciones NVIDIA.
+n8n debe consumir `POST /api/search`; no insertar vectores directo en Qdrant.
 
 ---
 
-> **EasyPanel:** el build usa la **raíz del repositorio**. El `Dockerfile` debe estar en `/`, no solo dentro de `api/` o `http/`.
-
-### Historial de deploy (versión Git visible)
-
-EasyPanel muestra: `Deploy service: <asunto del commit>`.
-
-| Asunto del commit | Lo que ves en EasyPanel |
-|---|---|
-| `[V1.9] merge main: ...` | `[V1.9] merge main: ...` — **sin hash** |
-| `[V2.1@59f69da] feat: import Excel` | `[V2.1@59f69da] feat: import Excel` — **con hash** |
-
-El hash **va en el asunto**, no lo agrega EasyPanel. Tras `git commit`, enmendar:
+## Historial de deploy (versión Git visible)
 
 ```powershell
-.\scripts\commit-version.ps1 -Version "2.1" -Message "feat: descripcion corta"
+.\scripts\commit-version.ps1 -Version "1.0" -Message "feat: descripcion corta"
 ```
 
-Evitar `Co-authored-by:` en commits de deploy (aparece en la misma línea del historial).
+Verificar en producción: `GET https://inn.at-once.cl/api/health` → `app.title`, `app.version`, `git.commit`.
 
-Tras deploy, verificar commit en producción: `GET https://dfaq.at-once.cl/api/health` → campo `git.commit`.
-
-EasyPanel pasa `GIT_SHA` al build (sin carpeta `.git` en el archive). Los Dockerfiles usan ese build-arg, no `COPY .git`.
-
+---
 
 ## Estructura del repositorio
 
 ```text
-dfaq/
-├── README.md          # Arquitectura y decisiones
-├── DEPLOY.md          # Esta guía
-├── api/               # Servicio backend (rama api)
-│   ├── Dockerfile
-│   ├── docker/entrypoint.sh
-│   └── src/
-└── http/              # Servicio interfaz (rama http)
-    ├── Dockerfile
-    ├── nginx.conf.template
-    └── public/
+faq-inn/
+├── README.md
+├── DEPLOY.md
+├── api/               # rama api
+└── http/              # rama http
 ```
 
 | Rama | Uso en EasyPanel |
 |---|---|
-| `main` | Desarrollo integrado (contiene `api/` + `http/`) |
-| `api` | Deploy de `dfaq-api` — directorio raíz: `api` |
-| `http` | Deploy de `dfaq-http` — directorio raíz: `http` |
+| `main` | Desarrollo integrado |
+| `api` | Deploy `faq-inn-api` |
+| `http` | Deploy `faq-inn-http` |
 
 ---
 
-## EasyPanel — proyecto `dfaq`
-
-### 1. Servicio `dfaq-api`
+## EasyPanel — servicio `faq-inn-api`
 
 | Campo | Valor |
 |---|---|
-| Fuente | GitHub `mcandiav/dfaq` |
+| Fuente | GitHub `mcandiav/faq-inn` |
 | Rama | `api` |
-| Dockerfile | `/Dockerfile` en la **raíz del repo** (no `api/Dockerfile`) |
 | Puerto interno | `3000` |
 | Healthcheck | `GET /health` |
-| Volumen | **Ninguno** (quitar `/var/lib/mysql` si existía) |
-| Réplicas | `1` (cero downtime puede quedar OFF u ON — ya no hay lock MariaDB) |
 
-**Preparación MariaDB:** en el **primer deploy**, la API crea sola la base `dfaq` y el usuario `dfaq_app` si no existen. Solo necesitas el password **root** de `bignotti_mariadb` en `DB_ADMIN_PASSWORD` (una vez). Opcional: script manual `api/scripts/init-dfaq-database.sql`.
+**Variables mínimas:**
 
-**Variables de entorno:**
-
-```text
+```env
 APP_ENV=production
-APP_URL=https://dfaq.at-once.cl
-PORT=3000
+APP_URL=https://inn.at-once.cl
+TENANT=FAQ-INN
+TENANT_SLUG=faq-inn
+APP_TITLE=FAQ Inn FAQ-INN
+APP_VERSION=1.0.0
+DB_HOST=n8n_faq-inn_postgres
+DB_PORT=5432
+DB_NAME=faq-inn
+DB_USER=postgres
+DB_PASSWORD=<desde EasyPanel, no documentar>
 QDRANT_URL=http://n8n_qdrant:6333
-QDRANT_COLLECTION_TEMPLATE=kb_<tenant_slug>_nvidia_1024
-
-# MariaDB compartido (misma instancia que planificador)
-DB_HOST=bignotti_mariadb
-DB_PORT=3306
-DB_NAME=dfaq
-DB_USER=dfaq_app
-DB_PASSWORD=<secreto app>
-DB_ADMIN_USER=root
-DB_ADMIN_PASSWORD=<root de bignotti_mariadb — solo para bootstrap inicial>
-
-# Auth V1.9
-ADMIN_EMAIL=<tu email admin>
-ADMIN_PASSWORD=<secreto>
-SESSION_SECRET=<secreto>
-
-# Embeddings NVIDIA (gratuito en build.nvidia.com)
 EMBEDDING_PROVIDER=nvidia
-EMBEDDING_DIMENSION=1024
 NVIDIA_API_KEY=<secreto>
-NVIDIA_API_BASE=https://integrate.api.nvidia.com/v1
-NVIDIA_EMBEDDING_MODEL=baai/bge-m3
+SESSION_SECRET=<secreto>
+ADMIN_EMAIL=admin@at-once.cl
+ADMIN_PASSWORD=<secreto>
 ```
 
-Quitar variables obsoletas: `MYSQL_ROOT_PASSWORD`, volumen `/var/lib/mysql`, `DATABASE_URL` con `127.0.0.1` (salvo que prefieras URL completa).
+**Smoke test tras deploy:**
 
-**Endpoints de validación post-deploy:**
+1. `GET /api/health` → `service: faq-inn-api`, `database.healthy: true`
+2. `POST /api/qdrant/collections/ensure` body `{"tenant_slug":"faq-inn"}`
+3. `POST /api/search` con `tenant_id` / `agent_id` del tenant demo
 
-- `GET /health` — API + MariaDB
-- `GET /api/db/health` — MariaDB
-- `GET /api/qdrant/health` — Qdrant
-- `POST /api/qdrant/collections/ensure` — crear/verificar colección
-- `POST /api/qdrant/faq/upsert-test` — upsert FAQ WiFi (requiere `NVIDIA_API_KEY` u `OPENAI_API_KEY`)
-- `POST /api/search` — búsqueda semántica
+---
 
-**Integración n8n:** configuración completa del nodo HTTP Request en [docs/N8N-SEARCH.md](docs/N8N-SEARCH.md).
-
-**Secuencia fases 4-6:**
-
-1. `POST /api/qdrant/collections/ensure` body `{}` → crea `kb_morroreservas_nvidia_1024`
-2. `POST /api/qdrant/faq/upsert-test` body `{}` → FAQ WiFi con embedding NVIDIA
-3. `POST /api/search` body `{"tenant_id":"morroreservas","agent_id":"chatwoot_reservas","query":"Tem internet bom para trabalhar?"}`
-
-### 2. Servicio `dfaq-http`
+## EasyPanel — servicio `faq-inn-http`
 
 | Campo | Valor |
 |---|---|
-| Fuente | GitHub `mcandiav/dfaq` |
+| Fuente | GitHub `mcandiav/faq-inn` |
 | Rama | `http` |
-| Dockerfile | `/Dockerfile` en la **raíz del repo** (rama `http` apunta a build http) |
-| Puerto interno | `80` |
-| Dominio | `dfaq.at-once.cl` |
-| Healthcheck | `GET /health` |
+| Dominio | `inn.at-once.cl` |
 
-**Variables de entorno:**
-
-```text
-API_UPSTREAM=http://n8n_dfaq-api:3000
+```env
+API_UPSTREAM=http://n8n_faq-inn-api:3000
 ```
 
-`n8n_dfaq-api` = nombre interno del App Service api en el proyecto EasyPanel `n8n`.
+Validar:
 
-**Validación post-deploy:**
-
-- `GET https://dfaq.at-once.cl/health` → `dfaq-http` OK
-- `GET https://dfaq.at-once.cl/api/health` → proxy hacia `dfaq-api` OK
+- `GET /health` → `faq-inn-http`
+- `GET /api/health` → proxy OK, título `FAQ Inn FAQ-INN`
 
 ---
 
-## Orden de despliegue recomendado
+## PostgreSQL (`faq-inn_postgres`)
 
-1. Desplegar **`dfaq-api`** primero y validar `/api/qdrant/health`.
-2. Si Qdrant no conecta, resolver red hacia `n8n_qdrant:6333` antes de continuar.
-3. Desplegar **`dfaq-http`** con `API_UPSTREAM` apuntando al servicio api.
-4. Publicar dominio `dfaq.at-once.cl` en el servicio `http`.
+| Campo | Valor |
+|---|---|
+| Nombre servicio | `faq-inn_postgres` |
+| Host interno | `n8n_faq-inn_postgres` |
+| Imagen | `postgres:17` |
+| Base | `faq-inn` |
+| Usuario | `postgres` |
+| Puerto interno | `5432` |
+| Puerto público | No publicado |
 
----
-
-## Desarrollo local (Acer)
-
-Copiar variables desde `api/.env.example` y `http/.env.example`.
-
-- En local, `QDRANT_URL` suele ser `http://127.0.0.1:6333`.
-- MariaDB local o túnel; en EasyPanel usar `DB_HOST=bignotti_mariadb`.
-
-Ver también: `api/README.md` y `http/README.md`.
+La contraseña la genera EasyPanel; configurarla solo en variables de `faq-inn-api`.
 
 ---
 
-## Criterios de aprobación Fase 1
+## Nota sobre DFAQ legacy
 
-Desde producción EasyPanel:
-
-1. `dfaq-api` → `/api/qdrant/health` responde `status: ok`.
-2. `dfaq-api` → `/api/db/health` responde `status: ok`.
-3. `dfaq-http` → `/api/health` proxifica correctamente hacia api.
+`dfaq.at-once.cl` / MorroReservas permanece en producción con MariaDB. **No** mezclar despliegues ni bases entre DFAQ y FAQ Inn.

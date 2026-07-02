@@ -63,7 +63,7 @@ try {
           : config.openaiEmbeddingModel,
       databaseUrl: config.databaseUrl.replace(/:([^:@]+)@/, ':***@'),
     },
-    'dfaq-api started'
+    'faq-inn-api started'
   );
 } catch (error) {
   app.log.error(error);

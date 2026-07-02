@@ -6,16 +6,18 @@ import {
   resolveCollectionName,
 } from '../lib/qdrant.js';
 
-const TEST_FAQ = {
-  tenant_id: 'morroreservas',
-  agent_id: 'chatwoot_reservas',
-  faq_id: 'wifi-001',
-  question: 'Tienen Wifi?',
-  answer:
-    'Si, tenemos WIFI, pero estamos en una isla y el servicio no tiene la robustez de un servicio en el continente.',
-  category: 'servicios',
-  keywords: 'wifi, internet, conexion, ilha, trabalho remoto',
-};
+function testFaqDefaults(config) {
+  return {
+    tenant_id: config.tenantSlug,
+    agent_id: 'principal',
+    faq_id: 'wifi-001',
+    question: 'Tienen Wifi?',
+    answer:
+      'Si, tenemos WIFI, pero estamos en una isla y el servicio no tiene la robustez de un servicio en el continente.',
+    category: 'servicios',
+    keywords: 'wifi, internet, conexion',
+  };
+}
 
 function searchFilter(tenantId, agentId) {
   return {
@@ -29,7 +31,7 @@ function searchFilter(tenantId, agentId) {
 
 export async function searchRoutes(app, config) {
   app.post('/api/qdrant/collections/ensure', async (request, reply) => {
-    const tenantSlug = request.body?.tenant_slug || 'morroreservas';
+    const tenantSlug = request.body?.tenant_slug || config.tenantSlug;
     const collection = resolveCollectionName(
       config.qdrantCollectionTemplate,
       tenantSlug
@@ -82,12 +84,13 @@ export async function searchRoutes(app, config) {
 
   app.post('/api/qdrant/faq/upsert-test', async (request, reply) => {
     try {
-      const tenantSlug = request.body?.tenant_slug || TEST_FAQ.tenant_id;
+      const defaults = testFaqDefaults(config);
+      const tenantSlug = request.body?.tenant_slug || defaults.tenant_id;
       const collection = resolveCollectionName(
         config.qdrantCollectionTemplate,
         tenantSlug
       );
-      const faq = { ...TEST_FAQ, ...(request.body?.faq || {}) };
+      const faq = { ...defaults, ...(request.body?.faq || {}) };
       const text = buildVectorizableText(faq);
       const vector = await createEmbedding(text, config, { inputType: 'passage' });
       const pointId = faqPointId(faq.faq_id);

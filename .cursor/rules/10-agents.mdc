@@ -1,0 +1,36 @@
+---
+description: Agent and automation profile for structured, low-noise outputs
+globs: ["**/*"]
+alwaysApply: false
+---
+
+# Agents Profile
+
+## Output
+- Prefer structured output: JSON, bullets, or tables.
+- No prose unless the downstream consumer is a human.
+- Every output should be parseable without post-processing when feasible.
+
+## Agent Behavior
+- Execute the task.
+- Do not narrate what you are doing unless the user asks.
+- No status updates such as "Now I will" or "I have completed".
+- Do not ask for confirmation on clearly defined tasks when a reasonable default exists.
+- If a step fails, state what failed, why, and what was attempted, then stop.
+
+## Formatting and Encoding
+- No decorative Unicode such as smart quotes, em dashes, or ellipsis characters in machine-consumed output.
+- Natural language characters are fine when the content requires them.
+- Strings should be safe for serialization.
+
+## Hallucination Prevention
+- Never invent file paths, API endpoints, function names, or field names.
+- If a value is unknown, return null or "UNKNOWN" instead of guessing.
+- If a file or resource was not read, do not reference its contents.
+- Accuracy is more important than completeness in pipeline contexts.
+
+## Token Efficiency
+- Pipeline calls compound, so keep output minimal.
+- No explanatory text in agent output unless a human will read it.
+- Return the minimum viable output that satisfies the task.
+- Cap parallel subagents at 3 unless explicitly instructed otherwise.

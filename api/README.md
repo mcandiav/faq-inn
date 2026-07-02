@@ -1,8 +1,8 @@
-# DFAQ — servicio `api`
+# FAQ Inn — servicio `api`
 
-Backend Fastify conectado a **MariaDB externo** (`bignotti_mariadb` en EasyPanel).
+Backend Fastify conectado a **PostgreSQL propio** (`n8n_faq-inn_postgres` en EasyPanel).
 
-Parte de la arquitectura: `dfaq-api` + `dfaq-http` + MariaDB compartido. Ver [DEPLOY.md](../DEPLOY.md).
+Arquitectura: `faq-inn-api` + `faq-inn-http` + `faq-inn_postgres`. Ver [DEPLOY.md](../DEPLOY.md).
 
 ## Rol
 
@@ -10,8 +10,8 @@ Parte de la arquitectura: `dfaq-api` + `dfaq-http` + MariaDB compartido. Ver [DE
 |---|---|
 | Rama Git | `api` |
 | Puerto | `3000` |
-| Base de datos | MariaDB `bignotti_mariadb:3306`, base `dfaq` |
-| Persistencia | Volumen en el servicio MariaDB (no en `dfaq-api`) |
+| Base de datos | PostgreSQL `n8n_faq-inn_postgres:5432`, base `faq-inn` |
+| Tenant dev | `FAQ-INN` / slug `faq-inn` |
 | Qdrant | Externo vía `QDRANT_URL` |
 | Embeddings | NVIDIA API `baai/bge-m3` (por defecto) |
 
@@ -19,58 +19,30 @@ Parte de la arquitectura: `dfaq-api` + `dfaq-http` + MariaDB compartido. Ver [DE
 
 | Campo | Valor |
 |---|---|
-| Repositorio | `mcandiav/dfaq` |
+| Repositorio | `mcandiav/faq-inn` |
 | Rama | `api` |
-| Directorio raíz | `/Dockerfile` en raíz del repo |
-| App Service | `dfaq-api` (interno: `n8n_dfaq-api`) |
+| App Service | `faq-inn-api` (interno: `n8n_faq-inn-api`) |
 
 ## Endpoints
 
 | Método | Ruta | Descripción |
 |---|---|---|
-| GET | `/health` | API + estado MariaDB |
-| GET | `/api/db/health` | MariaDB |
-| GET | `/api/qdrant/health` | Conectividad Qdrant |
+| GET | `/health` | API + metadatos app/tenant |
+| GET | `/api/db/health` | PostgreSQL |
+| POST | `/api/search` | Búsqueda semántica |
 | POST | `/api/qdrant/collections/ensure` | Crear/verificar colección tenant |
-| POST | `/api/qdrant/faq/upsert-test` | Upsert FAQ WiFi de prueba |
-| POST | `/api/search` | Búsqueda semántica (consumo n8n) — ver [docs/N8N-SEARCH.md](../docs/N8N-SEARCH.md) |
-| POST | `/api/unanswered` | Registro de preguntas sin respuesta (n8n) |
-| GET | `/api/unanswered` | Listado para cliente autenticado |
-| PATCH | `/api/unanswered/:id` | Cambiar estado (`ignored`, `resolved_manually`, `pending`) |
-| POST | `/api/unanswered/:id/convert` | Convertir pregunta en FAQ e indexar en Qdrant |
-| POST | `/api/auth/login` | Login (cookie) |
-| GET | `/api/auth/me` | Sesión actual |
-| PATCH | `/api/auth/profile` | Nombre negocio / contraseña |
-| GET/POST | `/api/admin/tenants` | Alta posadas (admin) |
-| CRUD | `/api/faqs` | FAQs con reindex inmediato |
 
-## Embeddings (V1.8)
+Ver código en `src/routes/` para el listado completo.
 
-Proveedor por defecto: **NVIDIA API** — modelo multilingüe `baai/bge-m3`.
+## Variables clave
 
-```text
-EMBEDDING_PROVIDER=nvidia
-EMBEDDING_DIMENSION=1024
-NVIDIA_API_KEY=<secreto>
-NVIDIA_API_BASE=https://integrate.api.nvidia.com/v1
-NVIDIA_EMBEDDING_MODEL=baai/bge-m3
-QDRANT_COLLECTION_TEMPLATE=kb_<tenant_slug>_nvidia_1024
+Copiar desde [`.env.example`](./.env.example).
+
+```env
+TENANT=FAQ-INN
+TENANT_SLUG=faq-inn
+DB_HOST=n8n_faq-inn_postgres
+DB_NAME=faq-inn
+DB_USER=postgres
+QDRANT_URL=http://n8n_qdrant:6333
 ```
-
-Alternativa OpenAI:
-
-```text
-EMBEDDING_PROVIDER=openai
-OPENAI_API_KEY=<secreto>
-OPENAI_EMBEDDING_MODEL=text-embedding-3-small
-EMBEDDING_DIMENSION=1536
-QDRANT_COLLECTION_TEMPLATE=kb_<tenant_slug>_openai_1536
-```
-
-**Regla:** no mezclar vectores de distinto proveedor/dimensión en la misma colección Qdrant.
-
-## Arranque
-
-El script `docker/entrypoint.sh` ejecuta solo Node. Las migraciones SQL corren al iniciar la API.
-
-Inicialización de la base: automática en el primer arranque con `DB_ADMIN_PASSWORD` (root MariaDB). Ver `src/lib/bootstrapDb.js`.

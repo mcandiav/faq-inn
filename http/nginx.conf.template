@@ -10,7 +10,7 @@ server {
     location = /health {
         access_log off;
         add_header Content-Type application/json;
-        return 200 '{"status":"ok","service":"dfaq-http"}';
+        return 200 '{"status":"ok","service":"faq-inn-http"}';
     }
 
     location /api/ {

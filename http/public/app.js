@@ -1,20 +1,28 @@
-const APP_VERSION = '2.4.4';
-const apiBase = window.DFAQ_API_URL || '/api';
-const VIEW_STORAGE_KEY = 'dfaq-current-view';
+const APP_VERSION = '1.0.0';
+const apiBase = window.FAQ_INN_API_URL || window.DFAQ_API_URL || '/api';
+const VIEW_STORAGE_KEY = 'faq-inn-current-view';
 const VALID_VIEWS = ['dashboard', 'unanswered', 'profile', 'admin'];
 
 const state = { user: null, faqs: [], unanswered: [], currentView: 'dashboard' };
+const appMeta = { title: 'FAQ Inn FAQ-INN', version: APP_VERSION };
 
 const $ = (sel) => document.querySelector(sel);
 const $$ = (sel) => document.querySelectorAll(sel);
 
 function versionLabel(gitCommit) {
-  const base = `DFAQ v${APP_VERSION}`;
+  const base = `${appMeta.title} v${appMeta.version}`;
   const hash = gitCommit?.trim();
   if (hash && hash !== 'unknown') {
     return `${base} @${hash}`;
   }
   return base;
+}
+
+function applyAppBranding() {
+  const productEl = document.querySelector('.login-product');
+  if (productEl) {
+    productEl.textContent = appMeta.title;
+  }
 }
 
 function applyAppVersion(gitCommit) {
@@ -32,12 +40,21 @@ async function loadDeployVersion() {
       headers: { Accept: 'application/json' },
     });
     if (!response.ok) {
+      applyAppBranding();
       applyAppVersion();
       return;
     }
     const data = await response.json();
+    if (data.app?.title) {
+      appMeta.title = data.app.title;
+    }
+    if (data.app?.version) {
+      appMeta.version = data.app.version;
+    }
+    applyAppBranding();
     applyAppVersion(data.git?.commit);
   } catch {
+    applyAppBranding();
     applyAppVersion();
   }
 }
