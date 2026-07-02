@@ -131,13 +131,25 @@ export async function runMigrations(pool, _config) {
   );
 
   if (existing.length > 0) {
-    await pool.query('UPDATE users SET password_hash = ? WHERE id = ?', [
-      passwordHash,
-      existing[0].id,
-    ]);
-    console.log(
-      `[faq-inn-api] Password admin global sincronizado (${existing[0].email})`
+    const adminId = existing[0].id;
+
+    const [emailTaken] = await pool.query(
+      'SELECT id FROM users WHERE email = ? AND id != ?',
+      [adminEmail, adminId]
     );
+
+    if (emailTaken.length > 0) {
+      console.error(
+        `[faq-inn-api] ADMIN_EMAIL ${adminEmail} ya está en uso por otro usuario`
+      );
+      return;
+    }
+
+    await pool.query(
+      'UPDATE users SET email = ?, password_hash = ? WHERE id = ?',
+      [adminEmail, passwordHash, adminId]
+    );
+    console.log(`[faq-inn-api] Admin global sincronizado: ${adminEmail}`);
     return;
   }
 
