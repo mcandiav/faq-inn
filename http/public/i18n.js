@@ -139,6 +139,8 @@ const MESSAGES = {
     'msg.synced': 'Qdrant sincronizado.',
     'msg.savingIndexing': 'Guardando e indexando…',
     'msg.profileSaved': 'Cambios guardados.',
+    'msg.passwordRequiredForEmail':
+      'Ingresa tu contraseña actual para cambiar el email.',
     'msg.tenantCreated': 'Posada creada. El cliente puede ingresar con su email.',
   },
   pt: {
@@ -270,6 +272,8 @@ const MESSAGES = {
     'msg.synced': 'Qdrant sincronizado.',
     'msg.savingIndexing': 'Salvando e indexando…',
     'msg.profileSaved': 'Alterações salvas.',
+    'msg.passwordRequiredForEmail':
+      'Informe sua senha atual para alterar o email.',
     'msg.tenantCreated': 'Pousada criada. O cliente pode entrar com seu email.',
   },
   en: {
@@ -401,6 +405,8 @@ const MESSAGES = {
     'msg.synced': 'Qdrant synced.',
     'msg.savingIndexing': 'Saving and indexing…',
     'msg.profileSaved': 'Changes saved.',
+    'msg.passwordRequiredForEmail':
+      'Enter your current password to change your email.',
     'msg.tenantCreated': 'Lodging created. The client can sign in with their email.',
   },
 };
