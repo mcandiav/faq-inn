@@ -91,6 +91,41 @@ CREATE INDEX IF NOT EXISTS idx_unanswered_tenant_status
   ON unanswered_questions (tenant_id, status);
 CREATE INDEX IF NOT EXISTS idx_unanswered_agent
   ON unanswered_questions (agent_id);
+
+CREATE TABLE IF NOT EXISTS tenant_settings (
+  tenant_id BIGINT PRIMARY KEY REFERENCES tenants (id) ON DELETE CASCADE,
+  vertical_slug VARCHAR(64) NOT NULL DEFAULT 'hotel',
+  primary_language VARCHAR(16) NOT NULL DEFAULT 'es',
+  booking_url_base TEXT NOT NULL DEFAULT '',
+  booking_url_template TEXT NOT NULL DEFAULT '',
+  lodging_type VARCHAR(64) NOT NULL DEFAULT 'hotel',
+  business_hours TEXT NOT NULL DEFAULT '',
+  policies TEXT NOT NULL DEFAULT '',
+  welcome_message TEXT NOT NULL DEFAULT '',
+  postgres_database VARCHAR(128) NOT NULL DEFAULT '',
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS tenant_provisioning (
+  tenant_id BIGINT PRIMARY KEY REFERENCES tenants (id) ON DELETE CASCADE,
+  status VARCHAR(32) NOT NULL DEFAULT 'draft'
+    CHECK (status IN (
+      'draft',
+      'provisioning',
+      'waiting_qr_scan',
+      'connected',
+      'workflow_created',
+      'testing',
+      'active',
+      'error',
+      'suspended',
+      'cancelled'
+    )),
+  last_error TEXT NOT NULL DEFAULT '',
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
 `;
 
 async function applySchemaPatches(pool) {
@@ -131,13 +166,25 @@ export async function runMigrations(pool, _config) {
   );
 
   if (existing.length > 0) {
-    await pool.query('UPDATE users SET password_hash = ? WHERE id = ?', [
-      passwordHash,
-      existing[0].id,
-    ]);
-    console.log(
-      `[faq-inn-api] Password admin global sincronizado (${existing[0].email})`
+    const adminId = existing[0].id;
+
+    const [emailTaken] = await pool.query(
+      'SELECT id FROM users WHERE email = ? AND id != ?',
+      [adminEmail, adminId]
     );
+
+    if (emailTaken.length > 0) {
+      console.error(
+        `[faq-inn-api] ADMIN_EMAIL ${adminEmail} ya está en uso por otro usuario`
+      );
+      return;
+    }
+
+    await pool.query(
+      'UPDATE users SET email = ?, password_hash = ? WHERE id = ?',
+      [adminEmail, passwordHash, adminId]
+    );
+    console.log(`[faq-inn-api] Admin global sincronizado: ${adminEmail}`);
     return;
   }
 

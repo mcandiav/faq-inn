@@ -82,10 +82,174 @@ body {
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: center;
-  gap: 1.25rem;
+  justify-content: flex-start;
+  gap: 1rem;
   padding: 1rem;
   padding-top: calc(3.25rem + env(safe-area-inset-top, 0px));
+  padding-bottom: 2rem;
+}
+
+.landing-hero {
+  width: min(520px, 96vw);
+  padding: 1.25rem 1.35rem;
+}
+
+.landing-welcome {
+  margin: 0 0 0.85rem;
+  font-size: 1.05rem;
+  line-height: 1.55;
+  color: #e2e8f0;
+}
+
+.landing-flow-title {
+  margin: 0 0 0.85rem;
+  font-size: 0.9rem;
+  color: #94a3b8;
+}
+
+.onboarding-flow {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+.flow-step {
+  display: grid;
+  grid-template-columns: 2rem 1fr;
+  gap: 0.75rem;
+  padding-bottom: 1rem;
+  position: relative;
+}
+
+.flow-step:not(:last-child)::before {
+  content: '';
+  position: absolute;
+  left: 0.95rem;
+  top: 2rem;
+  bottom: 0;
+  width: 2px;
+  background: linear-gradient(180deg, #38bdf8 0%, #334155 100%);
+}
+
+.flow-marker {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2rem;
+  height: 2rem;
+  border-radius: 999px;
+  border: 2px solid #334155;
+  background: #0f172a;
+  color: #94a3b8;
+  font-size: 0.85rem;
+  font-weight: 700;
+  z-index: 1;
+}
+
+.flow-step--now .flow-marker {
+  border-color: #38bdf8;
+  background: rgba(56, 189, 248, 0.2);
+  color: #7dd3fc;
+}
+
+.flow-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-bottom: 0.2rem;
+}
+
+.flow-head strong {
+  font-size: 0.95rem;
+}
+
+.flow-time {
+  flex-shrink: 0;
+  font-size: 0.78rem;
+  color: #67e8f9;
+  font-weight: 600;
+}
+
+.flow-body p {
+  margin: 0;
+  font-size: 0.85rem;
+  line-height: 1.45;
+  color: #94a3b8;
+}
+
+.flow-badge {
+  display: inline-block;
+  margin-top: 0.45rem;
+  padding: 0.15rem 0.55rem;
+  border-radius: 999px;
+  background: rgba(56, 189, 248, 0.18);
+  color: #7dd3fc;
+  font-size: 0.72rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.flow-badge--soon {
+  background: rgba(148, 163, 184, 0.15);
+  color: #cbd5e1;
+}
+
+.flow-total {
+  margin: 0.25rem 0 0;
+  padding-top: 0.75rem;
+  border-top: 1px solid #334155;
+  font-size: 0.88rem;
+  color: #94a3b8;
+}
+
+.flow-total strong {
+  color: #e2e8f0;
+}
+
+.landing-tabs {
+  display: flex;
+  gap: 0.5rem;
+  width: min(520px, 96vw);
+}
+
+.landing-tab {
+  flex: 1;
+  padding: 0.65rem 1rem;
+  border: 1px solid #334155;
+  border-radius: 999px;
+  background: rgba(15, 23, 42, 0.6);
+  color: #94a3b8;
+  font: inherit;
+  cursor: pointer;
+}
+
+.landing-tab.active {
+  border-color: #38bdf8;
+  background: rgba(56, 189, 248, 0.15);
+  color: #e2e8f0;
+}
+
+.landing-panel .select-inline.block,
+.landing-panel select {
+  width: 100%;
+  margin-top: 0.35rem;
+}
+
+.landing-panel textarea {
+  width: 100%;
+  margin-top: 0.35rem;
+  padding: 0.65rem 0.75rem;
+  border: 1px solid #334155;
+  border-radius: 8px;
+  background: #0f172a;
+  color: #e2e8f0;
+  font: inherit;
+  resize: vertical;
 }
 
 .card,

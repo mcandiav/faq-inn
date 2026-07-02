@@ -1,4 +1,4 @@
-const APP_VERSION = '1.0.0';
+const APP_VERSION = '1.1.0';
 const apiBase = window.FAQ_INN_API_URL || window.DFAQ_API_URL || '/api';
 const VIEW_STORAGE_KEY = 'faq-inn-current-view';
 const VALID_VIEWS = ['dashboard', 'unanswered', 'profile', 'admin'];
@@ -93,10 +93,24 @@ async function apiUpload(path, formData) {
   return api(path, { method: 'POST', body: formData });
 }
 
-function showLogin() {
+function showLanding(tab = 'signup') {
   document.body.classList.remove('app-logged-in');
   $('#app').classList.add('hidden');
   $('#login-screen').classList.remove('hidden');
+  setLandingTab(tab);
+}
+
+function setLandingTab(tab) {
+  const signup = tab === 'signup';
+  $('#tab-signup')?.classList.toggle('active', signup);
+  $('#tab-login')?.classList.toggle('active', !signup);
+  $('#onboarding-form')?.classList.toggle('hidden', !signup);
+  $('#login-form')?.classList.toggle('hidden', signup);
+  document.querySelector('.landing-hero')?.classList.toggle('hidden', !signup);
+}
+
+function showLogin() {
+  showLanding('login');
 }
 
 function showApp() {
@@ -740,7 +754,7 @@ async function loadSession() {
       await refreshUnanswered();
     }
   } catch {
-    showLogin();
+    showLanding('signup');
   }
 }
 
@@ -914,6 +928,75 @@ $('#login-form').addEventListener('submit', async (event) => {
   }
 });
 
+$('#tab-signup')?.addEventListener('click', () => setLandingTab('signup'));
+$('#tab-login')?.addEventListener('click', () => setLandingTab('login'));
+
+function slugifyBusinessName(value) {
+  return String(value || '')
+    .trim()
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+    .slice(0, 48);
+}
+
+let slugTouched = false;
+
+$('#onboarding-slug')?.addEventListener('input', () => {
+  slugTouched = true;
+});
+
+$('#onboarding-business')?.addEventListener('input', () => {
+  if (slugTouched) {
+    return;
+  }
+  const slugInput = $('#onboarding-slug');
+  if (slugInput) {
+    slugInput.value = slugifyBusinessName($('#onboarding-business').value);
+  }
+});
+
+$('#onboarding-form')?.addEventListener('submit', async (event) => {
+  event.preventDefault();
+  const msg = $('#onboarding-msg');
+  msg.textContent = '';
+  msg.className = 'form-msg';
+
+  try {
+    const data = await api('/onboarding/hotel', {
+      method: 'POST',
+      body: JSON.stringify({
+        business_name: $('#onboarding-business').value.trim(),
+        tenant_slug: $('#onboarding-slug').value.trim(),
+        email: $('#onboarding-email').value.trim(),
+        password: $('#onboarding-password').value,
+        primary_language: $('#onboarding-language').value,
+        lodging_type: $('#onboarding-lodging').value,
+        booking_url_base: $('#onboarding-booking-url').value.trim(),
+        booking_url_template: $('#onboarding-booking-template').value.trim(),
+        welcome_message: $('#onboarding-welcome').value.trim(),
+      }),
+    });
+    state.user = data.user;
+    slugTouched = false;
+    showApp();
+    renderHeader();
+    await openView('dashboard');
+    await refreshUnanswered();
+    if (data.message) {
+      const hint = $('#dashboard-hint');
+      if (hint) {
+        hint.textContent = data.message;
+      }
+    }
+  } catch (error) {
+    msg.textContent = error.message;
+    msg.classList.add('error');
+  }
+});
+
 async function logout() {
   try {
     await api('/auth/logout', { method: 'POST' });
@@ -929,7 +1012,7 @@ async function logout() {
     /* ignore */
   }
   history.replaceState(null, '', location.pathname + location.search);
-  showLogin();
+  showLanding('signup');
 }
 
 $('#btn-logout').addEventListener('click', logout);
