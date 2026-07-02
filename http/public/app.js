@@ -1,4 +1,4 @@
-const APP_VERSION = '2.4.3';
+const APP_VERSION = '2.4.4';
 const apiBase = window.DFAQ_API_URL || '/api';
 const VIEW_STORAGE_KEY = 'dfaq-current-view';
 const VALID_VIEWS = ['dashboard', 'unanswered', 'profile', 'admin'];
@@ -999,6 +999,8 @@ $('#profile-form').addEventListener('submit', async (event) => {
 
   const body = {};
   const email = $('#profile-email').value.trim().toLowerCase();
+  const currentEmail = state.user?.email?.trim().toLowerCase() || '';
+  const emailChanged = Boolean(email && email !== currentEmail);
   if (email) {
     body.email = email;
   }
@@ -1007,8 +1009,18 @@ $('#profile-form').addEventListener('submit', async (event) => {
   }
   const current = $('#profile-current-password').value;
   const next = $('#profile-new-password').value;
-  if (next) {
+
+  if (emailChanged && !current) {
+    msg.textContent = t('msg.passwordRequiredForEmail');
+    msg.classList.add('error');
+    $('#profile-current-password').focus();
+    return;
+  }
+
+  if (emailChanged || next) {
     body.current_password = current;
+  }
+  if (next) {
     body.new_password = next;
   }
 
