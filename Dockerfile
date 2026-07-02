@@ -13,7 +13,7 @@ COPY http/public /usr/share/nginx/html
 RUN sed -i 's/\r$//' /entrypoint.sh && chmod +x /entrypoint.sh \
   && printf '%.7s\n' "${GIT_SHA}" > /usr/share/nginx/html/git-commit.txt
 
-ENV API_UPSTREAM=http://dfaq-api:3000
+ENV API_UPSTREAM=http://n8n_faq-inn-api:3000
 
 EXPOSE 80
 

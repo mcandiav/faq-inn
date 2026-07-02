@@ -118,21 +118,29 @@ export async function runMigrations(pool, _config) {
   await applySchemaPatches(pool);
 
   const adminEmail = process.env.ADMIN_EMAIL?.trim().toLowerCase();
-  const adminPassword = process.env.ADMIN_PASSWORD;
+  const adminPassword = process.env.ADMIN_PASSWORD?.trim();
 
   if (!adminEmail || !adminPassword) {
     return;
   }
 
+  const passwordHash = await hashPassword(adminPassword);
+
   const [existing] = await pool.query(
-    "SELECT id FROM users WHERE role = 'admin_global' LIMIT 1"
+    "SELECT id, email FROM users WHERE role = 'admin_global' LIMIT 1"
   );
 
   if (existing.length > 0) {
+    await pool.query('UPDATE users SET password_hash = ? WHERE id = ?', [
+      passwordHash,
+      existing[0].id,
+    ]);
+    console.log(
+      `[faq-inn-api] Password admin global sincronizado (${existing[0].email})`
+    );
     return;
   }
 
-  const passwordHash = await hashPassword(adminPassword);
   await pool.query(
     `INSERT INTO users (tenant_id, email, password_hash, role, status)
      VALUES (NULL, ?, ?, 'admin_global', 'active')`,
