@@ -11,7 +11,7 @@
     <link rel="icon" type="image/png" sizes="512x512" href="/favicon.png" />
     <link rel="apple-touch-icon" href="/favicon.png" />
     <title>FAQ Inn FAQ-INN</title>
-    <link rel="stylesheet" href="/styles.css?v=1.1.0" />
+    <link rel="stylesheet" href="/styles.css?v=1.1.1" />
   </head>
   <body>
     <div id="app" class="app hidden">
@@ -241,6 +241,71 @@
         <p class="badge login-version" data-app-version>FAQ Inn v1.1.0</p>
       </div>
 
+      <section class="card landing-hero" aria-label="Ruta de activación">
+        <p class="landing-welcome" data-i18n="landing.welcome">
+          Si llegaste acá es porque te interesa levantar tu agente de WhatsApp para tu negocio.
+        </p>
+        <p class="landing-flow-title" data-i18n="landing.flowTitle">Esto es lo que harás y cuánto puede tomar:</p>
+        <ol class="onboarding-flow">
+          <li class="flow-step flow-step--now">
+            <span class="flow-marker" aria-hidden="true">1</span>
+            <div class="flow-body">
+              <div class="flow-head">
+                <strong data-i18n="landing.step1Title">Registra tu hotel</strong>
+                <span class="flow-time" data-i18n="landing.step1Time">~3 min</span>
+              </div>
+              <p data-i18n="landing.step1Desc">Completas el formulario y creamos tu espacio en FAQ Inn.</p>
+              <span class="flow-badge" data-i18n="landing.badgeNow">Paso actual</span>
+            </div>
+          </li>
+          <li class="flow-step flow-step--next">
+            <span class="flow-marker" aria-hidden="true">2</span>
+            <div class="flow-body">
+              <div class="flow-head">
+                <strong data-i18n="landing.step2Title">Carga tus preguntas y respuestas</strong>
+                <span class="flow-time" data-i18n="landing.step2Time">~10 min</span>
+              </div>
+              <p data-i18n="landing.step2Desc">Importas o escribes las FAQs que el agente podrá usar.</p>
+            </div>
+          </li>
+          <li class="flow-step flow-step--next">
+            <span class="flow-marker" aria-hidden="true">3</span>
+            <div class="flow-body">
+              <div class="flow-head">
+                <strong data-i18n="landing.step3Title">Vincula WhatsApp con QR</strong>
+                <span class="flow-time" data-i18n="landing.step3Time">~5 min</span>
+              </div>
+              <p data-i18n="landing.step3Desc">Escaneas el código y conectas el número de tu negocio.</p>
+              <span class="flow-badge flow-badge--soon" data-i18n="landing.badgeSoon">Próxima etapa</span>
+            </div>
+          </li>
+          <li class="flow-step flow-step--next">
+            <span class="flow-marker" aria-hidden="true">4</span>
+            <div class="flow-body">
+              <div class="flow-head">
+                <strong data-i18n="landing.step4Title">Activamos tu agente</strong>
+                <span class="flow-time" data-i18n="landing.step4Time">~2 min</span>
+              </div>
+              <p data-i18n="landing.step4Desc">FAQ Inn genera el workflow n8n y deja el agente listo.</p>
+              <span class="flow-badge flow-badge--soon" data-i18n="landing.badgeSoon">Próxima etapa</span>
+            </div>
+          </li>
+          <li class="flow-step flow-step--next">
+            <span class="flow-marker" aria-hidden="true">5</span>
+            <div class="flow-body">
+              <div class="flow-head">
+                <strong data-i18n="landing.step5Title">Prueba y salida a producción</strong>
+                <span class="flow-time" data-i18n="landing.step5Time">~5 min</span>
+              </div>
+              <p data-i18n="landing.step5Desc">Envías un mensaje de prueba y confirmas que todo responde bien.</p>
+            </div>
+          </li>
+        </ol>
+        <p class="flow-total" data-i18n="landing.flowTotal">
+          Tiempo total estimado: <strong>~25 min</strong> (hoy puedes completar los pasos 1 y 2).
+        </p>
+      </section>
+
       <div class="landing-tabs" role="tablist">
         <button type="button" class="landing-tab active" id="tab-signup" data-i18n="landing.tabSignup">
           Crear mi hotel
@@ -252,9 +317,7 @@
 
       <form id="onboarding-form" class="card login-card landing-panel">
         <h1 data-i18n="onboarding.title">Alta de hotel</h1>
-        <p class="lead" data-i18n="onboarding.lead">
-          Crea tu espacio en FAQ Inn y comienza a entrenar las respuestas de tu alojamiento.
-        </p>
+        <p class="lead" data-i18n="onboarding.lead">Paso 1 de 5 — comienza aquí.</p>
         <label>
           <span data-i18n="onboarding.businessName">Nombre comercial</span>
           <input type="text" id="onboarding-business" required placeholder="Hotel Vista Mar" />
@@ -388,7 +451,7 @@
       </form>
     </dialog>
 
-    <script src="/i18n.js?v=1.1.0"></script>
-    <script src="/app.js?v=1.1.0"></script>
+    <script src="/i18n.js?v=1.1.1"></script>
+    <script src="/app.js?v=1.1.1"></script>
   </body>
 </html>

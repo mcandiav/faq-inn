@@ -106,6 +106,7 @@ function setLandingTab(tab) {
   $('#tab-login')?.classList.toggle('active', !signup);
   $('#onboarding-form')?.classList.toggle('hidden', !signup);
   $('#login-form')?.classList.toggle('hidden', signup);
+  document.querySelector('.landing-hero')?.classList.toggle('hidden', !signup);
 }
 
 function showLogin() {
