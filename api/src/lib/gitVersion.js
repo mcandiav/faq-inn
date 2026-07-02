@@ -15,8 +15,11 @@ export function readGitCommit() {
     return cachedGitCommit;
   }
 
-  if (process.env.DFAQ_GIT_COMMIT?.trim()) {
-    cachedGitCommit = shortenHash(process.env.DFAQ_GIT_COMMIT);
+  const envCommit =
+    process.env.FAQ_INN_GIT_COMMIT?.trim() ||
+    process.env.DFAQ_GIT_COMMIT?.trim();
+  if (envCommit) {
+    cachedGitCommit = shortenHash(envCommit);
     return cachedGitCommit;
   }
 

@@ -1,3 +1,5 @@
+import { DEFAULT_DB_NAME, loadTenantConfig } from './lib/tenant.js';
+
 function required(name, value) {
   if (!value) {
     throw new Error(`Missing required environment variable: ${name}`);
@@ -9,41 +11,45 @@ function normalizeBaseUrl(url) {
   return url.replace(/\/+$/, '');
 }
 
-function buildDatabaseUrl() {
+function buildDatabaseUrl(tenantConfig) {
   if (process.env.DATABASE_URL) {
     return process.env.DATABASE_URL;
   }
 
-  const host = process.env.DB_HOST;
-  const port = Number(process.env.DB_PORT || 3306);
+  const host =
+    process.env.DB_HOST || process.env.PGHOST || '127.0.0.1';
+  const port = Number(process.env.DB_PORT || process.env.PGPORT || 5432);
   const database =
-    process.env.DB_NAME || process.env.MYSQL_DATABASE || 'dfaq';
-  const user = process.env.DB_USER || process.env.MYSQL_USER || 'dfaq';
+    process.env.DB_NAME ||
+    process.env.PGDATABASE ||
+    tenantConfig.postgresDatabase;
+  const user = process.env.DB_USER || process.env.PGUSER || 'postgres';
   const password =
-    process.env.DB_PASSWORD || process.env.MYSQL_PASSWORD || 'dfaq';
+    process.env.DB_PASSWORD || process.env.PGPASSWORD || '';
 
   if (process.env.APP_ENV === 'production') {
-    required('DB_HOST', host);
+    required('DB_HOST', process.env.DB_HOST || process.env.PGHOST);
     required('DB_USER', user);
     required(
       'DB_PASSWORD',
-      process.env.DB_PASSWORD || process.env.MYSQL_PASSWORD
+      process.env.DB_PASSWORD || process.env.PGPASSWORD
     );
   }
 
-  const dbHost = host || '127.0.0.1';
-
-  return `mysql://${encodeURIComponent(user)}:${encodeURIComponent(password)}@${dbHost}:${port}/${database}`;
+  return `postgresql://${encodeURIComponent(user)}:${encodeURIComponent(password)}@${host}:${port}/${encodeURIComponent(database)}`;
 }
 
-function loadDatabaseConfig() {
-  const host = process.env.DB_HOST || '127.0.0.1';
-  const port = Number(process.env.DB_PORT || 3306);
+function loadDatabaseConfig(tenantConfig) {
+  const host =
+    process.env.DB_HOST || process.env.PGHOST || '127.0.0.1';
+  const port = Number(process.env.DB_PORT || process.env.PGPORT || 5432);
   const database =
-    process.env.DB_NAME || process.env.MYSQL_DATABASE || 'dfaq';
-  const user = process.env.DB_USER || process.env.MYSQL_USER || 'dfaq';
+    process.env.DB_NAME ||
+    process.env.PGDATABASE ||
+    tenantConfig.postgresDatabase;
+  const user = process.env.DB_USER || process.env.PGUSER || 'postgres';
   const password =
-    process.env.DB_PASSWORD || process.env.MYSQL_PASSWORD || 'dfaq';
+    process.env.DB_PASSWORD || process.env.PGPASSWORD || '';
 
   return {
     dbHost: host,
@@ -51,18 +57,16 @@ function loadDatabaseConfig() {
     dbName: database,
     dbUser: user,
     dbPassword: password,
-    dbAdminUser: process.env.DB_ADMIN_USER || 'root',
-    dbAdminPassword:
-      process.env.DB_ADMIN_PASSWORD || process.env.MYSQL_ROOT_PASSWORD || '',
   };
 }
 
 export function loadConfig() {
+  const tenantConfig = loadTenantConfig();
   const qdrantUrl = normalizeBaseUrl(
     required('QDRANT_URL', process.env.QDRANT_URL)
   );
 
-  const databaseUrl = buildDatabaseUrl();
+  const databaseUrl = buildDatabaseUrl(tenantConfig);
 
   const embeddingProvider = (
     process.env.EMBEDDING_PROVIDER || 'nvidia'
@@ -82,10 +86,10 @@ export function loadConfig() {
   };
 
   const isNvidia = embeddingProvider === 'nvidia';
-
-  const databaseConfig = loadDatabaseConfig();
+  const databaseConfig = loadDatabaseConfig(tenantConfig);
 
   return {
+    ...tenantConfig,
     appEnv: process.env.APP_ENV || 'development',
     appUrl: process.env.APP_URL || 'http://localhost:3000',
     port: Number(process.env.PORT || 3000),
@@ -118,7 +122,8 @@ export function loadConfig() {
       process.env.SESSION_SECRET ||
       (process.env.APP_ENV === 'production'
         ? required('SESSION_SECRET', process.env.SESSION_SECRET)
-        : 'dfaq-dev-session-secret'),
+        : 'faq-inn-dev-session-secret'),
     n8nAllowedToken: process.env.N8N_ALLOWED_TOKEN || '',
+    postgresDatabase: tenantConfig.postgresDatabase || DEFAULT_DB_NAME,
   };
 }

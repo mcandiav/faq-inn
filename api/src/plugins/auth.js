@@ -31,7 +31,7 @@ export async function registerAuth(app, config) {
 
   app.decorate('authenticate', async (request, reply) => {
     const cookies = parseCookies(request.headers.cookie);
-    const token = cookies.dfaq_token;
+    const token = cookies.faq_inn_token || cookies.dfaq_token;
 
     if (!token) {
       return reply.code(401).send({ status: 'error', error: 'No autenticado' });
@@ -71,7 +71,7 @@ export async function registerAuth(app, config) {
   app.decorate('setAuthCookie', (reply, token) => {
     const secure = config.appEnv === 'production';
     const parts = [
-      `dfaq_token=${encodeURIComponent(token)}`,
+      `faq_inn_token=${encodeURIComponent(token)}`,
       'Path=/',
       'HttpOnly',
       'SameSite=Lax',
@@ -88,7 +88,7 @@ export async function registerAuth(app, config) {
   app.decorate('clearAuthCookie', (reply) => {
     const secure = config.appEnv === 'production';
     const parts = [
-      'dfaq_token=',
+      'faq_inn_token=',
       'Path=/',
       'HttpOnly',
       'SameSite=Lax',

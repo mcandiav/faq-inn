@@ -1,0 +1,38 @@
+---
+description: Analysis and reporting profile for data, research, and financial work
+globs: ["**/*"]
+alwaysApply: false
+---
+
+# Analysis Profile
+
+## Output
+- Lead with the finding.
+- Put context and methodology after the finding.
+- Prefer tables and bullets over long prose.
+- Numbers must include units.
+- Avoid ambiguous values.
+
+## Accuracy Rules
+- Never state a number without a source or derivation.
+- If data is missing, say so.
+- Do not estimate silently.
+- If confidence is low, state that explicitly and explain why.
+- Preserve meaningful precision.
+
+## Hallucination Prevention
+- Never fabricate data points, statistics, or citations.
+- If a claim cannot be grounded in provided data, do not make it.
+- Distinguish clearly between what data shows and what is inferred.
+- Label inferences explicitly.
+
+## Report Format
+- Summary first.
+- Supporting data second.
+- Caveats and limitations last.
+- No narrative fluff between sections.
+
+## Formatting
+- No em dashes or smart quotes in report-style output.
+- Tables should stay plain and copy-paste friendly.
+- Natural language characters are fine when the content requires them.
