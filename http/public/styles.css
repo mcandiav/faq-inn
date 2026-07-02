@@ -82,10 +82,52 @@ body {
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: center;
-  gap: 1.25rem;
+  justify-content: flex-start;
+  gap: 1rem;
   padding: 1rem;
   padding-top: calc(3.25rem + env(safe-area-inset-top, 0px));
+  padding-bottom: 2rem;
+}
+
+.landing-tabs {
+  display: flex;
+  gap: 0.5rem;
+  width: min(520px, 96vw);
+}
+
+.landing-tab {
+  flex: 1;
+  padding: 0.65rem 1rem;
+  border: 1px solid #334155;
+  border-radius: 999px;
+  background: rgba(15, 23, 42, 0.6);
+  color: #94a3b8;
+  font: inherit;
+  cursor: pointer;
+}
+
+.landing-tab.active {
+  border-color: #38bdf8;
+  background: rgba(56, 189, 248, 0.15);
+  color: #e2e8f0;
+}
+
+.landing-panel .select-inline.block,
+.landing-panel select {
+  width: 100%;
+  margin-top: 0.35rem;
+}
+
+.landing-panel textarea {
+  width: 100%;
+  margin-top: 0.35rem;
+  padding: 0.65rem 0.75rem;
+  border: 1px solid #334155;
+  border-radius: 8px;
+  background: #0f172a;
+  color: #e2e8f0;
+  font: inherit;
+  resize: vertical;
 }
 
 .card,

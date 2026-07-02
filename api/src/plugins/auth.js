@@ -65,7 +65,7 @@ export async function registerAuth(app, config) {
   });
 
   app.decorate('signToken', async (userId) => {
-    return app.jwt.sign({ sub: userId }, { expiresIn: '7d' });
+    return app.jwt.sign({ sub: String(userId) }, { expiresIn: '7d' });
   });
 
   app.decorate('setAuthCookie', (reply, token) => {
