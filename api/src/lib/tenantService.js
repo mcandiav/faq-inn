@@ -1,0 +1,243 @@
+import { hashPassword } from './password.js';
+import { ensureTenantCollection } from './indexer.js';
+import { isValidTenantSlug, normalizeTenantSlug } from './tenantSlug.js';
+
+function validationError(message, statusCode = 400) {
+  const error = new Error(message);
+  error.statusCode = statusCode;
+  return error;
+}
+
+export async function createHotelTenant(pool, config, input, { logger } = {}) {
+  const businessName = input.business_name?.trim();
+  const slug =
+    normalizeTenantSlug(input.tenant_slug) ||
+    normalizeTenantSlug(businessName);
+  const email = input.email?.trim().toLowerCase();
+  const password = input.password || '';
+  const primaryLanguage = input.primary_language?.trim() || 'es';
+  const bookingUrlBase = input.booking_url_base?.trim() || '';
+  const bookingUrlTemplate = input.booking_url_template?.trim() || '';
+  const lodgingType = input.lodging_type?.trim() || 'hotel';
+  const businessHours = input.business_hours?.trim() || '';
+  const policies = input.policies?.trim() || '';
+  const welcomeMessage = input.welcome_message?.trim() || '';
+  const agentSlug = input.agent_slug?.trim().toLowerCase() || 'principal';
+  const agentName = input.agent_name?.trim() || 'Agente principal';
+
+  if (!businessName || businessName.length < 2) {
+    throw validationError('nombre comercial es obligatorio');
+  }
+
+  if (!isValidTenantSlug(slug)) {
+    throw validationError(
+      'slug inválido (mínimo 2 caracteres, solo a-z, 0-9 y guiones)'
+    );
+  }
+
+  if (!email || !email.includes('@')) {
+    throw validationError('email inválido');
+  }
+
+  if (password.length < 8) {
+    throw validationError('password debe tener al menos 8 caracteres');
+  }
+
+  if (!bookingUrlBase) {
+    throw validationError('URL de reservas es obligatoria');
+  }
+
+  const connection = await pool.getConnection();
+
+  try {
+    await connection.beginTransaction();
+
+    const [existingSlug] = await connection.query(
+      'SELECT id FROM tenants WHERE slug = ?',
+      [slug]
+    );
+    if (existingSlug.length > 0) {
+      throw validationError('ese identificador ya está en uso', 409);
+    }
+
+    const [existingEmail] = await connection.query(
+      'SELECT id FROM users WHERE email = ?',
+      [email]
+    );
+    if (existingEmail.length > 0) {
+      throw validationError('email ya registrado', 409);
+    }
+
+    const [, tenantMeta] = await connection.query(
+      `INSERT INTO tenants (slug, name, status) VALUES (?, ?, 'active')`,
+      [slug, businessName]
+    );
+    const tenantId = tenantMeta.insertId;
+
+    await connection.query(
+      `INSERT INTO tenant_settings
+       (tenant_id, vertical_slug, primary_language, booking_url_base,
+        booking_url_template, lodging_type, business_hours, policies,
+        welcome_message, postgres_database)
+       VALUES (?, 'hotel', ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [
+        tenantId,
+        primaryLanguage,
+        bookingUrlBase,
+        bookingUrlTemplate,
+        lodgingType,
+        businessHours,
+        policies,
+        welcomeMessage,
+        slug,
+      ]
+    );
+
+    await connection.query(
+      `INSERT INTO tenant_provisioning (tenant_id, status, last_error)
+       VALUES (?, 'active', '')`,
+      [tenantId]
+    );
+
+    const passwordHash = await hashPassword(password);
+    const [, userMeta] = await connection.query(
+      `INSERT INTO users (tenant_id, email, password_hash, role, status)
+       VALUES (?, ?, ?, 'client', 'active')`,
+      [tenantId, email, passwordHash]
+    );
+
+    await connection.query(
+      `INSERT INTO agents (tenant_id, slug, name, channel, status)
+       VALUES (?, ?, ?, 'whatsapp', 'active')`,
+      [tenantId, agentSlug, agentName]
+    );
+
+    await connection.commit();
+
+    let qdrantCollection = config.qdrantCollectionTemplate.replace(
+      '<tenant_slug>',
+      slug
+    );
+
+    try {
+      await ensureTenantCollection(config, slug);
+    } catch (error) {
+      logger?.warn({ err: error }, 'Colección Qdrant no creada al onboarding');
+      qdrantCollection = null;
+    }
+
+    return {
+      tenantId,
+      userId: userMeta.insertId,
+      slug,
+      businessName,
+      email,
+      agentSlug,
+      qdrantCollection,
+      provisioningStatus: 'active',
+    };
+  } catch (error) {
+    await connection.rollback();
+    throw error;
+  } finally {
+    connection.release();
+  }
+}
+
+export async function createAdminTenant(pool, config, input, { logger } = {}) {
+  const slug = normalizeTenantSlug(input.slug);
+  const email = input.email?.trim().toLowerCase();
+  const password = input.password || '';
+  const agentSlug = input.agent_slug?.trim().toLowerCase() || 'principal';
+  const agentName = input.agent_name?.trim() || 'Agente principal';
+  const businessName = input.name?.trim() || '';
+
+  if (!isValidTenantSlug(slug)) {
+    throw validationError('slug inválido (solo a-z, 0-9, _ y -)');
+  }
+
+  if (!email || !email.includes('@')) {
+    throw validationError('email inválido');
+  }
+
+  if (password.length < 8) {
+    throw validationError('password debe tener al menos 8 caracteres');
+  }
+
+  const connection = await pool.getConnection();
+
+  try {
+    await connection.beginTransaction();
+
+    const [existingSlug] = await connection.query(
+      'SELECT id FROM tenants WHERE slug = ?',
+      [slug]
+    );
+    if (existingSlug.length > 0) {
+      throw validationError('slug ya existe', 409);
+    }
+
+    const [existingEmail] = await connection.query(
+      'SELECT id FROM users WHERE email = ?',
+      [email]
+    );
+    if (existingEmail.length > 0) {
+      throw validationError('email ya registrado', 409);
+    }
+
+    const [, tenantMeta] = await connection.query(
+      `INSERT INTO tenants (slug, name, status) VALUES (?, ?, 'active')`,
+      [slug, businessName]
+    );
+    const tenantId = tenantMeta.insertId;
+
+    await connection.query(
+      `INSERT INTO tenant_settings
+       (tenant_id, vertical_slug, postgres_database)
+       VALUES (?, 'hotel', ?)`,
+      [tenantId, slug]
+    );
+
+    await connection.query(
+      `INSERT INTO tenant_provisioning (tenant_id, status) VALUES (?, 'active')`,
+      [tenantId]
+    );
+
+    const passwordHash = await hashPassword(password);
+    await connection.query(
+      `INSERT INTO users (tenant_id, email, password_hash, role, status)
+       VALUES (?, ?, ?, 'client', 'active')`,
+      [tenantId, email, passwordHash]
+    );
+
+    await connection.query(
+      `INSERT INTO agents (tenant_id, slug, name, channel, status)
+       VALUES (?, ?, ?, 'default', 'active')`,
+      [tenantId, agentSlug, agentName]
+    );
+
+    await connection.commit();
+
+    try {
+      await ensureTenantCollection(config, slug);
+    } catch (error) {
+      logger?.warn({ err: error }, 'Colección Qdrant no creada al alta');
+    }
+
+    return {
+      tenantId,
+      slug,
+      email,
+      agentSlug,
+      qdrantCollection: config.qdrantCollectionTemplate.replace(
+        '<tenant_slug>',
+        slug
+      ),
+    };
+  } catch (error) {
+    await connection.rollback();
+    throw error;
+  } finally {
+    connection.release();
+  }
+}

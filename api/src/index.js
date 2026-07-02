@@ -15,6 +15,7 @@ import { authRoutes } from './routes/auth.js';
 import { adminRoutes } from './routes/admin.js';
 import { faqRoutes } from './routes/faqs.js';
 import { unansweredRoutes } from './routes/unanswered.js';
+import { onboardingRoutes } from './routes/onboarding.js';
 
 const config = loadConfig();
 
@@ -48,6 +49,7 @@ await authRoutes(app, config);
 await adminRoutes(app, config);
 await faqRoutes(app, config);
 await unansweredRoutes(app, config);
+await onboardingRoutes(app, config);
 
 try {
   await app.listen({ port: config.port, host: config.host });
@@ -58,9 +60,13 @@ try {
       qdrantUrl: config.qdrantUrl,
       embeddingProvider: config.embeddingProvider,
       embeddingModel:
-        config.embeddingProvider === 'nvidia'
-          ? config.nvidiaEmbeddingModel
-          : config.openaiEmbeddingModel,
+        config.embeddingProvider === 'ollama'
+          ? config.ollamaEmbeddingModel
+          : config.embeddingProvider === 'nvidia'
+            ? config.nvidiaEmbeddingModel
+            : config.openaiEmbeddingModel,
+      ollamaApiBase:
+        config.embeddingProvider === 'ollama' ? config.ollamaApiBase : undefined,
       databaseUrl: config.databaseUrl.replace(/:([^:@]+)@/, ':***@'),
     },
     'faq-inn-api started'

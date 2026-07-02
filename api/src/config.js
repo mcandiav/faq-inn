@@ -69,8 +69,15 @@ export function loadConfig() {
   const databaseUrl = buildDatabaseUrl(tenantConfig);
 
   const embeddingProvider = (
-    process.env.EMBEDDING_PROVIDER || 'nvidia'
+    process.env.EMBEDDING_PROVIDER || 'ollama'
   ).toLowerCase();
+
+  const ollamaDefaults = {
+    apiBase: 'http://127.0.0.1:11434',
+    model: 'mxbai-embed-large:latest',
+    dimension: 1024,
+    collectionTemplate: 'kb_<tenant_slug>_mxbai_embed_large_1024',
+  };
 
   const nvidiaDefaults = {
     apiBase: 'https://integrate.api.nvidia.com/v1',
@@ -85,7 +92,13 @@ export function loadConfig() {
     collectionTemplate: 'kb_<tenant_slug>_openai_1536',
   };
 
-  const isNvidia = embeddingProvider === 'nvidia';
+  const providerDefaults = {
+    ollama: ollamaDefaults,
+    nvidia: nvidiaDefaults,
+    openai: openaiDefaults,
+  };
+  const activeDefaults =
+    providerDefaults[embeddingProvider] || ollamaDefaults;
   const databaseConfig = loadDatabaseConfig(tenantConfig);
 
   return {
@@ -101,9 +114,12 @@ export function loadConfig() {
     embeddingProvider,
     qdrantCollectionTemplate:
       process.env.QDRANT_COLLECTION_TEMPLATE ||
-      (isNvidia
-        ? nvidiaDefaults.collectionTemplate
-        : openaiDefaults.collectionTemplate),
+      activeDefaults.collectionTemplate,
+    ollamaApiBase: normalizeBaseUrl(
+      process.env.OLLAMA_API_BASE || ollamaDefaults.apiBase
+    ),
+    ollamaEmbeddingModel:
+      process.env.OLLAMA_EMBEDDING_MODEL || ollamaDefaults.model,
     openaiApiKey: process.env.OPENAI_API_KEY || '',
     openaiEmbeddingModel:
       process.env.OPENAI_EMBEDDING_MODEL || openaiDefaults.model,
@@ -115,8 +131,7 @@ export function loadConfig() {
       process.env.NVIDIA_EMBEDDING_MODEL || nvidiaDefaults.model,
     nvidiaUseInputType: process.env.NVIDIA_USE_INPUT_TYPE === 'true',
     embeddingDimension: Number(
-      process.env.EMBEDDING_DIMENSION ||
-        (isNvidia ? nvidiaDefaults.dimension : openaiDefaults.dimension)
+      process.env.EMBEDDING_DIMENSION || activeDefaults.dimension
     ),
     sessionSecret:
       process.env.SESSION_SECRET ||
