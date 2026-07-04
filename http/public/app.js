@@ -1,4 +1,4 @@
-const APP_VERSION = '1.2.2';
+const APP_VERSION = '1.2.3';
 const APP_PRODUCT_NAME = 'FAQ Inn';
 const apiBase = window.FAQ_INN_API_URL || window.DFAQ_API_URL || '/api';
 const VIEW_STORAGE_KEY = 'faq-inn-current-view';
