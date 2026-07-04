@@ -27,8 +27,8 @@ const MESSAGES = {
     'login.submit': 'Entrar',
     'login.showPassword': 'Mostrar contraseña',
     'login.hidePassword': 'Ocultar contraseña',
-    'landing.tabSignup': 'Conectar WhatsApp',
-    'landing.tabLogin': 'Iniciar sesión',
+    'landing.hasAccount': '¿Ya tienes cuenta? Iniciar sesión',
+    'landing.newBusiness': 'Registrar un negocio nuevo',
     'landing.welcome':
       'Si llegaste acá es porque te interesa levantar tu agente de WhatsApp para tu negocio.',
     'landing.flowTitle': 'Esto es lo que harás y cuánto puede tomar:',
@@ -48,14 +48,16 @@ const MESSAGES = {
     'landing.step5Time': '~5 min',
     'landing.step5Desc': 'Envías un mensaje de prueba y confirmas que todo responde bien.',
     'landing.badgeNow': 'Paso actual',
+    'landing.badgeAfterRegister': 'Justo después del registro',
     'landing.badgeSoon': 'Próxima etapa',
     'landing.flowTotal':
-      'MVP actual: registro mínimo + conectar WhatsApp (~8 min). FAQs y agente automático vienen después.',
+      'Hoy: registro y vinculación WhatsApp (~8 min). FAQs y agente automático en etapas siguientes.',
     'provision.title': 'Registra tu negocio',
-    'provision.lead': 'Paso 1 — nombre y correo. Luego conectas WhatsApp con QR.',
+    'provision.lead':
+      'Nombre comercial y correo. Al continuar verás el QR para vincular WhatsApp.',
     'provision.commercialName': 'Nombre comercial',
     'provision.email': 'Correo electrónico',
-    'provision.submit': 'Continuar y conectar WhatsApp',
+    'provision.submit': 'Registrar y continuar',
     'provision.qrTitle': 'Escanea el QR',
     'provision.successTitle': 'WhatsApp conectado',
     'provision.successLead':
