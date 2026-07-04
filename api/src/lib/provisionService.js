@@ -91,7 +91,7 @@ export async function startWhatsappProvision(pool, config, tenant) {
   const instanceName = evolution.buildInstanceName(tenant.slug);
 
   const [existing] = await pool.query(
-    `SELECT id, instance_name, status, phone_number
+    `SELECT id, instance_name, status, phone_number, last_qr_base64
      FROM evolution_instances
      WHERE tenant_id = ?
      ORDER BY id DESC
@@ -109,26 +109,29 @@ export async function startWhatsappProvision(pool, config, tenant) {
   }
 
   try {
-    await evolution.createInstance(instanceName);
-    const { qrBase64 } = await evolution.getQr(instanceName);
+    // Siempre sesión limpia: evita limbo "connecting" que impide vincular.
+    const { qrBase64 } = await evolution.createFreshQrSession(instanceName);
 
     if (existing[0]) {
       await pool.query(
         `UPDATE evolution_instances
          SET instance_name = ?,
              status = 'qr_pending',
+             phone_number = '',
+             last_qr_base64 = ?,
              last_qr_at = NOW(),
+             connected_at = NULL,
              last_error = '',
              updated_at = NOW()
          WHERE id = ?`,
-        [instanceName, existing[0].id]
+        [instanceName, qrBase64, existing[0].id]
       );
     } else {
       await pool.query(
         `INSERT INTO evolution_instances
-         (tenant_id, instance_name, status, last_qr_at)
-         VALUES (?, ?, 'qr_pending', NOW())`,
-        [tenant.id, instanceName]
+         (tenant_id, instance_name, status, last_qr_base64, last_qr_at)
+         VALUES (?, ?, 'qr_pending', ?, NOW())`,
+        [tenant.id, instanceName, qrBase64]
       );
     }
 
@@ -148,6 +151,8 @@ export async function startWhatsappProvision(pool, config, tenant) {
       status: 'qr_pending',
       phoneNumber: null,
       qrBase64,
+      message:
+        'Escanea el QR una sola vez (válido ~40s). Si falla, pulsa Actualizar QR.',
     };
   } catch (error) {
     const message = error.message || 'Error al crear instancia Evolution';
@@ -177,7 +182,7 @@ export async function startWhatsappProvision(pool, config, tenant) {
 
 export async function getProvisionStatus(pool, config, tenant, instanceName) {
   const [rows] = await pool.query(
-    `SELECT id, instance_name, status, phone_number, last_qr_at, connected_at
+    `SELECT id, instance_name, status, phone_number, last_qr_base64, last_qr_at, connected_at
      FROM evolution_instances
      WHERE tenant_id = ? AND instance_name = ?
      LIMIT 1`,
@@ -200,7 +205,22 @@ export async function getProvisionStatus(pool, config, tenant, instanceName) {
   }
 
   const evolution = createEvolutionClient(config);
-  const connection = await evolution.getConnectionState(instanceName);
+  let connection;
+  try {
+    connection = await evolution.getConnectionState(instanceName);
+  } catch (error) {
+    return {
+      instanceName,
+      status: 'qr_pending',
+      phoneNumber: null,
+      qrBase64: row.last_qr_base64 || null,
+      tenantStatus: 'qr_pending',
+      evolutionState: null,
+      message:
+        error.message ||
+        'No se pudo consultar Evolution. Pulsa Actualizar QR para reintentar.',
+    };
+  }
 
   if (connection.connected) {
     const phoneNumber =
@@ -210,6 +230,7 @@ export async function getProvisionStatus(pool, config, tenant, instanceName) {
       `UPDATE evolution_instances
        SET status = 'connected',
            phone_number = ?,
+           last_qr_base64 = '',
            connected_at = COALESCE(connected_at, NOW()),
            last_error = '',
            updated_at = NOW()
@@ -237,40 +258,22 @@ export async function getProvisionStatus(pool, config, tenant, instanceName) {
     };
   }
 
-  // Si ya escaneó el QR, Evolution queda en "connecting".
-  // NO pedir QR nuevo: /instance/connect regenera el código e interrumpe el emparejamiento.
-  if (connection.pairing) {
-    return {
-      instanceName,
-      status: 'qr_pending',
-      phoneNumber: null,
-      qrBase64: null,
-      tenantStatus: 'qr_pending',
-      evolutionState: connection.state,
-      message: 'WhatsApp está emparejando. Espera unos segundos sin escanear de nuevo.',
-    };
-  }
-
-  let qrBase64 = null;
-  try {
-    const qr = await evolution.getQr(instanceName);
-    qrBase64 = qr.qrBase64;
-    await pool.query(
-      `UPDATE evolution_instances
-       SET status = 'qr_pending', last_qr_at = NOW(), updated_at = NOW()
-       WHERE id = ?`,
-      [row.id]
-    );
-  } catch {
-    /* keep previous QR pending without failing poll */
-  }
+  // Nunca llamar /instance/connect en polling: regenera QR e impide vincular.
+  // Devolvemos el QR cacheado en PostgreSQL.
+  const qrAgeMs = row.last_qr_at
+    ? Date.now() - new Date(row.last_qr_at).getTime()
+    : Number.POSITIVE_INFINITY;
+  const qrExpired = qrAgeMs > 45_000;
 
   return {
     instanceName,
     status: 'qr_pending',
     phoneNumber: null,
-    qrBase64,
+    qrBase64: row.last_qr_base64 || null,
     tenantStatus: 'qr_pending',
     evolutionState: connection.state,
+    message: qrExpired
+      ? 'El QR expiró. Pulsa Actualizar QR y escanea el nuevo código de inmediato.'
+      : 'Escanea el QR una sola vez. Si WhatsApp dice que no pudo vincular, pulsa Actualizar QR.',
   };
 }

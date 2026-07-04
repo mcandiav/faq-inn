@@ -139,6 +139,7 @@ export async function provisionRoutes(app, config) {
           connection_status: result.status,
           phone_number: result.phoneNumber,
           qr_base64: result.qrBase64,
+          message: result.message || null,
           poll_interval_seconds: config.evolutionQrPollIntervalSeconds,
           timeout_seconds: config.evolutionQrTimeoutSeconds,
         };
@@ -188,6 +189,7 @@ export async function provisionRoutes(app, config) {
           qr_base64: result.qrBase64,
           tenant_status: result.tenantStatus,
           evolution_state: result.evolutionState || null,
+          message: result.message || null,
         };
       } catch (error) {
         app.log.error({ err: error, detail: error.detail }, 'provision status failed');
