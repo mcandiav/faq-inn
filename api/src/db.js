@@ -8,14 +8,23 @@ function toPgParams(sql, params = []) {
   return { text, values: params };
 }
 
+const TABLES_WITH_ID = [
+  'tenants',
+  'users',
+  'agents',
+  'faq_items',
+  'unanswered_questions',
+  'evolution_instances',
+].join('|');
+
 function withReturningId(sql) {
   const trimmed = sql.trim().replace(/;+\s*$/, '');
-  // Solo tablas con columna id; evita fallar en INSERT ... ON CONFLICT
-  // sobre tablas con PK distinta (ej. tenant_provisioning.tenant_id).
+  // Solo tablas con columna serial `id`. Evita fallar en
+  // tenant_provisioning / tenant_settings (PK = tenant_id).
   if (
     /^\s*INSERT\s/i.test(trimmed) &&
     !/\bRETURNING\b/i.test(trimmed) &&
-    !/\bON\s+CONFLICT\b/i.test(trimmed)
+    new RegExp(`\\bINSERT\\s+INTO\\s+(${TABLES_WITH_ID})\\b`, 'i').test(trimmed)
   ) {
     return `${trimmed} RETURNING id`;
   }
