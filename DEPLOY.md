@@ -107,7 +107,6 @@ APP_URL=https://inn.at-once.cl
 TENANT=FAQ-INN
 TENANT_SLUG=faq-inn
 APP_TITLE=FAQ Inn FAQ-INN
-APP_VERSION=1.0.0
 DB_HOST=n8n_faq-inn_postgres
 DB_PORT=5432
 DB_NAME=faq-inn
