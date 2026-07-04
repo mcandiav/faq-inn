@@ -40,6 +40,16 @@ function extractConnectionState(payload) {
   );
 }
 
+/** Estados en los que NO se debe pedir un QR nuevo (interrumpe el emparejamiento). */
+export function isPairingInProgress(state) {
+  const value = String(state || '').toLowerCase();
+  return value === 'connecting' || value === 'open';
+}
+
+export function isConnectedState(state, expected = 'open') {
+  return String(state || '').toLowerCase() === String(expected || 'open').toLowerCase();
+}
+
 function extractPhoneNumber(payload) {
   const candidates = [
     payload?.instance?.ownerJid,
@@ -166,7 +176,8 @@ export function createEvolutionClient(config) {
       const state = extractConnectionState(payload);
       return {
         state,
-        connected: String(state || '').toLowerCase() === connectedState,
+        connected: isConnectedState(state, connectedState),
+        pairing: isPairingInProgress(state),
         payload,
       };
     },

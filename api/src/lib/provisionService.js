@@ -237,6 +237,20 @@ export async function getProvisionStatus(pool, config, tenant, instanceName) {
     };
   }
 
+  // Si ya escaneó el QR, Evolution queda en "connecting".
+  // NO pedir QR nuevo: /instance/connect regenera el código e interrumpe el emparejamiento.
+  if (connection.pairing) {
+    return {
+      instanceName,
+      status: 'qr_pending',
+      phoneNumber: null,
+      qrBase64: null,
+      tenantStatus: 'qr_pending',
+      evolutionState: connection.state,
+      message: 'WhatsApp está emparejando. Espera unos segundos sin escanear de nuevo.',
+    };
+  }
+
   let qrBase64 = null;
   try {
     const qr = await evolution.getQr(instanceName);

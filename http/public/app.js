@@ -1,4 +1,4 @@
-const APP_VERSION = '1.2.3';
+const APP_VERSION = '1.2.4';
 const APP_PRODUCT_NAME = 'FAQ Inn';
 const apiBase = window.FAQ_INN_API_URL || window.DFAQ_API_URL || '/api';
 const VIEW_STORAGE_KEY = 'faq-inn-current-view';
@@ -224,7 +224,14 @@ async function pollProvisionStatus() {
     }
 
     if (msg) {
-      msg.textContent = `Esperando escaneo… (${Math.floor(elapsed)}s)`;
+      const state = String(data.evolution_state || '').toLowerCase();
+      if (state === 'connecting' || data.message) {
+        msg.textContent =
+          data.message ||
+          `WhatsApp está emparejando… (${Math.floor(elapsed)}s). No escanees de nuevo.`;
+      } else {
+        msg.textContent = `Esperando escaneo… (${Math.floor(elapsed)}s)`;
+      }
       msg.className = 'form-msg';
     }
   } catch (error) {
