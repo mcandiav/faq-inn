@@ -86,6 +86,40 @@ export async function registerProvisionTenant(pool, input) {
   }
 }
 
+async function markTenantConnected(pool, tenant, instanceRow, instanceName, phoneNumber) {
+  if (instanceRow?.id) {
+    await pool.query(
+      `UPDATE evolution_instances
+       SET status = 'connected',
+           phone_number = ?,
+           last_qr_base64 = '',
+           connected_at = COALESCE(connected_at, NOW()),
+           last_error = '',
+           updated_at = NOW()
+       WHERE id = ?`,
+      [phoneNumber || '', instanceRow.id]
+    );
+  } else {
+    await pool.query(
+      `INSERT INTO evolution_instances
+       (tenant_id, instance_name, status, phone_number, connected_at)
+       VALUES (?, ?, 'connected', ?, NOW())`,
+      [tenant.id, instanceName, phoneNumber || '']
+    );
+  }
+
+  await pool.query(
+    `UPDATE tenants SET status = 'connected', updated_at = NOW() WHERE id = ?`,
+    [tenant.id]
+  );
+  await pool.query(
+    `UPDATE tenant_provisioning
+     SET status = 'connected', last_error = '', updated_at = NOW()
+     WHERE tenant_id = ?`,
+    [tenant.id]
+  );
+}
+
 export async function startWhatsappProvision(pool, config, tenant) {
   const evolution = createEvolutionClient(config);
   const instanceName = evolution.buildInstanceName(tenant.slug);
@@ -105,11 +139,40 @@ export async function startWhatsappProvision(pool, config, tenant) {
       status: 'connected',
       phoneNumber: existing[0].phone_number,
       qrBase64: null,
+      message: 'WhatsApp ya está vinculado.',
     };
   }
 
+  // Si Evolution ya está open (p. ej. se vinculó y se cerró la pestaña),
+  // sincronizar DB y NO borrar la instancia.
   try {
-    // Siempre sesión limpia: evita limbo "connecting" que impide vincular.
+    const connection = await evolution.getConnectionState(instanceName);
+    if (connection.connected) {
+      const phoneNumber =
+        (await evolution.resolvePhoneNumber(instanceName)) ||
+        existing[0]?.phone_number ||
+        '';
+      await markTenantConnected(
+        pool,
+        tenant,
+        existing[0],
+        instanceName,
+        phoneNumber
+      );
+      return {
+        instanceName,
+        status: 'connected',
+        phoneNumber,
+        qrBase64: null,
+        message: 'WhatsApp vinculado correctamente.',
+      };
+    }
+  } catch {
+    /* instancia puede no existir aún */
+  }
+
+  try {
+    // Sesión limpia solo si aún no está conectada.
     const { qrBase64 } = await evolution.createFreshQrSession(instanceName);
 
     if (existing[0]) {
@@ -226,27 +289,7 @@ export async function getProvisionStatus(pool, config, tenant, instanceName) {
     const phoneNumber =
       (await evolution.resolvePhoneNumber(instanceName)) || row.phone_number || '';
 
-    await pool.query(
-      `UPDATE evolution_instances
-       SET status = 'connected',
-           phone_number = ?,
-           last_qr_base64 = '',
-           connected_at = COALESCE(connected_at, NOW()),
-           last_error = '',
-           updated_at = NOW()
-       WHERE id = ?`,
-      [phoneNumber, row.id]
-    );
-    await pool.query(
-      `UPDATE tenants SET status = 'connected', updated_at = NOW() WHERE id = ?`,
-      [tenant.id]
-    );
-    await pool.query(
-      `UPDATE tenant_provisioning
-       SET status = 'connected', last_error = '', updated_at = NOW()
-       WHERE tenant_id = ?`,
-      [tenant.id]
-    );
+    await markTenantConnected(pool, tenant, row, instanceName, phoneNumber);
 
     return {
       instanceName,
@@ -255,6 +298,7 @@ export async function getProvisionStatus(pool, config, tenant, instanceName) {
       qrBase64: null,
       tenantStatus: 'connected',
       evolutionState: connection.state,
+      message: 'WhatsApp vinculado correctamente.',
     };
   }
 
