@@ -78,6 +78,46 @@ payload Evolution -> extraer instance_name -> buscar evolution_instances.instanc
 
 El campo exacto de instancia debe confirmarse con un payload real antes de cerrar el contrato del runtime n8n.
 
+## Desvinculación desde el teléfono
+
+Si el tenant desvincula WhatsApp desde su teléfono, FAQ Inn debe tratarlo como un evento normal del ciclo de vida de la instancia, no como un error inesperado.
+
+Regla operativa:
+
+```text
+Si Evolution API informa o refleja que la instancia dejó de estar conectada, FAQ Inn debe marcar la evolution_instance como disconnected y suspender respuestas automáticas para esa instancia.
+```
+
+Comportamiento esperado:
+
+```text
+1. Detectar el cambio de estado por webhook Evolution o por polling/consulta de estado.
+2. Actualizar evolution_instances.status = disconnected.
+3. Registrar disconnected_at y motivo si Evolution lo informa.
+4. Marcar el canal WhatsApp del tenant como no operativo.
+5. Evitar que n8n responda mensajes asociados a esa instancia mientras esté desconectada.
+6. Notificar al tenant en el panel o por correo.
+7. Mostrar acción Reconectar WhatsApp.
+8. Regenerar QR sobre la misma instancia si Evolution lo permite; si no, crear una nueva instancia controlada y actualizar la relación en base de datos.
+9. Registrar el evento en auditoría.
+```
+
+Estados mínimos recomendados para la instancia:
+
+```text
+qr_pending
+connected
+disconnected
+reconnecting
+error
+```
+
+Regla de responsabilidad:
+
+```text
+n8n no es responsable de validar el estado de conexión de la instancia. Si la instancia no está connected, Evolution API no debería entregar mensajes entrantes operativos al webhook conversacional. La detección de desconexión, actualización de estado y reconexión pertenecen al backend/provisioner de FAQ Inn y a Evolution API.
+```
+
 ## Regla de seguridad
 
 La API key de Evolution debe almacenarse cifrada o como secreto de infraestructura y no debe mostrarse al cliente final. Los secretos observados en variables Swarm/EasyPanel no deben copiarse a documentación ni código.

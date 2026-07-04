@@ -17,6 +17,8 @@ import { faqRoutes } from './routes/faqs.js';
 import { unansweredRoutes } from './routes/unanswered.js';
 import { onboardingRoutes } from './routes/onboarding.js';
 import { provisionRoutes } from './routes/provision.js';
+import { accountRoutes } from './routes/account.js';
+import { whatsappRoutes } from './routes/whatsapp.js';
 import { startEvolutionCleanupScheduler } from './lib/evolutionCleanup.js';
 
 const config = loadConfig();
@@ -53,6 +55,8 @@ await faqRoutes(app, config);
 await unansweredRoutes(app, config);
 await onboardingRoutes(app, config);
 await provisionRoutes(app, config);
+await accountRoutes(app);
+await whatsappRoutes(app, config);
 
 const stopEvolutionCleanup = startEvolutionCleanupScheduler(
   pool,

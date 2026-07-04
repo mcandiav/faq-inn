@@ -1,4 +1,5 @@
 import { hashPassword, verifyPassword } from '../lib/password.js';
+import { registerQuickSignup } from '../lib/tenantService.js';
 
 async function fetchUserByEmail(pool, email) {
   const [rows] = await pool.query(
@@ -30,6 +31,47 @@ function publicUser(row) {
 
 export async function authRoutes(app, config) {
   const pool = app.db.pool;
+
+  app.post('/api/auth/signup', async (request, reply) => {
+    const email = request.body?.email?.trim().toLowerCase();
+    const password = request.body?.password || '';
+
+    if (!email || !password) {
+      reply.code(400);
+      return { status: 'error', error: 'email y password son obligatorios' };
+    }
+
+    try {
+      const result = await registerQuickSignup(
+        pool,
+        config,
+        { email, password },
+        { logger: app.log }
+      );
+
+      const token = await app.signToken(result.userId);
+      app.setAuthCookie(reply, token);
+
+      const user = await fetchUserByEmail(pool, email);
+
+      return {
+        status: 'ok',
+        user: publicUser(user),
+        tenant: {
+          id: result.tenantId,
+          slug: result.slug,
+        },
+        poll_interval_seconds: config.evolutionQrPollIntervalSeconds,
+        timeout_seconds: config.evolutionQrTimeoutSeconds,
+      };
+    } catch (error) {
+      reply.code(error.statusCode || 500);
+      return {
+        status: 'error',
+        error: error.message || 'No se pudo registrar',
+      };
+    }
+  });
 
   app.post('/api/auth/login', async (request, reply) => {
     const email = request.body?.email?.trim().toLowerCase();

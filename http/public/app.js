@@ -1,10 +1,16 @@
-const APP_VERSION = '1.3.3';
+const APP_VERSION = '1.4.0';
 const APP_PRODUCT_NAME = 'FAQ Inn';
 const apiBase = window.FAQ_INN_API_URL || window.DFAQ_API_URL || '/api';
 const VIEW_STORAGE_KEY = 'faq-inn-current-view';
 const VALID_VIEWS = ['dashboard', 'unanswered', 'profile', 'admin'];
 
-const state = { user: null, faqs: [], unanswered: [], currentView: 'dashboard' };
+const state = {
+  user: null,
+  account: null,
+  faqs: [],
+  unanswered: [],
+  currentView: 'dashboard',
+};
 const appMeta = {
   productName: APP_PRODUCT_NAME,
   title: APP_PRODUCT_NAME,
@@ -109,9 +115,7 @@ function showLanding(tab = 'signup') {
   setLandingTab(tab);
 }
 
-const provisionState = {
-  token: '',
-  tenant: null,
+const whatsappState = {
   instanceName: '',
   pollTimer: null,
   startedAt: 0,
@@ -119,15 +123,15 @@ const provisionState = {
   timeoutSeconds: 180,
 };
 
-function clearProvisionPoll() {
-  if (provisionState.pollTimer) {
-    clearInterval(provisionState.pollTimer);
-    provisionState.pollTimer = null;
+function clearWhatsappPoll() {
+  if (whatsappState.pollTimer) {
+    clearInterval(whatsappState.pollTimer);
+    whatsappState.pollTimer = null;
   }
 }
 
-function hideProvisionPanels() {
-  $('#provision-form')?.classList.add('hidden');
+function hideLandingPanels() {
+  $('#signup-form')?.classList.add('hidden');
   $('#provision-qr-panel')?.classList.add('hidden');
   $('#provision-success-panel')?.classList.add('hidden');
 }
@@ -135,41 +139,33 @@ function hideProvisionPanels() {
 function setLandingTab(tab) {
   const signup = tab === 'signup';
   $('#login-form')?.classList.toggle('hidden', signup);
-  setProvisionFocus(false);
+  setWhatsappFocus(false);
   document.querySelector('.landing-hero')?.classList.toggle('hidden', !signup);
   if (signup) {
-    hideProvisionPanels();
-    $('#provision-form')?.classList.remove('hidden');
+    hideLandingPanels();
+    $('#signup-form')?.classList.remove('hidden');
   } else {
-    clearProvisionPoll();
-    hideProvisionPanels();
-    $('#provision-form')?.classList.add('hidden');
+    clearWhatsappPoll();
+    hideLandingPanels();
+    $('#signup-form')?.classList.add('hidden');
   }
 }
 
-function provisionHeaders() {
-  return provisionState.token
-    ? { Authorization: `Bearer ${provisionState.token}` }
-    : {};
-}
-
-function setProvisionFocus(active) {
+function setWhatsappFocus(active) {
   $('#login-screen')?.classList.toggle('provision-focus', active);
   document.querySelector('.landing-hero')?.classList.toggle('hidden', active);
 }
 
-function showProvisionQr(qrBase64, instanceName) {
-  hideProvisionPanels();
-  setProvisionFocus(true);
+function showWhatsappQr(qrBase64, instanceName) {
+  hideLandingPanels();
+  setWhatsappFocus(true);
   const panel = $('#provision-qr-panel');
   panel?.classList.remove('hidden');
   const img = $('#provision-qr-image');
   const waiting = $('#provision-qr-waiting');
   const label = $('#provision-instance-label');
   if (label) {
-    label.textContent = instanceName
-      ? `Instancia: ${instanceName}`
-      : '';
+    label.textContent = instanceName ? `Instancia: ${instanceName}` : '';
   }
   if (qrBase64 && img) {
     img.src = qrBase64;
@@ -184,35 +180,45 @@ function showProvisionQr(qrBase64, instanceName) {
   });
 }
 
-function showProvisionSuccess(phoneNumber, tenant) {
-  clearProvisionPoll();
-  hideProvisionPanels();
-  setProvisionFocus(true);
-  $('#provision-success-panel')?.classList.remove('hidden');
-  const phone = $('#provision-phone');
-  if (phone) {
-    phone.textContent = phoneNumber
-      ? `+${String(phoneNumber).replace(/^\+/, '')}`
-      : 'Número vinculado';
+async function onWhatsappConnected(phoneNumber) {
+  clearWhatsappPoll();
+  hideLandingPanels();
+  setWhatsappFocus(false);
+
+  try {
+    const data = await api('/auth/me');
+    state.user = data.user;
+  } catch {
+    /* session cookie should still be valid */
   }
-  const meta = $('#provision-success-meta');
-  if (meta && tenant) {
-    meta.textContent = `${tenant.commercial_name || tenant.name || ''} · ${tenant.slug || ''}`;
+
+  showApp();
+  renderHeader();
+  await openView('profile');
+
+  const msg = $('#profile-msg');
+  if (msg) {
+    const phone = phoneNumber
+      ? `+${String(phoneNumber).replace(/^\+/, '')}`
+      : '';
+    msg.textContent = phone
+      ? t('msg.whatsappConnectedPhone', { phone })
+      : t('msg.whatsappConnected');
+    msg.className = 'form-msg ok';
   }
 }
 
-async function pollProvisionStatus() {
+async function pollWhatsappStatus() {
   const msg = $('#provision-qr-msg');
-  if (!provisionState.instanceName) {
+  if (!whatsappState.instanceName) {
     return;
   }
 
-  const elapsed = (Date.now() - provisionState.startedAt) / 1000;
-  if (elapsed > provisionState.timeoutSeconds) {
-    clearProvisionPoll();
+  const elapsed = (Date.now() - whatsappState.startedAt) / 1000;
+  if (elapsed > whatsappState.timeoutSeconds) {
+    clearWhatsappPoll();
     if (msg) {
-      msg.textContent =
-        'Se agotó el tiempo de espera del QR. Pulsa «Actualizar QR» e inténtalo de nuevo.';
+      msg.textContent = t('msg.qrTimeout');
       msg.className = 'form-msg error';
     }
     return;
@@ -220,23 +226,22 @@ async function pollProvisionStatus() {
 
   try {
     const data = await api(
-      `/provision/status/${encodeURIComponent(provisionState.instanceName)}`,
-      { headers: provisionHeaders() }
+      `/whatsapp/status/${encodeURIComponent(whatsappState.instanceName)}`
     );
 
     if (data.qr_base64) {
-      showProvisionQr(data.qr_base64, data.instance_name);
+      showWhatsappQr(data.qr_base64, data.instance_name);
     }
 
     if (data.connection_status === 'connected') {
-      showProvisionSuccess(data.phone_number, provisionState.tenant);
+      await onWhatsappConnected(data.phone_number);
       return;
     }
 
     if (msg) {
       msg.textContent =
         data.message ||
-        `Escanea el QR una sola vez… (${Math.floor(elapsed)}s)`;
+        t('msg.qrWaiting', { seconds: Math.floor(elapsed) });
       msg.className = 'form-msg';
     }
   } catch (error) {
@@ -247,41 +252,76 @@ async function pollProvisionStatus() {
   }
 }
 
-function startProvisionPolling() {
-  clearProvisionPoll();
-  provisionState.startedAt = Date.now();
-  const intervalMs = Math.max(1, provisionState.pollIntervalSeconds) * 1000;
-  provisionState.pollTimer = setInterval(pollProvisionStatus, intervalMs);
-  pollProvisionStatus();
+function startWhatsappPolling() {
+  clearWhatsappPoll();
+  whatsappState.startedAt = Date.now();
+  const intervalMs = Math.max(1, whatsappState.pollIntervalSeconds) * 1000;
+  whatsappState.pollTimer = setInterval(pollWhatsappStatus, intervalMs);
+  pollWhatsappStatus();
 }
 
-async function startWhatsappProvision() {
-  const msg = $('#provision-msg') || $('#provision-qr-msg');
-  showProvisionQr(null, '');
+async function startWhatsappConnect() {
+  showWhatsappQr(null, '');
   const qrMsg = $('#provision-qr-msg');
   if (qrMsg) {
-    qrMsg.textContent = 'Creando instancia en Evolution API…';
+    qrMsg.textContent = t('msg.creatingWhatsapp');
     qrMsg.className = 'form-msg';
   }
 
-  const data = await api('/provision/whatsapp', {
-    method: 'POST',
-    headers: provisionHeaders(),
-  });
+  const data = await api('/whatsapp/connect', { method: 'POST' });
 
-  provisionState.instanceName = data.instance_name;
-  provisionState.pollIntervalSeconds =
-    data.poll_interval_seconds || provisionState.pollIntervalSeconds;
-  provisionState.timeoutSeconds =
-    data.timeout_seconds || provisionState.timeoutSeconds;
+  whatsappState.instanceName = data.instance_name;
+  whatsappState.pollIntervalSeconds =
+    data.poll_interval_seconds || whatsappState.pollIntervalSeconds;
+  whatsappState.timeoutSeconds =
+    data.timeout_seconds || whatsappState.timeoutSeconds;
 
   if (data.connection_status === 'connected') {
-    showProvisionSuccess(data.phone_number, provisionState.tenant);
+    await onWhatsappConnected(data.phone_number);
     return;
   }
 
-  showProvisionQr(data.qr_base64, data.instance_name);
-  startProvisionPolling();
+  showWhatsappQr(data.qr_base64, data.instance_name);
+  startWhatsappPolling();
+}
+
+async function resumeWhatsappOnboarding(account) {
+  showLanding('signup');
+  hideLandingPanels();
+  setWhatsappFocus(true);
+
+  whatsappState.instanceName = account?.whatsapp?.instance_name || '';
+
+  if (account?.whatsapp?.connection_status === 'connected') {
+    return false;
+  }
+
+  if (account?.whatsapp?.qr_base64 && whatsappState.instanceName) {
+    showWhatsappQr(account.whatsapp.qr_base64, whatsappState.instanceName);
+    startWhatsappPolling();
+    return true;
+  }
+
+  await startWhatsappConnect();
+  return true;
+}
+
+async function ensureClientAppOrWhatsapp() {
+  if (state.user?.role !== 'client') {
+    return true;
+  }
+
+  try {
+    const account = await api('/account/settings');
+    state.account = account;
+    if (account.whatsapp?.connection_status === 'connected') {
+      return true;
+    }
+    await resumeWhatsappOnboarding(account);
+    return false;
+  } catch {
+    return true;
+  }
 }
 
 function showLogin() {
@@ -412,6 +452,7 @@ function renderProfile() {
   const emailEl = $('#profile-email');
   const businessInput = $('#profile-business');
   const slugWrap = $('#profile-slug-wrap');
+  const onboardHint = $('#profile-onboard-hint');
 
   if (!user || !emailEl || !businessInput) {
     return;
@@ -421,20 +462,47 @@ function renderProfile() {
   emailEl.value = user.email || '';
 
   if (user.role === 'client') {
+    const account = state.account;
     businessInput.disabled = false;
-    businessInput.value = user.tenant?.name || '';
+    businessInput.value =
+      account?.tenant?.name || user.tenant?.name || '';
     businessInput.placeholder = user.tenant?.slug
       ? t('profile.businessExample', { name: user.tenant.slug })
       : t('profile.businessPlaceholder');
     slugWrap?.classList.remove('hidden');
     const slugInput = $('#profile-slug');
     if (slugInput) {
-      slugInput.value = user.tenant?.slug || '—';
+      slugInput.value = account?.tenant?.slug || user.tenant?.slug || '—';
     }
+
+    const addressEl = $('#profile-address');
+    const agentNameEl = $('#profile-agent-name');
+    const welcomeEl = $('#profile-welcome-message');
+    const bookingEl = $('#profile-booking-url');
+    const langEl = $('#profile-primary-language');
+
+    if (addressEl) {
+      addressEl.value = account?.settings?.address || '';
+    }
+    if (agentNameEl) {
+      agentNameEl.value = account?.agent?.name || '';
+    }
+    if (welcomeEl) {
+      welcomeEl.value = account?.settings?.welcome_message || '';
+    }
+    if (bookingEl) {
+      bookingEl.value = account?.settings?.booking_url_base || '';
+    }
+    if (langEl) {
+      langEl.value = account?.settings?.primary_language || 'es';
+    }
+
+    onboardHint?.classList.remove('hidden');
   } else {
     businessInput.disabled = true;
     businessInput.value = t('profile.globalAdmin');
     slugWrap?.classList.add('hidden');
+    onboardHint?.classList.add('hidden');
   }
 
   const currentPassword = $('#profile-current-password');
@@ -442,16 +510,29 @@ function renderProfile() {
   const profileMsg = $('#profile-msg');
   if (currentPassword) currentPassword.value = '';
   if (newPassword) newPassword.value = '';
-  if (profileMsg) {
+  if (profileMsg && !profileMsg.classList.contains('ok')) {
     profileMsg.textContent = '';
     profileMsg.className = 'form-msg';
   }
 }
 
 async function refreshProfile() {
+  const user = state.user;
+  if (!user) {
+    return;
+  }
+
   try {
-    const data = await api('/auth/me');
-    state.user = data.user;
+    if (user.role === 'client') {
+      const account = await api('/account/settings');
+      state.account = account;
+      if (account.tenant?.name && state.user.tenant) {
+        state.user.tenant.name = account.tenant.name;
+      }
+    } else {
+      const data = await api('/auth/me');
+      state.user = data.user;
+    }
     renderHeader();
   } catch {
     renderProfile();
@@ -919,6 +1000,11 @@ async function loadSession() {
   try {
     const data = await api('/auth/me');
     state.user = data.user;
+
+    if (!(await ensureClientAppOrWhatsapp())) {
+      return;
+    }
+
     showApp();
     renderHeader();
     const view = resolveView(getRequestedView());
@@ -1091,6 +1177,9 @@ $('#login-form').addEventListener('submit', async (event) => {
       }),
     });
     state.user = data.user;
+    if (!(await ensureClientAppOrWhatsapp())) {
+      return;
+    }
     showApp();
     renderHeader();
     await openView('dashboard');
@@ -1106,29 +1195,28 @@ $('#login-form').addEventListener('submit', async (event) => {
 $('#link-show-login')?.addEventListener('click', () => setLandingTab('login'));
 $('#link-show-signup')?.addEventListener('click', () => setLandingTab('signup'));
 
-$('#provision-form')?.addEventListener('submit', async (event) => {
+$('#signup-form')?.addEventListener('submit', async (event) => {
   event.preventDefault();
-  const msg = $('#provision-msg');
+  const msg = $('#signup-msg');
   msg.textContent = '';
   msg.className = 'form-msg';
 
   try {
-    const data = await api('/provision/register', {
+    const data = await api('/auth/signup', {
       method: 'POST',
       body: JSON.stringify({
-        commercial_name: $('#provision-commercial-name').value.trim(),
-        email: $('#provision-email').value.trim(),
+        email: $('#signup-email').value.trim(),
+        password: $('#signup-password').value,
       }),
     });
 
-    provisionState.token = data.token || '';
-    provisionState.tenant = data.tenant;
-    provisionState.pollIntervalSeconds =
-      data.poll_interval_seconds || provisionState.pollIntervalSeconds;
-    provisionState.timeoutSeconds =
-      data.timeout_seconds || provisionState.timeoutSeconds;
+    state.user = data.user;
+    whatsappState.pollIntervalSeconds =
+      data.poll_interval_seconds || whatsappState.pollIntervalSeconds;
+    whatsappState.timeoutSeconds =
+      data.timeout_seconds || whatsappState.timeoutSeconds;
 
-    await startWhatsappProvision();
+    await startWhatsappConnect();
   } catch (error) {
     msg.textContent = error.message;
     msg.classList.add('error');
@@ -1138,7 +1226,7 @@ $('#provision-form')?.addEventListener('submit', async (event) => {
 $('#provision-qr-refresh')?.addEventListener('click', async () => {
   const msg = $('#provision-qr-msg');
   try {
-    await startWhatsappProvision();
+    await startWhatsappConnect();
   } catch (error) {
     if (msg) {
       msg.textContent = error.message;
@@ -1147,23 +1235,15 @@ $('#provision-qr-refresh')?.addEventListener('click', async () => {
   }
 });
 
-$('#provision-success-again')?.addEventListener('click', () => {
-  clearProvisionPoll();
-  provisionState.token = '';
-  provisionState.tenant = null;
-  provisionState.instanceName = '';
-  $('#provision-form')?.reset();
-  setLandingTab('signup');
-});
-
 async function logout() {
   try {
     await api('/auth/logout', { method: 'POST' });
   } catch {
     /* ignore */
   }
-  clearProvisionPoll();
+  clearWhatsappPoll();
   state.user = null;
+  state.account = null;
   state.faqs = [];
   state.unanswered = [];
   try {
@@ -1257,16 +1337,9 @@ $('#profile-form').addEventListener('submit', async (event) => {
   msg.textContent = '';
   msg.className = 'form-msg';
 
-  const body = {};
   const email = $('#profile-email').value.trim().toLowerCase();
   const currentEmail = state.user?.email?.trim().toLowerCase() || '';
   const emailChanged = Boolean(email && email !== currentEmail);
-  if (email) {
-    body.email = email;
-  }
-  if (state.user?.role === 'client') {
-    body.business_name = $('#profile-business').value.trim();
-  }
   const current = $('#profile-current-password').value;
   const next = $('#profile-new-password').value;
 
@@ -1277,19 +1350,48 @@ $('#profile-form').addEventListener('submit', async (event) => {
     return;
   }
 
-  if (emailChanged || next) {
-    body.current_password = current;
-  }
-  if (next) {
-    body.new_password = next;
-  }
-
   try {
-    const data = await api('/auth/profile', {
-      method: 'PATCH',
-      body: JSON.stringify(body),
-    });
-    state.user = data.user;
+    if (emailChanged || next) {
+      const authBody = { email };
+      if (emailChanged || next) {
+        authBody.current_password = current;
+      }
+      if (next) {
+        authBody.new_password = next;
+      }
+      const authData = await api('/auth/profile', {
+        method: 'PATCH',
+        body: JSON.stringify(authBody),
+      });
+      state.user = authData.user;
+    }
+
+    if (state.user?.role === 'client') {
+      const accountBody = {
+        address: $('#profile-address')?.value.trim() || '',
+        welcome_message: $('#profile-welcome-message')?.value.trim() || '',
+        booking_url_base: $('#profile-booking-url')?.value.trim() || '',
+        primary_language: $('#profile-primary-language')?.value || 'es',
+      };
+      const businessName = $('#profile-business').value.trim();
+      const agentName = $('#profile-agent-name')?.value.trim() || '';
+      if (businessName.length >= 2) {
+        accountBody.business_name = businessName;
+      }
+      if (agentName.length >= 2) {
+        accountBody.agent_name = agentName;
+      }
+
+      const accountData = await api('/account/settings', {
+        method: 'PATCH',
+        body: JSON.stringify(accountBody),
+      });
+      state.account = accountData;
+      if (accountData.tenant?.name && state.user.tenant) {
+        state.user.tenant.name = accountData.tenant.name;
+      }
+    }
+
     renderHeader();
     msg.textContent = t('msg.profileSaved');
     msg.classList.add('ok');
