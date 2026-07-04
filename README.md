@@ -4,6 +4,8 @@
 
 | Fecha | Versión | Cambio realizado | Motivo | Impacto | Sección afectada |
 |---|---|---|---|---|---|
+| 2026-07-04 | V1.8 | Se acota el MVP inmediato a onboarding automático de WhatsApp con Evolution API. | El auditor recomienda validar primero la creación de tenant, instancia Evolution, QR y conexión antes de invertir en n8n conversacional o FAQs. | El primer MVP queda limitado a registro mínimo, creación de instancia `faqinn_<tenant_slug>`, QR, polling de estado y marcado `connected`; n8n, FAQs, prompts y conversación quedan fuera de alcance de este MVP. | Alcance inicial, Arquitectura objetivo, Onboarding, Evolution API, Estado actual |
+| 2026-07-04 | V1.7 | Se normaliza la arquitectura MVP: onboarding gobernado por backend FAQ Inn, Evolution API creada por provisioner y n8n como workflow compartido multitenant. | El proyecto avanzó desde diseño conceptual hacia pruebas reales con Evolution API y `FAQ prototipo`; era necesario eliminar ambigüedad entre workflow por tenant y workflow compartido. | Queda definido que el MVP no generará un workflow n8n por tenant; usará un runtime n8n compartido que carga configuración por tenant. Se crean subproyectos de prueba documentados. | Arquitectura objetivo, Provisioner, Evolution API, n8n, Estado actual |
 | 2026-07-02 | V1.6 | Se valida operativamente el PostgreSQL de FAQ Inn. | Miguel ejecuta consulta interna desde el contenedor y confirma respuesta correcta de PostgreSQL. | Queda confirmado PostgreSQL 17.10, base `faq-inn`, usuario `postgres`, puerto interno 5432 y sin puerto público externo. | Configuración EasyPanel PostgreSQL, Estado actual |
 | 2026-07-02 | V1.5 | Se confirma creación real del PostgreSQL de FAQ Inn en EasyPanel. | Miguel crea el servicio y aporta captura con credenciales visibles del servicio. | Host interno real confirmado: `n8n_faq-inn_postgres`; base `faq-inn`; usuario `postgres`; imagen `postgres:17`; puerto interno 5432; sin puerto público externo. La contraseña no se documenta. | Configuración EasyPanel PostgreSQL, Estado actual |
 | 2026-07-02 | V1.4 | Se define la configuración base para crear PostgreSQL en EasyPanel. | Miguel inicia la creación del servicio Postgres propio de FAQ Inn en EasyPanel. | El servicio debe llamarse `faq-inn_postgres`, usar base `faq-inn`, usuario `postgres`, imagen `postgres:17`, contraseña autogenerada por EasyPanel y sin puerto público externo. | Base de datos, Configuración EasyPanel PostgreSQL |
@@ -55,6 +57,52 @@ FAQ Inn hereda aprendizajes de DFAQ, pero no modifica producción.
 
 ## 3. Alcance inicial
 
+### 3.0 MVP inmediato: onboarding WhatsApp con Evolution API
+
+El MVP inmediato del proyecto no incluye todavía conversación automática, n8n productivo, carga de FAQs ni prompts finales.
+
+Objetivo del MVP inmediato:
+
+```text
+Permitir que un hotelero cree su tenant mínimo y vincule su WhatsApp mediante QR en Evolution API sin intervención técnica manual.
+```
+
+Flujo cerrado del MVP:
+
+```text
+Registro mínimo -> tenant draft -> crear instancia Evolution -> mostrar QR -> polling de estado -> capturar phone_number -> tenant connected
+```
+
+Datos mínimos del registro:
+
+```text
+nombre_comercial
+email
+tenant_slug generado automáticamente
+```
+
+Reglas obligatorias:
+
+```text
+El frontend nunca llama directo a Evolution API.
+Toda llamada a Evolution API pasa por el backend Fastify de FAQ Inn.
+La API key de Evolution vive solo en variables de entorno del servidor.
+El instance_name debe usar prefijo técnico: faqinn_<tenant_slug>.
+El estado de conexión se consulta por polling desde el frontend contra el backend propio.
+```
+
+Fuera de alcance de este MVP:
+
+```text
+n8n conversacional
+carga de FAQs
+prompts por vertical
+respuestas automáticas
+Chatwoot operativo
+panel completo de administración
+login completo de usuarios
+```
+
 ### 3.1 Vertical inicial: Hotel v1
 
 El primer vertical será `hotel`.
@@ -96,17 +144,25 @@ Cliente hotelero
       ↓
 Sitio FAQ Inn — inn.at-once.cl
       ↓
-Formulario de onboarding
+Registro mínimo
       ↓
-Provisioner interno de FAQ Inn
-      ├── crea tenant y configuración
-      ├── crea instancia Evolution API
+Backend / Provisioner interno de FAQ Inn
+      ├── crea tenant en estado draft
+      ├── genera tenant_slug único
+      ├── crea instancia Evolution API con instance_name faqinn_<tenant_slug>
       ├── obtiene QR WhatsApp
-      ├── espera conexión
-      ├── genera workflow n8n desde plantilla
-      ├── configura webhook Evolution → n8n
-      ├── activa agente
-      └── guarda trazabilidad
+      ├── expone estado por endpoint propio
+      ├── espera conexión por polling
+      ├── captura phone_number
+      └── marca tenant connected
+      ↓
+WhatsApp vinculado en Evolution API
+
+Etapas posteriores al MVP:
+      ↓
+Configurar webhook Evolution → runtime n8n multitenant
+      ↓
+Workflow n8n compartido carga configuración del tenant
       ↓
 Agente WhatsApp operativo
 ```
@@ -137,10 +193,10 @@ flowchart TB
   H --> I[Cliente escanea QR]
   I --> J{WhatsApp conectado?}
   J -- No --> H
-  J -- Sí --> K[Crea workflow n8n desde plantilla]
-  K --> L[Inyecta variables del tenant]
-  L --> M[Configura webhook Evolution hacia n8n]
-  M --> N[Activa workflow]
+  J -- Sí --> K[Configura webhook Evolution hacia runtime n8n multitenant]
+  K --> L[Marca tenant como conectado]
+  L --> M[Runtime n8n carga variables desde PostgreSQL/API]
+  M --> N[Activa tenant/agente]
   N --> O[Envía mensaje de prueba]
   O --> P{Prueba OK?}
   P -- No --> Q[Marca onboarding con error y muestra diagnóstico]
@@ -169,8 +225,8 @@ Responsabilidades del Provisioner:
 4. Obtener y mostrar QR.
 5. Esperar estado `connected`.
 6. Crear credencial o configuración segura para n8n.
-7. Crear workflow n8n desde plantilla.
-8. Configurar webhook en Evolution API.
+7. Registrar la configuración necesaria para que el runtime n8n multitenant pueda identificar y cargar el tenant.
+8. Configurar webhook en Evolution API hacia el runtime n8n compartido.
 9. Ejecutar prueba final.
 10. Marcar tenant como `active` o `error`.
 
@@ -237,49 +293,71 @@ FAQ prototipo
 
 Este workflow sirve como referencia técnica para transformar MorroReservas en un flujo parametrizable, pero no debe asumirse como plantilla final productiva.
 
-### 8.2 Workflows por cliente
+### 8.2 Workflow compartido multitenant para MVP
 
-La app FAQ Inn debe poder crear workflows n8n desde una plantilla versionada.
+La decisión vigente para el MVP es usar **un workflow n8n compartido y multitenant**, no un workflow generado por cada tenant.
 
-Variables mínimas a inyectar:
+Motivo:
+
+- Reduce duplicación operativa.
+- Permite corregir la lógica conversacional una sola vez.
+- Mantiene el onboarding en la app FAQ Inn, no en n8n.
+- Facilita pruebas iniciales de Evolution API, Redis TTL, búsqueda FAQ y preguntas sin respuesta.
+
+El workflow debe identificar el tenant desde la instancia Evolution, webhook path, token, metadata o mapeo persistido, y luego cargar su configuración desde PostgreSQL/API.
+
+Variables mínimas que debe cargar el runtime n8n:
 
 ```text
 tenant_id
 agent_id
 tenant_slug
 vertical
-nombre_comercial
-prompt_base
-prompt_personalizado
+agent_name
+initial_greeting
+primary_language
+timezone
 booking_url_base
 booking_url_template
 evolution_instance_name
 evolution_api_url
-credential_id
-webhook_path
 faq_search_endpoint
 unanswered_endpoint
-pause_rule
+pause_enabled
+pause_trigger
+pause_ttl_seconds
+pause_scope
 ```
+
+El modelo de workflow por tenant queda reservado como alternativa futura solo si existe una necesidad explícita de aislamiento, personalización fuerte o lógica conversacional distinta por cliente.
 
 ### 8.3 Regla de pausa humana
 
 MVP:
 
 ```text
-Si un mensaje entrante comienza con **, el agente se pausa para esa conversación.
+Si un mensaje entrante comienza con el `pause_trigger` configurado, el agente se pausa para esa conversación.
 ```
 
-Comportamiento propuesto:
+La pausa humana se implementa con Redis TTL, no con `Wait` de n8n ni apagando workflows.
 
-| Comando | Resultado |
-|---|---|
-| `**5` | Pausa 5 minutos. |
-| `**10` | Pausa 10 minutos. |
-| `**15` | Pausa 15 minutos. |
-| `**` | Pausa por defecto: 10 minutos. |
+Clave estándar:
 
-Mientras `now < pause_until`, n8n no debe responder al cliente, para permitir intervención humana desde WhatsApp.
+```text
+faqinn:pause:<tenant_id>:<agent_id>:<chat_id>
+```
+
+Configuración mínima por tenant/agente:
+
+```text
+pause_enabled=true
+pause_trigger=**
+pause_ttl_seconds=300
+pause_scope=chat
+pause_mode=redis_ttl
+```
+
+Mientras exista la clave Redis de pausa, n8n no debe responder al cliente, para permitir intervención humana desde WhatsApp o Chatwoot.
 
 ---
 
@@ -553,12 +631,18 @@ La base técnica inicial en PostgreSQL se crea como faq-inn para mantener compat
 3. Definir `$tenant = FAQ-INN` para desarrollo.
 4. Cambiar el título HTTP/frontend a `FAQ Inn $Tenant`.
 5. Asociar PostgreSQL al tenant mediante la variable de base definida para FAQ Inn y conexión interna del servicio PostgreSQL.
-6. Reconstruir configuración heredada de DFAQ para que nombres, endpoints, base de datos, workflows y búsqueda dependan del tenant.
-7. Diseñar modelo de datos para `vertical_templates`, `tenant_provisioning`, `whatsapp_instances` y `n8n_workflows`.
-8. Definir plantilla final de prompt Hotel v1.
-9. Definir contrato con Evolution API.
-10. Definir contrato con n8n para creación de workflows.
-11. Crear primer tenant demo hotelero sin tocar MorroReservas.
+6. Implementar primero el MVP `evolution-onboarding-mvp`:
+   - registro mínimo con nombre comercial y email;
+   - generación automática de `tenant_slug`;
+   - creación de instancia Evolution con `instance_name = faqinn_<tenant_slug>`;
+   - obtención y visualización de QR;
+   - polling de estado;
+   - captura de `phone_number`;
+   - actualización del tenant a `connected`.
+7. Diseñar modelo mínimo para `tenants` y `evolution_instances`.
+8. Validar contrato real con Evolution API v2.3.7.
+9. Crear primer tenant demo hotelero sin tocar MorroReservas.
+10. Recién después de validar WhatsApp conectado, avanzar a n8n multitenant, FAQs, prompts y conversación.
 
 ---
 
@@ -595,5 +679,5 @@ MorroReservas permanece congelado.
 Dominio objetivo definido: inn.at-once.cl.
 Vertical inicial definida: Hotel v1.
 Arquitectura SaaS/multivertical definida a nivel conceptual.
-Pendiente: merge a ramas api/http en EasyPanel, diseño técnico del Provisioner y primer MVP operativo.
+Pendiente inmediato: implementar y validar `evolution-onboarding-mvp`, confirmar contrato real de endpoints Evolution API v2.3.7, crear tablas mínimas `tenants` y `evolution_instances`, y demostrar un tenant externo con WhatsApp conectado sin intervención técnica manual. n8n, FAQs, prompts y conversación quedan para etapa posterior.
 ```

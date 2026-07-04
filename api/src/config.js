@@ -76,7 +76,7 @@ export function loadConfig() {
     apiBase: 'http://127.0.0.1:11434',
     model: 'mxbai-embed-large:latest',
     dimension: 1024,
-    collectionTemplate: 'kb_<tenant_slug>_mxbai_embed_large_1024',
+    collectionTemplate: 'kb_<tenant_slug>_mxbai_1024',
   };
 
   const nvidiaDefaults = {
@@ -140,5 +140,22 @@ export function loadConfig() {
         : 'faq-inn-dev-session-secret'),
     n8nAllowedToken: process.env.N8N_ALLOWED_TOKEN || '',
     postgresDatabase: tenantConfig.postgresDatabase || DEFAULT_DB_NAME,
+    evolutionApiBaseUrl: normalizeBaseUrl(
+      process.env.EVOLUTION_API_BASE_URL || ''
+    ),
+    evolutionApiPublicUrl: normalizeBaseUrl(
+      process.env.EVOLUTION_API_PUBLIC_URL || ''
+    ),
+    evolutionApiKey: process.env.EVOLUTION_API_KEY || '',
+    evolutionInstancePrefix: process.env.EVOLUTION_INSTANCE_PREFIX || 'faqinn_',
+    evolutionQrPollIntervalSeconds: Number(
+      process.env.EVOLUTION_QR_POLL_INTERVAL_SECONDS || 3
+    ),
+    evolutionQrTimeoutSeconds: Number(
+      process.env.EVOLUTION_QR_TIMEOUT_SECONDS || 180
+    ),
+    evolutionConnectedState: (
+      process.env.EVOLUTION_CONNECTED_STATE || 'open'
+    ).toLowerCase(),
   };
 }

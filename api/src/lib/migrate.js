@@ -5,8 +5,16 @@ CREATE TABLE IF NOT EXISTS tenants (
   id BIGSERIAL PRIMARY KEY,
   slug VARCHAR(64) NOT NULL,
   name VARCHAR(255) NOT NULL DEFAULT '',
+  email VARCHAR(255) NOT NULL DEFAULT '',
   status VARCHAR(16) NOT NULL DEFAULT 'active'
-    CHECK (status IN ('active', 'inactive')),
+    CHECK (status IN (
+      'active',
+      'inactive',
+      'draft',
+      'qr_pending',
+      'connected',
+      'error'
+    )),
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   UNIQUE (slug)
@@ -126,6 +134,24 @@ CREATE TABLE IF NOT EXISTS tenant_provisioning (
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
+
+CREATE TABLE IF NOT EXISTS evolution_instances (
+  id BIGSERIAL PRIMARY KEY,
+  tenant_id BIGINT NOT NULL REFERENCES tenants (id) ON DELETE CASCADE,
+  instance_name VARCHAR(128) NOT NULL,
+  status VARCHAR(32) NOT NULL DEFAULT 'draft'
+    CHECK (status IN ('draft', 'qr_pending', 'connected', 'error')),
+  phone_number VARCHAR(64) NOT NULL DEFAULT '',
+  last_qr_at TIMESTAMPTZ NULL,
+  connected_at TIMESTAMPTZ NULL,
+  last_error TEXT NOT NULL DEFAULT '',
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  UNIQUE (instance_name)
+);
+
+CREATE INDEX IF NOT EXISTS idx_evolution_instances_tenant
+  ON evolution_instances (tenant_id);
 `;
 
 async function applySchemaPatches(pool) {
@@ -143,6 +169,37 @@ async function applySchemaPatches(pool) {
        ADD COLUMN phone VARCHAR(64) NOT NULL DEFAULT ''`
     );
   }
+
+  const [emailCol] = await pool.query(
+    `SELECT column_name
+     FROM information_schema.columns
+     WHERE table_schema = current_schema()
+       AND table_name = 'tenants'
+       AND column_name = 'email'`
+  );
+
+  if (emailCol.length === 0) {
+    await pool.query(
+      `ALTER TABLE tenants
+       ADD COLUMN email VARCHAR(255) NOT NULL DEFAULT ''`
+    );
+  }
+
+  await pool.query(
+    `ALTER TABLE tenants DROP CONSTRAINT IF EXISTS tenants_status_check`
+  );
+  await pool.query(
+    `ALTER TABLE tenants
+     ADD CONSTRAINT tenants_status_check
+     CHECK (status IN (
+       'active',
+       'inactive',
+       'draft',
+       'qr_pending',
+       'connected',
+       'error'
+     ))`
+  );
 }
 
 export async function runMigrations(pool, _config) {
