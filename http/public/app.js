@@ -1,4 +1,4 @@
-const APP_VERSION = '1.2.4';
+const APP_VERSION = '1.2.6';
 const APP_PRODUCT_NAME = 'FAQ Inn';
 const apiBase = window.FAQ_INN_API_URL || window.DFAQ_API_URL || '/api';
 const VIEW_STORAGE_KEY = 'faq-inn-current-view';
@@ -137,6 +137,7 @@ function setLandingTab(tab) {
   $('#tab-signup')?.classList.toggle('active', signup);
   $('#tab-login')?.classList.toggle('active', !signup);
   $('#login-form')?.classList.toggle('hidden', signup);
+  setProvisionFocus(false);
   document.querySelector('.landing-hero')?.classList.toggle('hidden', !signup);
   if (signup) {
     hideProvisionPanels();
@@ -153,9 +154,17 @@ function provisionHeaders() {
     : {};
 }
 
+function setProvisionFocus(active) {
+  $('#login-screen')?.classList.toggle('provision-focus', active);
+  document.querySelector('.landing-hero')?.classList.toggle('hidden', active);
+  document.querySelector('.landing-tabs')?.classList.toggle('hidden', active);
+}
+
 function showProvisionQr(qrBase64, instanceName) {
   hideProvisionPanels();
-  $('#provision-qr-panel')?.classList.remove('hidden');
+  setProvisionFocus(true);
+  const panel = $('#provision-qr-panel');
+  panel?.classList.remove('hidden');
   const img = $('#provision-qr-image');
   const waiting = $('#provision-qr-waiting');
   const label = $('#provision-instance-label');
@@ -168,16 +177,19 @@ function showProvisionQr(qrBase64, instanceName) {
     img.src = qrBase64;
     img.classList.remove('hidden');
     waiting?.classList.add('hidden');
-  } else {
+  } else if (!img?.src || img.classList.contains('hidden')) {
     img?.classList.add('hidden');
     waiting?.classList.remove('hidden');
   }
+  requestAnimationFrame(() => {
+    panel?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  });
 }
 
 function showProvisionSuccess(phoneNumber, tenant) {
   clearProvisionPoll();
   hideProvisionPanels();
-  document.querySelector('.landing-hero')?.classList.add('hidden');
+  setProvisionFocus(true);
   $('#provision-success-panel')?.classList.remove('hidden');
   const phone = $('#provision-phone');
   if (phone) {
@@ -224,14 +236,9 @@ async function pollProvisionStatus() {
     }
 
     if (msg) {
-      const state = String(data.evolution_state || '').toLowerCase();
-      if (state === 'connecting' || data.message) {
-        msg.textContent =
-          data.message ||
-          `WhatsApp está emparejando… (${Math.floor(elapsed)}s). No escanees de nuevo.`;
-      } else {
-        msg.textContent = `Esperando escaneo… (${Math.floor(elapsed)}s)`;
-      }
+      msg.textContent =
+        data.message ||
+        `Escanea el QR una sola vez… (${Math.floor(elapsed)}s)`;
       msg.className = 'form-msg';
     }
   } catch (error) {

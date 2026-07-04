@@ -15,15 +15,28 @@ function extractQrBase64(payload) {
     payload?.qrcode?.base64,
     payload?.base64,
     payload?.qr?.base64,
-    payload?.qrcode,
     payload?.qrcode?.code,
+    payload?.qrcode,
   ];
 
   for (const value of candidates) {
-    if (typeof value === 'string' && value.length > 20) {
-      return value.startsWith('data:')
-        ? value
-        : `data:image/png;base64,${value.replace(/^data:image\/\w+;base64,/, '')}`;
+    if (typeof value !== 'string' || value.length < 20) {
+      continue;
+    }
+    // Evolution a veces devuelve el código QR en texto, no imagen.
+    if (!value.includes('base64') && !/^[A-Za-z0-9+/=\s]+$/.test(value.slice(0, 80))) {
+      continue;
+    }
+    if (value.startsWith('data:image')) {
+      return value;
+    }
+    const cleaned = value.replace(/^data:image\/\w+;base64,/, '').replace(/\s/g, '');
+    // Solo aceptar payloads que parezcan PNG/JPEG base64 (no el string del QR crudo).
+    if (cleaned.startsWith('iVBOR') || cleaned.startsWith('/9j/')) {
+      return `data:image/png;base64,${cleaned}`;
+    }
+    if (cleaned.length > 200) {
+      return `data:image/png;base64,${cleaned}`;
     }
   }
 
@@ -38,12 +51,6 @@ function extractConnectionState(payload) {
     payload?.status ||
     null
   );
-}
-
-/** Estados en los que NO se debe pedir un QR nuevo (interrumpe el emparejamiento). */
-export function isPairingInProgress(state) {
-  const value = String(state || '').toLowerCase();
-  return value === 'connecting' || value === 'open';
 }
 
 export function isConnectedState(state, expected = 'open') {
@@ -100,7 +107,7 @@ export function createEvolutionClient(config) {
         Accept: 'application/json',
       },
       body: body ? JSON.stringify(body) : undefined,
-      signal: AbortSignal.timeout(30_000),
+      signal: AbortSignal.timeout(45_000),
     });
 
     let data = null;
@@ -127,29 +134,40 @@ export function createEvolutionClient(config) {
     return data;
   }
 
+  async function ignoreNotFound(fn) {
+    try {
+      return await fn();
+    } catch (error) {
+      if (error.statusCode === 404 || /not found|does not exist|exist/i.test(error.message)) {
+        return null;
+      }
+      return null;
+    }
+  }
+
   return {
     buildInstanceName(tenantSlug) {
       return buildInstanceName(config.evolutionInstancePrefix, tenantSlug);
     },
 
+    async logoutInstance(instanceName) {
+      return ignoreNotFound(() =>
+        request('DELETE', `/instance/logout/${encodeURIComponent(instanceName)}`)
+      );
+    },
+
+    async deleteInstance(instanceName) {
+      return ignoreNotFound(() =>
+        request('DELETE', `/instance/delete/${encodeURIComponent(instanceName)}`)
+      );
+    },
+
     async createInstance(instanceName) {
-      try {
-        return await request('POST', '/instance/create', {
-          instanceName,
-          qrcode: true,
-          integration: 'WHATSAPP-BAILEYS',
-        });
-      } catch (error) {
-        const detail = JSON.stringify(error.detail || error.message || '');
-        if (
-          error.statusCode === 403 ||
-          error.statusCode === 409 ||
-          /already|exist|exists/i.test(detail)
-        ) {
-          return { instanceName, alreadyExists: true };
-        }
-        throw error;
-      }
+      return request('POST', '/instance/create', {
+        instanceName,
+        qrcode: true,
+        integration: 'WHATSAPP-BAILEYS',
+      });
     },
 
     async getQr(instanceName) {
@@ -160,7 +178,7 @@ export function createEvolutionClient(config) {
       const qrBase64 = extractQrBase64(payload);
       if (!qrBase64) {
         throw evolutionError(
-          'Evolution API no devolvió QR en Base64',
+          'Evolution API no devolvió QR en imagen Base64',
           502,
           payload
         );
@@ -174,10 +192,12 @@ export function createEvolutionClient(config) {
         `/instance/connectionState/${encodeURIComponent(instanceName)}`
       );
       const state = extractConnectionState(payload);
+      const normalized = String(state || '').toLowerCase();
       return {
         state,
         connected: isConnectedState(state, connectedState),
-        pairing: isPairingInProgress(state),
+        // "connecting" = QR activo o emparejando; no regenerar QR.
+        awaitingScanOrPairing: normalized === 'connecting',
         payload,
       };
     },
@@ -212,6 +232,30 @@ export function createEvolutionClient(config) {
       } catch {
         return null;
       }
+    },
+
+    /**
+     * Sesión limpia: logout + delete + create.
+     * Evita instancias en limbo "connecting" que impiden vincular el dispositivo.
+     */
+    async createFreshQrSession(instanceName) {
+      await this.logoutInstance(instanceName);
+      await this.deleteInstance(instanceName);
+
+      // Pequeña pausa para que Evolution libere la instancia en Redis/DB.
+      await new Promise((resolve) => setTimeout(resolve, 800));
+
+      const created = await this.createInstance(instanceName);
+      let qrBase64 = extractQrBase64(created);
+
+      if (!qrBase64) {
+        // Solo un connect si create no trajo imagen QR.
+        await new Promise((resolve) => setTimeout(resolve, 500));
+        const qr = await this.getQr(instanceName);
+        qrBase64 = qr.qrBase64;
+      }
+
+      return { qrBase64, created };
     },
   };
 }
