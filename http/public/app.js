@@ -1,16 +1,21 @@
-const APP_VERSION = '1.2.0';
+const APP_VERSION = '1.2.2';
+const APP_PRODUCT_NAME = 'FAQ Inn';
 const apiBase = window.FAQ_INN_API_URL || window.DFAQ_API_URL || '/api';
 const VIEW_STORAGE_KEY = 'faq-inn-current-view';
 const VALID_VIEWS = ['dashboard', 'unanswered', 'profile', 'admin'];
 
 const state = { user: null, faqs: [], unanswered: [], currentView: 'dashboard' };
-const appMeta = { title: 'FAQ Inn FAQ-INN', version: APP_VERSION };
+const appMeta = {
+  productName: APP_PRODUCT_NAME,
+  title: APP_PRODUCT_NAME,
+  version: APP_VERSION,
+};
 
 const $ = (sel) => document.querySelector(sel);
 const $$ = (sel) => document.querySelectorAll(sel);
 
 function versionLabel(gitCommit) {
-  const base = `${appMeta.title} v${appMeta.version}`;
+  const base = `${appMeta.productName} v${appMeta.version}`;
   const hash = gitCommit?.trim();
   if (hash && hash !== 'unknown') {
     return `${base} @${hash}`;
@@ -21,7 +26,7 @@ function versionLabel(gitCommit) {
 function applyAppBranding() {
   const productEl = document.querySelector('.login-product');
   if (productEl) {
-    productEl.textContent = appMeta.title;
+    productEl.textContent = appMeta.productName;
   }
 }
 
@@ -45,11 +50,14 @@ async function loadDeployVersion() {
       return;
     }
     const data = await response.json();
-    if (data.app?.title) {
-      appMeta.title = data.app.title;
+    if (data.app?.product_name) {
+      appMeta.productName = data.app.product_name;
     }
     if (data.app?.version) {
       appMeta.version = data.app.version;
+    }
+    if (data.app?.title) {
+      appMeta.title = data.app.title;
     }
     applyAppBranding();
     applyAppVersion(data.git?.commit);

@@ -20,6 +20,7 @@ export async function healthRoutes(app, config) {
         tenant: config.tenant,
         tenant_slug: config.tenantSlug,
         tenant_display_name: config.tenantDisplayName,
+        product_name: config.appProductName || 'FAQ Inn',
         title: config.appTitle,
         version: config.appVersion,
       },
