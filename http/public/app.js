@@ -1,4 +1,4 @@
-const APP_VERSION = '1.4.0';
+const APP_VERSION = '1.4.2';
 const APP_PRODUCT_NAME = 'FAQ Inn';
 const apiBase = window.FAQ_INN_API_URL || window.DFAQ_API_URL || '/api';
 const VIEW_STORAGE_KEY = 'faq-inn-current-view';
@@ -165,7 +165,8 @@ function showWhatsappQr(qrBase64, instanceName) {
   const waiting = $('#provision-qr-waiting');
   const label = $('#provision-instance-label');
   if (label) {
-    label.textContent = instanceName ? `Instancia: ${instanceName}` : '';
+    label.textContent = '';
+    label.classList.add('hidden');
   }
   if (qrBase64 && img) {
     img.src = qrBase64;
@@ -451,7 +452,6 @@ function renderProfile() {
   const user = state.user;
   const emailEl = $('#profile-email');
   const businessInput = $('#profile-business');
-  const slugWrap = $('#profile-slug-wrap');
   const onboardHint = $('#profile-onboard-hint');
 
   if (!user || !emailEl || !businessInput) {
@@ -466,26 +466,15 @@ function renderProfile() {
     businessInput.disabled = false;
     businessInput.value =
       account?.tenant?.name || user.tenant?.name || '';
-    businessInput.placeholder = user.tenant?.slug
-      ? t('profile.businessExample', { name: user.tenant.slug })
-      : t('profile.businessPlaceholder');
-    slugWrap?.classList.remove('hidden');
-    const slugInput = $('#profile-slug');
-    if (slugInput) {
-      slugInput.value = account?.tenant?.slug || user.tenant?.slug || '—';
-    }
+    businessInput.placeholder = t('profile.businessPlaceholder');
 
     const addressEl = $('#profile-address');
-    const agentNameEl = $('#profile-agent-name');
     const welcomeEl = $('#profile-welcome-message');
     const bookingEl = $('#profile-booking-url');
     const langEl = $('#profile-primary-language');
 
     if (addressEl) {
       addressEl.value = account?.settings?.address || '';
-    }
-    if (agentNameEl) {
-      agentNameEl.value = account?.agent?.name || '';
     }
     if (welcomeEl) {
       welcomeEl.value = account?.settings?.welcome_message || '';
@@ -501,7 +490,6 @@ function renderProfile() {
   } else {
     businessInput.disabled = true;
     businessInput.value = t('profile.globalAdmin');
-    slugWrap?.classList.add('hidden');
     onboardHint?.classList.add('hidden');
   }
 
@@ -1374,12 +1362,8 @@ $('#profile-form').addEventListener('submit', async (event) => {
         primary_language: $('#profile-primary-language')?.value || 'es',
       };
       const businessName = $('#profile-business').value.trim();
-      const agentName = $('#profile-agent-name')?.value.trim() || '';
       if (businessName.length >= 2) {
         accountBody.business_name = businessName;
-      }
-      if (agentName.length >= 2) {
-        accountBody.agent_name = agentName;
       }
 
       const accountData = await api('/account/settings', {
