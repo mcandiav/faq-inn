@@ -1,14 +1,34 @@
 import { createEvolutionClient } from './evolutionClient.js';
 
+function normalizePrefix(prefix) {
+  return String(prefix || 'faqinn_').replace(/_+$/, '_') || 'faqinn_';
+}
+
+/** Solo instancias creadas por FAQ Inn (prefijo obligatorio). */
+export function isFaqInnInstance(instanceName, prefix = 'faqinn_') {
+  const name = String(instanceName || '').trim();
+  const p = normalizePrefix(prefix);
+  return name.length > p.length && name.startsWith(p);
+}
+
+async function safeDeleteInstance(evolution, instanceName, prefix, logger) {
+  if (!isFaqInnInstance(instanceName, prefix)) {
+    logger.warn?.(
+      { instance: instanceName, prefix },
+      'evolution cleanup: BLOQUEADO borrar instancia fuera de prefijo faqinn_'
+    );
+    return false;
+  }
+  await evolution.logoutInstance(instanceName);
+  await evolution.deleteInstance(instanceName);
+  return true;
+}
+
 /**
  * Limpia instancias FAQ Inn que no quedaron conectadas.
  *
- * Reglas:
- * - Nunca borra instancias con status=connected en nuestra DB.
- * - Si Evolution reporta open, sincroniza a connected (no borra).
- * - Si lleva más de `staleMinutes` en qr_pending/error/draft, logout+delete en Evolution
- *   y marca error/abandoned en PostgreSQL.
- * - También elimina huérfanas en Evolution (prefijo faqinn_) no conectadas y sin fila connected.
+ * Regla dura: SOLO nombres que empiecen por EVOLUTION_INSTANCE_PREFIX (faqinn_).
+ * Nunca toca instancias de otros sistemas en el mismo Evolution.
  */
 export async function cleanupStaleEvolutionInstances(pool, config, logger = console) {
   if (!config.evolutionApiBaseUrl || !config.evolutionApiKey) {
@@ -17,13 +37,16 @@ export async function cleanupStaleEvolutionInstances(pool, config, logger = cons
 
   const staleMinutes = Number(config.evolutionStaleMinutes || 10);
   const evolution = createEvolutionClient(config);
-  const prefix = (config.evolutionInstancePrefix || 'faqinn_').replace(/_+$/, '_');
+  const prefix = normalizePrefix(config.evolutionInstancePrefix);
+  const likePrefix = `${prefix}%`;
 
   const summary = {
+    prefix,
     checked: 0,
     syncedConnected: 0,
     deleted: 0,
     orphansDeleted: 0,
+    skippedForeign: 0,
     errors: 0,
   };
 
@@ -32,15 +55,26 @@ export async function cleanupStaleEvolutionInstances(pool, config, logger = cons
             COALESCE(last_qr_at, updated_at, created_at) AS activity_at
      FROM evolution_instances
      WHERE status IN ('draft', 'qr_pending', 'error')
+       AND instance_name LIKE ?
        AND COALESCE(last_qr_at, updated_at, created_at)
            < NOW() - (? * INTERVAL '1 minute')
      ORDER BY id ASC
      LIMIT 50`,
-    [staleMinutes]
+    [likePrefix, staleMinutes]
   );
 
   for (const row of staleRows) {
     summary.checked += 1;
+
+    if (!isFaqInnInstance(row.instance_name, prefix)) {
+      summary.skippedForeign += 1;
+      logger.warn?.(
+        { instance: row.instance_name },
+        'evolution cleanup: fila DB ignorada (no es faqinn_)'
+      );
+      continue;
+    }
+
     try {
       let connected = false;
       try {
@@ -84,8 +118,16 @@ export async function cleanupStaleEvolutionInstances(pool, config, logger = cons
         continue;
       }
 
-      await evolution.logoutInstance(row.instance_name);
-      await evolution.deleteInstance(row.instance_name);
+      const deleted = await safeDeleteInstance(
+        evolution,
+        row.instance_name,
+        prefix,
+        logger
+      );
+      if (!deleted) {
+        summary.skippedForeign += 1;
+        continue;
+      }
 
       await pool.query(
         `UPDATE evolution_instances
@@ -115,7 +157,7 @@ export async function cleanupStaleEvolutionInstances(pool, config, logger = cons
       summary.deleted += 1;
       logger.info?.(
         { instance: row.instance_name },
-        'evolution cleanup: instancia no conectada eliminada'
+        'evolution cleanup: instancia faqinn_ no conectada eliminada'
       );
     } catch (error) {
       summary.errors += 1;
@@ -126,10 +168,12 @@ export async function cleanupStaleEvolutionInstances(pool, config, logger = cons
     }
   }
 
-  // Huérfanas en Evolution: prefijo faqinn_ sin registro connected en nuestra DB.
+  // Huérfanas en Evolution: SOLO prefijo faqinn_, no conectadas, sin fila connected.
   try {
     const [connectedRows] = await pool.query(
-      `SELECT instance_name FROM evolution_instances WHERE status = 'connected'`
+      `SELECT instance_name FROM evolution_instances
+       WHERE status = 'connected' AND instance_name LIKE ?`,
+      [likePrefix]
     );
     const keep = new Set(connectedRows.map((r) => r.instance_name));
 
@@ -141,14 +185,14 @@ export async function cleanupStaleEvolutionInstances(pool, config, logger = cons
         item?.name ||
         item?.instance?.instanceName ||
         item?.instance?.name;
-      if (!name || !String(name).startsWith(prefix)) {
+
+      if (!isFaqInnInstance(name, prefix)) {
         continue;
       }
       if (keep.has(name)) {
         continue;
       }
 
-      // No tocar filas recientes (aún en proceso de escaneo).
       const [recent] = await pool.query(
         `SELECT id FROM evolution_instances
          WHERE instance_name = ?
@@ -174,12 +218,16 @@ export async function cleanupStaleEvolutionInstances(pool, config, logger = cons
         continue;
       }
 
-      await evolution.logoutInstance(name);
-      await evolution.deleteInstance(name);
+      const deleted = await safeDeleteInstance(evolution, name, prefix, logger);
+      if (!deleted) {
+        summary.skippedForeign += 1;
+        continue;
+      }
+
       summary.orphansDeleted += 1;
       logger.info?.(
         { instance: name },
-        'evolution cleanup: huérfana no conectada eliminada'
+        'evolution cleanup: huérfana faqinn_ no conectada eliminada'
       );
     }
   } catch (error) {
@@ -198,6 +246,12 @@ export function startEvolutionCleanupScheduler(pool, config, logger = console) {
     logger.info?.('evolution cleanup: desactivado (sin EVOLUTION_API_*)');
     return () => {};
   }
+
+  const prefix = normalizePrefix(config.evolutionInstancePrefix);
+  logger.info?.(
+    { prefix, staleMinutes: config.evolutionStaleMinutes },
+    'evolution cleanup: activo solo para instancias con prefijo faqinn_'
+  );
 
   const intervalMinutes = Number(config.evolutionCleanupIntervalMinutes || 5);
   const intervalMs = Math.max(1, intervalMinutes) * 60_000;
@@ -220,7 +274,6 @@ export function startEvolutionCleanupScheduler(pool, config, logger = console) {
     }
   };
 
-  // Primer ciclo tras arranque (da tiempo a migraciones/red).
   const startupTimer = setTimeout(tick, 20_000);
   const intervalTimer = setInterval(tick, intervalMs);
 
