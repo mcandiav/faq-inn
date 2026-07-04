@@ -1,4 +1,4 @@
-const APP_VERSION = '1.2.7';
+const APP_VERSION = '1.3.3';
 const APP_PRODUCT_NAME = 'FAQ Inn';
 const apiBase = window.FAQ_INN_API_URL || window.DFAQ_API_URL || '/api';
 const VIEW_STORAGE_KEY = 'faq-inn-current-view';
@@ -134,8 +134,6 @@ function hideProvisionPanels() {
 
 function setLandingTab(tab) {
   const signup = tab === 'signup';
-  $('#tab-signup')?.classList.toggle('active', signup);
-  $('#tab-login')?.classList.toggle('active', !signup);
   $('#login-form')?.classList.toggle('hidden', signup);
   setProvisionFocus(false);
   document.querySelector('.landing-hero')?.classList.toggle('hidden', !signup);
@@ -145,6 +143,7 @@ function setLandingTab(tab) {
   } else {
     clearProvisionPoll();
     hideProvisionPanels();
+    $('#provision-form')?.classList.add('hidden');
   }
 }
 
@@ -157,7 +156,6 @@ function provisionHeaders() {
 function setProvisionFocus(active) {
   $('#login-screen')?.classList.toggle('provision-focus', active);
   document.querySelector('.landing-hero')?.classList.toggle('hidden', active);
-  document.querySelector('.landing-tabs')?.classList.toggle('hidden', active);
 }
 
 function showProvisionQr(qrBase64, instanceName) {
@@ -1105,8 +1103,8 @@ $('#login-form').addEventListener('submit', async (event) => {
   }
 });
 
-$('#tab-signup')?.addEventListener('click', () => setLandingTab('signup'));
-$('#tab-login')?.addEventListener('click', () => setLandingTab('login'));
+$('#link-show-login')?.addEventListener('click', () => setLandingTab('login'));
+$('#link-show-signup')?.addEventListener('click', () => setLandingTab('signup'));
 
 $('#provision-form')?.addEventListener('submit', async (event) => {
   event.preventDefault();

@@ -101,9 +101,28 @@ body {
 }
 
 .login-screen.provision-focus .landing-hero,
-.login-screen.provision-focus .landing-tabs,
 .login-screen.provision-focus .login-brand {
   display: none;
+}
+
+.landing-switch {
+  margin: 0.75rem 0 0;
+  text-align: center;
+}
+
+.link-btn {
+  background: none;
+  border: none;
+  padding: 0;
+  color: var(--accent, #3b82f6);
+  font: inherit;
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.link-btn:hover {
+  opacity: 0.85;
 }
 
 .login-screen.provision-focus {

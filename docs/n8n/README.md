@@ -8,11 +8,44 @@ La app/backend FAQ Inn gobierna tenants, agentes, configuración, Evolution API,
 
 ## Decisión vigente MVP
 
-FAQ Inn usará un workflow n8n compartido y multitenant durante el MVP.
+FAQ Inn usará un workflow n8n compartido y multitenant durante el MVP conversacional.
 
-La app/backend FAQ Inn guarda la configuración del tenant en PostgreSQL/API. El workflow n8n identifica el tenant desde la instancia Evolution, webhook path, token o metadata y carga la configuración antes de ejecutar el agente.
+El onboarding debe guardar todos los datos del cliente/tenant en PostgreSQL/API. Cuando Evolution API envíe un evento al webhook inicial, n8n debe extraer el identificador de la instancia Evolution y consultar la configuración completa del tenant antes de ejecutar el agente.
 
 No se crearán workflows n8n por tenant durante el MVP. Esa opción queda reservada para una decisión futura documentada si se requiere aislamiento, personalización fuerte o lógica conversacional distinta por cliente.
+
+## Regla de resolución del tenant
+
+La llave preferida de runtime es:
+
+```text
+evolution_instance_name
+```
+
+Relación esperada:
+
+```text
+evolution_instances.instance_name
+  -> evolution_instances.tenant_id
+  -> tenants.id
+  -> tenant_settings / agents / faq_config / pause_config
+```
+
+El nombre exacto del campo recibido desde Evolution API debe confirmarse con un payload real. Posibles nombres a validar:
+
+```text
+instance
+instanceName
+instanceId
+sender
+apikey
+```
+
+## Flujo runtime esperado
+
+```text
+Webhook Evolution -> n8n Webhook inicial -> extraer instance_name -> consultar API/PostgreSQL FAQ Inn -> cargar Config Tenant -> normalizar Datos -> ejecutar agente.
+```
 
 ## Variables mínimas cargadas por runtime
 
@@ -75,4 +108,4 @@ Mientras exista la clave Redis de pausa, el runtime n8n no debe responder al cli
 
 ## Regla de evolución del prototipo
 
-Config Tenant es temporal. En producción debe reemplazarse por una consulta a PostgreSQL/API de FAQ Inn, manteniendo los mismos nombres de variables para no romper el runtime.
+Config Tenant es temporal. En producción debe reemplazarse por una consulta a PostgreSQL/API de FAQ Inn basada en `evolution_instance_name`, manteniendo los mismos nombres de variables para no romper el runtime.

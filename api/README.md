@@ -31,8 +31,11 @@ Arquitectura: `faq-inn-api` + `faq-inn-http` + `faq-inn_postgres`. Ver [DEPLOY.m
 | GET | `/api/db/health` | PostgreSQL |
 | POST | `/api/search` | Búsqueda semántica |
 | POST | `/api/qdrant/collections/ensure` | Crear/verificar colección tenant |
+| POST | `/api/provision/register` | Registro tenant MVP (nombre + email) |
+| POST | `/api/provision/whatsapp` | Crear instancia Evolution + QR |
+| GET | `/api/provision/status/:instance` | Polling conexión WhatsApp |
 
-Ver código en `src/routes/` para el listado completo.
+Ver código en `src/routes/` para el listado completo. Contrato Evolution: [../docs/evolution-api/ESTADO-MODULO.md](../docs/evolution-api/ESTADO-MODULO.md).
 
 ## Variables clave
 

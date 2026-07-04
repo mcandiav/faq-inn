@@ -1,5 +1,9 @@
 # Evolution API en FAQ Inn
 
+## Estado del módulo
+
+**MVP onboarding:** cerrado (V1.3.x). Documento de cierre: [ESTADO-MODULO.md](./ESTADO-MODULO.md).
+
 ## Decisión MVP
 
 FAQ Inn usará Evolution API como proveedor inicial para conectar WhatsApp mediante QR.
@@ -25,9 +29,11 @@ Volumen instancias: n8n_evolution-api_instances -> /evolution/instances
 | Acción | Responsable |
 |---|---|
 | Crear instancia | Provisioner FAQ Inn |
+| Generar o registrar token de instancia | Provisioner FAQ Inn |
 | Obtener QR | Provisioner FAQ Inn |
 | Mostrar QR al cliente | App FAQ Inn |
 | Detectar conexión | Provisioner FAQ Inn |
+| Guardar `instance_name`, token y `phone_number` | Backend FAQ Inn |
 | Configurar webhook hacia runtime n8n multitenant | Provisioner FAQ Inn |
 | Enviar y recibir mensajes | Evolution API + n8n |
 
@@ -49,8 +55,8 @@ eliminar/desconectar instancia de prueba
 tenant_id
 agent_id
 instance_name
+instance_token_encrypted
 evolution_api_url
-evolution_api_key_encrypted
 phone_number
 connection_status
 last_qr
@@ -59,6 +65,18 @@ webhook_url
 created_at
 updated_at
 ```
+
+## Regla de webhook hacia n8n
+
+Cuando Evolution API envíe eventos al webhook de n8n, el payload debe permitir identificar la instancia que originó el evento.
+
+La regla de runtime será:
+
+```text
+payload Evolution -> extraer instance_name -> buscar evolution_instances.instance_name -> resolver tenant_id -> cargar configuración completa del tenant/agente.
+```
+
+El campo exacto de instancia debe confirmarse con un payload real antes de cerrar el contrato del runtime n8n.
 
 ## Regla de seguridad
 
