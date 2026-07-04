@@ -144,7 +144,7 @@ export async function startWhatsappProvision(pool, config, tenant) {
   }
 
   // Si Evolution ya está open (p. ej. se vinculó y se cerró la pestaña),
-  // sincronizar DB y NO borrar la instancia.
+  // sincronizar DB, aplicar webhook/settings y NO borrar la instancia.
   try {
     const connection = await evolution.getConnectionState(instanceName);
     if (connection.connected) {
@@ -159,11 +159,14 @@ export async function startWhatsappProvision(pool, config, tenant) {
         instanceName,
         phoneNumber
       );
+      const integrations = await evolution.ensureIntegrations(instanceName);
       return {
         instanceName,
         status: 'connected',
         phoneNumber,
         qrBase64: null,
+        webhookUrl: config.evolutionWebhookUrl || '',
+        integrations,
         message: 'WhatsApp vinculado correctamente.',
       };
     }
@@ -173,7 +176,8 @@ export async function startWhatsappProvision(pool, config, tenant) {
 
   try {
     // Sesión limpia solo si aún no está conectada.
-    const { qrBase64 } = await evolution.createFreshQrSession(instanceName);
+    const { qrBase64, webhookUrl } =
+      await evolution.createFreshQrSession(instanceName);
 
     if (existing[0]) {
       await pool.query(
@@ -182,19 +186,20 @@ export async function startWhatsappProvision(pool, config, tenant) {
              status = 'qr_pending',
              phone_number = '',
              last_qr_base64 = ?,
+             webhook_url = ?,
              last_qr_at = NOW(),
              connected_at = NULL,
              last_error = '',
              updated_at = NOW()
          WHERE id = ?`,
-        [instanceName, qrBase64, existing[0].id]
+        [instanceName, qrBase64, webhookUrl || '', existing[0].id]
       );
     } else {
       await pool.query(
         `INSERT INTO evolution_instances
-         (tenant_id, instance_name, status, last_qr_base64, last_qr_at)
-         VALUES (?, ?, 'qr_pending', ?, NOW())`,
-        [tenant.id, instanceName, qrBase64]
+         (tenant_id, instance_name, status, last_qr_base64, webhook_url, last_qr_at)
+         VALUES (?, ?, 'qr_pending', ?, ?, NOW())`,
+        [tenant.id, instanceName, qrBase64, webhookUrl || '']
       );
     }
 
@@ -214,6 +219,7 @@ export async function startWhatsappProvision(pool, config, tenant) {
       status: 'qr_pending',
       phoneNumber: null,
       qrBase64,
+      webhookUrl: webhookUrl || '',
       message:
         'Escanea el QR una sola vez (válido ~40s). Si falla, pulsa Actualizar QR.',
     };
@@ -290,6 +296,7 @@ export async function getProvisionStatus(pool, config, tenant, instanceName) {
       (await evolution.resolvePhoneNumber(instanceName)) || row.phone_number || '';
 
     await markTenantConnected(pool, tenant, row, instanceName, phoneNumber);
+    await evolution.ensureIntegrations(instanceName);
 
     return {
       instanceName,
