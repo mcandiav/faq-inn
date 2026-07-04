@@ -10,7 +10,13 @@ function toPgParams(sql, params = []) {
 
 function withReturningId(sql) {
   const trimmed = sql.trim().replace(/;+\s*$/, '');
-  if (/^\s*INSERT\s/i.test(trimmed) && !/\bRETURNING\b/i.test(trimmed)) {
+  // Solo tablas con columna id; evita fallar en INSERT ... ON CONFLICT
+  // sobre tablas con PK distinta (ej. tenant_provisioning.tenant_id).
+  if (
+    /^\s*INSERT\s/i.test(trimmed) &&
+    !/\bRETURNING\b/i.test(trimmed) &&
+    !/\bON\s+CONFLICT\b/i.test(trimmed)
+  ) {
     return `${trimmed} RETURNING id`;
   }
   return trimmed;

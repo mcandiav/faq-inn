@@ -47,32 +47,43 @@ export async function registerProvisionTenant(pool, input) {
   }
 
   const slug = await allocateUniqueSlug(pool, commercialName);
+  const connection = await pool.getConnection();
 
-  const [, meta] = await pool.query(
-    `INSERT INTO tenants (slug, name, email, status)
-     VALUES (?, ?, ?, 'draft')`,
-    [slug, commercialName, email]
-  );
+  try {
+    await connection.beginTransaction();
 
-  const tenantId = meta.insertId;
+    const [, meta] = await connection.query(
+      `INSERT INTO tenants (slug, name, email, status)
+       VALUES (?, ?, ?, 'draft')`,
+      [slug, commercialName, email]
+    );
 
-  await pool.query(
-    `INSERT INTO tenant_provisioning (tenant_id, status, last_error)
-     VALUES (?, 'draft', '')
-     ON CONFLICT (tenant_id) DO UPDATE
-       SET status = EXCLUDED.status,
-           last_error = EXCLUDED.last_error,
-           updated_at = NOW()`,
-    [tenantId]
-  );
+    const tenantId = meta.insertId;
+    if (!tenantId) {
+      throw validationError('No se pudo crear el tenant', 500);
+    }
 
-  return {
-    tenantId,
-    slug,
-    commercialName,
-    email,
-    status: 'draft',
-  };
+    await connection.query(
+      `INSERT INTO tenant_provisioning (tenant_id, status, last_error)
+       VALUES (?, 'draft', '')`,
+      [tenantId]
+    );
+
+    await connection.commit();
+
+    return {
+      tenantId,
+      slug,
+      commercialName,
+      email,
+      status: 'draft',
+    };
+  } catch (error) {
+    await connection.rollback();
+    throw error;
+  } finally {
+    connection.release();
+  }
 }
 
 export async function startWhatsappProvision(pool, config, tenant) {

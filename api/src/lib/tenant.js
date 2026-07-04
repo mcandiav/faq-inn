@@ -1,4 +1,6 @@
-export const APP_VERSION = '1.2.0';
+// Fuente de verdad de versión de producto (no usar APP_VERSION en .env).
+export const APP_VERSION = '1.2.2';
+export const APP_PRODUCT_NAME = 'FAQ Inn';
 export const DEFAULT_TENANT = 'FAQ-INN';
 export const DEFAULT_TENANT_SLUG = 'faq-inn';
 export const DEFAULT_DB_NAME = 'faq-inn';
@@ -17,7 +19,7 @@ export function loadTenantConfig(env = process.env) {
   const tenant = env.TENANT || DEFAULT_TENANT;
   const tenantSlug = env.TENANT_SLUG || deriveTenantSlug(tenant);
   const tenantDisplayName = env.TENANT_DISPLAY_NAME || tenant;
-  const appTitle = env.APP_TITLE || `FAQ Inn ${tenantDisplayName}`;
+  const appTitle = env.APP_TITLE || `${APP_PRODUCT_NAME} ${tenantDisplayName}`;
   const postgresDatabase =
     env.DB_NAME || env.PGDATABASE || DEFAULT_DB_NAME;
 
@@ -26,7 +28,9 @@ export function loadTenantConfig(env = process.env) {
     tenantSlug,
     tenantDisplayName,
     appTitle,
-    appVersion: env.APP_VERSION || APP_VERSION,
+    appProductName: APP_PRODUCT_NAME,
+    // Versión siempre desde código; ignora APP_VERSION del entorno (evita 1.0.0 obsoleto en EasyPanel).
+    appVersion: APP_VERSION,
     postgresDatabase,
   };
 }
