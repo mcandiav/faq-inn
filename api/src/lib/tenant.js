@@ -1,5 +1,5 @@
 // Fuente de verdad de versión de producto (no usar APP_VERSION en .env).
-export const APP_VERSION = '1.3.1';
+export const APP_VERSION = '1.3.2';
 export const APP_PRODUCT_NAME = 'FAQ Inn';
 export const DEFAULT_TENANT = 'FAQ-INN';
 export const DEFAULT_TENANT_SLUG = 'faq-inn';
