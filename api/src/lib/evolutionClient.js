@@ -216,6 +216,17 @@ export function createEvolutionClient(config) {
       };
     },
 
+    async listInstances() {
+      const payload = await request('GET', '/instance/fetchInstances');
+      if (Array.isArray(payload)) {
+        return payload;
+      }
+      if (Array.isArray(payload?.instance)) {
+        return payload.instance;
+      }
+      return [];
+    },
+
     async resolvePhoneNumber(instanceName) {
       try {
         const fetched = await this.fetchInstance(instanceName);
