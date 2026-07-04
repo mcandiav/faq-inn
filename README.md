@@ -4,6 +4,8 @@
 
 | Fecha | Versión | Cambio realizado | Motivo | Impacto | Sección afectada |
 |---|---|---|---|---|---|
+| 2026-07-04 | V1.10 | Cierre documental del módulo Evolution API (onboarding MVP). | Validación operativa en inn.at-once.cl y alineación con arquitectura V1.9. | Subproyecto `01-evolution-onboarding-mvp` aprobado; pendientes explícitos (token instancia, desconexión teléfono, payload n8n) fuera de alcance. | docs/evolution-api, docs/pruebas, Estado actual |
+| 2026-07-04 | V1.9 | Se define la resolución runtime del tenant desde webhook Evolution API. | El onboarding debe guardar todos los datos del cliente y n8n debe operar sin datos hardcodeados. | El runtime n8n identificará la instancia Evolution recibida en el webhook, consultará PostgreSQL/API y cargará configuración completa del tenant/agente antes de conversar. | Arquitectura objetivo, Evolution API, n8n, Datos por tenant, Estado actual |
 | 2026-07-04 | V1.8 | Se acota el MVP inmediato a onboarding automático de WhatsApp con Evolution API. | El auditor recomienda validar primero la creación de tenant, instancia Evolution, QR y conexión antes de invertir en n8n conversacional o FAQs. | El primer MVP queda limitado a registro mínimo, creación de instancia `faqinn_<tenant_slug>`, QR, polling de estado y marcado `connected`; n8n, FAQs, prompts y conversación quedan fuera de alcance de este MVP. | Alcance inicial, Arquitectura objetivo, Onboarding, Evolution API, Estado actual |
 | 2026-07-04 | V1.7 | Se normaliza la arquitectura MVP: onboarding gobernado por backend FAQ Inn, Evolution API creada por provisioner y n8n como workflow compartido multitenant. | El proyecto avanzó desde diseño conceptual hacia pruebas reales con Evolution API y `FAQ prototipo`; era necesario eliminar ambigüedad entre workflow por tenant y workflow compartido. | Queda definido que el MVP no generará un workflow n8n por tenant; usará un runtime n8n compartido que carga configuración por tenant. Se crean subproyectos de prueba documentados. | Arquitectura objetivo, Provisioner, Evolution API, n8n, Estado actual |
 | 2026-07-02 | V1.6 | Se valida operativamente el PostgreSQL de FAQ Inn. | Miguel ejecuta consulta interna desde el contenedor y confirma respuesta correcta de PostgreSQL. | Queda confirmado PostgreSQL 17.10, base `faq-inn`, usuario `postgres`, puerto interno 5432 y sin puerto público externo. | Configuración EasyPanel PostgreSQL, Estado actual |
@@ -162,7 +164,11 @@ Etapas posteriores al MVP:
       ↓
 Configurar webhook Evolution → runtime n8n multitenant
       ↓
-Workflow n8n compartido carga configuración del tenant
+Webhook n8n recibe evento con identificador de instancia Evolution
+      ↓
+Runtime n8n resuelve instance_name → tenant_id → configuración completa
+      ↓
+Workflow n8n compartido carga datos del tenant/agente desde PostgreSQL/API
       ↓
 Agente WhatsApp operativo
 ```
@@ -304,7 +310,7 @@ Motivo:
 - Mantiene el onboarding en la app FAQ Inn, no en n8n.
 - Facilita pruebas iniciales de Evolution API, Redis TTL, búsqueda FAQ y preguntas sin respuesta.
 
-El workflow debe identificar el tenant desde la instancia Evolution, webhook path, token, metadata o mapeo persistido, y luego cargar su configuración desde PostgreSQL/API.
+El workflow debe identificar el tenant desde el identificador de la instancia Evolution recibido en el webhook, webhook path, token, metadata o mapeo persistido, y luego cargar su configuración completa desde PostgreSQL/API. La llave preferida de runtime será `evolution_instance_name`, confirmando el nombre exacto del campo con un payload real de Evolution API.
 
 Variables mínimas que debe cargar el runtime n8n:
 
@@ -427,6 +433,39 @@ human_handoff_enabled
 pause_default_minutes
 created_at
 updated_at
+```
+
+Datos que el onboarding debe capturar o derivar para que el runtime n8n no tenga valores hardcodeados:
+
+```text
+tenant_id
+tenant_slug
+agent_id
+agent_name
+initial_greeting
+primary_language
+timezone
+vertical_slug
+business_type
+booking_url_base
+booking_url_template
+human_contact
+pause_enabled
+pause_trigger
+pause_ttl_seconds
+pause_scope
+evolution_instance_name
+evolution_instance_token_encrypted
+phone_number
+webhook_url
+faq_search_endpoint
+unanswered_endpoint
+```
+
+Regla runtime:
+
+```text
+El webhook de Evolution entrega la instancia; n8n resuelve esa instancia contra PostgreSQL/API y carga todos los datos del tenant antes de ejecutar el agente.
 ```
 
 Estados sugeridos:
@@ -679,5 +718,7 @@ MorroReservas permanece congelado.
 Dominio objetivo definido: inn.at-once.cl.
 Vertical inicial definida: Hotel v1.
 Arquitectura SaaS/multivertical definida a nivel conceptual.
-Pendiente inmediato: implementar y validar `evolution-onboarding-mvp`, confirmar contrato real de endpoints Evolution API v2.3.7, crear tablas mínimas `tenants` y `evolution_instances`, y demostrar un tenant externo con WhatsApp conectado sin intervención técnica manual. n8n, FAQs, prompts y conversación quedan para etapa posterior.
+MVP Evolution onboarding validado en inn.at-once.cl (V1.3.x): registro, QR, conexión, webhook MESSAGES_UPSERT. Ver docs/evolution-api/ESTADO-MODULO.md.
+Siguiente etapa: 02-n8n-multitenant-runtime (payload webhook + resolución tenant por evolution_instance_name).
+Pendiente arquitecto: cleanup al desvincular WhatsApp desde teléfono; persistencia instance_token_encrypted.
 ```

@@ -24,7 +24,7 @@ decisión final
 
 | Subproyecto | Estado | Objetivo |
 |---|---|---|
-| `01-evolution-onboarding-mvp` | Implementado / por validar | Formulario mínimo, instancia Evolution, QR y polling de conexión. |
+| `01-evolution-onboarding-mvp` | **Cerrado / validado** | Registro, instancia Evolution, QR, polling, webhook MESSAGES_UPSERT. |
 | `02-n8n-multitenant-runtime` | En prueba | Validar workflow compartido multitenant con configuración por tenant. |
 | `03-tenant-settings-api` | Pendiente | Definir API/tablas para configuración de tenant y agente. |
 | `04-pausa-humana-redis` | En prueba | Validar pausa humana con Redis TTL por chat. |
