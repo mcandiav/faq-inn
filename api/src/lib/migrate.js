@@ -232,6 +232,21 @@ async function applySchemaPatches(pool) {
        ADD COLUMN webhook_url TEXT NOT NULL DEFAULT ''`
     );
   }
+
+  const [addressCol] = await pool.query(
+    `SELECT column_name
+     FROM information_schema.columns
+     WHERE table_schema = current_schema()
+       AND table_name = 'tenant_settings'
+       AND column_name = 'address'`
+  );
+
+  if (addressCol.length === 0) {
+    await pool.query(
+      `ALTER TABLE tenant_settings
+       ADD COLUMN address TEXT NOT NULL DEFAULT ''`
+    );
+  }
 }
 
 export async function runMigrations(pool, _config) {
