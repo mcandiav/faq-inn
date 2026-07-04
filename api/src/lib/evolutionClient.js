@@ -234,17 +234,12 @@ export function createEvolutionClient(config) {
         return null;
       }
 
-      const webhook = buildWebhookConfig(config.evolutionWebhookUrl);
-      // Evolution v2.3.x: POST /webhook/set/{instance}
+      // Evolution v2.3.x exige objeto anidado { webhook: { enabled, url, byEvents, ... } }.
       return request(
         'POST',
         `/webhook/set/${encodeURIComponent(instanceName)}`,
         {
-          enabled: true,
-          url: webhook.url,
-          webhookByEvents: false,
-          webhookBase64: false,
-          events: webhook.events,
+          webhook: buildWebhookConfig(config.evolutionWebhookUrl),
         }
       );
     },
