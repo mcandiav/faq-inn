@@ -17,6 +17,7 @@ import { faqRoutes } from './routes/faqs.js';
 import { unansweredRoutes } from './routes/unanswered.js';
 import { onboardingRoutes } from './routes/onboarding.js';
 import { provisionRoutes } from './routes/provision.js';
+import { startEvolutionCleanupScheduler } from './lib/evolutionCleanup.js';
 
 const config = loadConfig();
 
@@ -53,6 +54,12 @@ await unansweredRoutes(app, config);
 await onboardingRoutes(app, config);
 await provisionRoutes(app, config);
 
+const stopEvolutionCleanup = startEvolutionCleanupScheduler(
+  pool,
+  config,
+  app.log
+);
+
 try {
   await app.listen({ port: config.port, host: config.host });
   app.log.info(
@@ -73,11 +80,21 @@ try {
       evolutionConfigured: Boolean(
         config.evolutionApiBaseUrl && config.evolutionApiKey
       ),
+      evolutionStaleMinutes: config.evolutionStaleMinutes,
+      evolutionCleanupIntervalMinutes: config.evolutionCleanupIntervalMinutes,
       databaseUrl: config.databaseUrl.replace(/:([^:@]+)@/, ':***@'),
     },
     'faq-inn-api started'
   );
 } catch (error) {
+  stopEvolutionCleanup();
   app.log.error(error);
   process.exit(1);
+}
+
+for (const signal of ['SIGINT', 'SIGTERM']) {
+  process.on(signal, () => {
+    stopEvolutionCleanup();
+    app.close().finally(() => process.exit(0));
+  });
 }
