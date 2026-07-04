@@ -1,4 +1,4 @@
-const APP_VERSION = '1.4.2';
+const APP_VERSION = '1.4.3';
 const APP_PRODUCT_NAME = 'FAQ Inn';
 const apiBase = window.FAQ_INN_API_URL || window.DFAQ_API_URL || '/api';
 const VIEW_STORAGE_KEY = 'faq-inn-current-view';
@@ -495,9 +495,11 @@ function renderProfile() {
 
   const currentPassword = $('#profile-current-password');
   const newPassword = $('#profile-new-password');
+  const confirmPassword = $('#profile-confirm-password');
   const profileMsg = $('#profile-msg');
   if (currentPassword) currentPassword.value = '';
   if (newPassword) newPassword.value = '';
+  if (confirmPassword) confirmPassword.value = '';
   if (profileMsg && !profileMsg.classList.contains('ok')) {
     profileMsg.textContent = '';
     profileMsg.className = 'form-msg';
@@ -1330,6 +1332,7 @@ $('#profile-form').addEventListener('submit', async (event) => {
   const emailChanged = Boolean(email && email !== currentEmail);
   const current = $('#profile-current-password').value;
   const next = $('#profile-new-password').value;
+  const confirm = $('#profile-confirm-password')?.value || '';
 
   if (emailChanged && !current) {
     msg.textContent = t('msg.passwordRequiredForEmail');
@@ -1338,12 +1341,31 @@ $('#profile-form').addEventListener('submit', async (event) => {
     return;
   }
 
+  if (next && next.length < 8) {
+    msg.textContent = t('msg.passwordTooShort');
+    msg.classList.add('error');
+    $('#profile-new-password').focus();
+    return;
+  }
+
+  if (next && next !== confirm) {
+    msg.textContent = t('msg.passwordMismatch');
+    msg.classList.add('error');
+    $('#profile-confirm-password')?.focus();
+    return;
+  }
+
+  if (next && !current) {
+    msg.textContent = t('msg.passwordRequiredForChange');
+    msg.classList.add('error');
+    $('#profile-current-password').focus();
+    return;
+  }
+
   try {
     if (emailChanged || next) {
       const authBody = { email };
-      if (emailChanged || next) {
-        authBody.current_password = current;
-      }
+      authBody.current_password = current;
       if (next) {
         authBody.new_password = next;
       }
@@ -1381,6 +1403,7 @@ $('#profile-form').addEventListener('submit', async (event) => {
     msg.classList.add('ok');
     $('#profile-current-password').value = '';
     $('#profile-new-password').value = '';
+    $('#profile-confirm-password').value = '';
   } catch (error) {
     msg.textContent = error.message;
     msg.classList.add('error');

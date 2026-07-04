@@ -134,6 +134,7 @@ const MESSAGES = {
     'profile.changePassword': 'Cambiar contraseña',
     'profile.currentPassword': 'Contraseña actual',
     'profile.newPassword': 'Nueva contraseña',
+    'profile.confirmPassword': 'Repetir nueva contraseña',
     'profile.globalAdmin': 'Administración global',
     'profile.myBusiness': 'Mi negocio',
     'admin.title': 'Administrar posadas',
@@ -181,6 +182,10 @@ const MESSAGES = {
     'msg.profileSaved': 'Cambios guardados.',
     'msg.passwordRequiredForEmail':
       'Ingresa tu contraseña actual para cambiar el email.',
+    'msg.passwordRequiredForChange':
+      'Ingresa tu contraseña actual para cambiar la contraseña.',
+    'msg.passwordMismatch': 'La nueva contraseña y la repetición no coinciden.',
+    'msg.passwordTooShort': 'La nueva contraseña debe tener al menos 8 caracteres.',
     'msg.whatsappConnected': 'WhatsApp conectado. Completa los datos de tu negocio.',
     'msg.whatsappConnectedPhone': 'WhatsApp conectado ({phone}). Completa los datos de tu negocio.',
     'msg.qrTimeout':
@@ -313,6 +318,7 @@ const MESSAGES = {
     'profile.changePassword': 'Alterar senha',
     'profile.currentPassword': 'Senha atual',
     'profile.newPassword': 'Nova senha',
+    'profile.confirmPassword': 'Repetir nova senha',
     'profile.globalAdmin': 'Administração global',
     'profile.myBusiness': 'Meu negócio',
     'admin.title': 'Administrar pousadas',
@@ -360,6 +366,10 @@ const MESSAGES = {
     'msg.profileSaved': 'Alterações salvas.',
     'msg.passwordRequiredForEmail':
       'Informe sua senha atual para alterar o email.',
+    'msg.passwordRequiredForChange':
+      'Informe sua senha atual para alterar a senha.',
+    'msg.passwordMismatch': 'A nova senha e a repetição não coincidem.',
+    'msg.passwordTooShort': 'A nova senha deve ter pelo menos 8 caracteres.',
     'msg.whatsappConnected': 'WhatsApp conectado. Complete os dados do seu negócio.',
     'msg.whatsappConnectedPhone': 'WhatsApp conectado ({phone}). Complete os dados do seu negócio.',
     'msg.qrTimeout':
@@ -491,6 +501,7 @@ const MESSAGES = {
     'profile.changePassword': 'Change password',
     'profile.currentPassword': 'Current password',
     'profile.newPassword': 'New password',
+    'profile.confirmPassword': 'Repeat new password',
     'profile.globalAdmin': 'Global administration',
     'profile.myBusiness': 'My business',
     'admin.title': 'Manage lodgings',
@@ -538,6 +549,10 @@ const MESSAGES = {
     'msg.profileSaved': 'Changes saved.',
     'msg.passwordRequiredForEmail':
       'Enter your current password to change your email.',
+    'msg.passwordRequiredForChange':
+      'Enter your current password to change your password.',
+    'msg.passwordMismatch': 'New password and confirmation do not match.',
+    'msg.passwordTooShort': 'New password must be at least 8 characters.',
     'msg.whatsappConnected': 'WhatsApp connected. Complete your business details.',
     'msg.whatsappConnectedPhone': 'WhatsApp connected ({phone}). Complete your business details.',
     'msg.qrTimeout':
