@@ -157,5 +157,15 @@ export function loadConfig() {
     evolutionConnectedState: (
       process.env.EVOLUTION_CONNECTED_STATE || 'open'
     ).toLowerCase(),
+    // Webhook n8n/runtime (MESSAGES_UPSERT debe estar activo).
+    evolutionWebhookUrl: normalizeBaseUrl(
+      process.env.EVOLUTION_WEBHOOK_URL || ''
+    ),
+    // Minutos sin conexión exitosa antes de borrar instancia basura.
+    evolutionStaleMinutes: Number(process.env.EVOLUTION_STALE_MINUTES || 10),
+    // Cada cuántos minutos corre el limpiador.
+    evolutionCleanupIntervalMinutes: Number(
+      process.env.EVOLUTION_CLEANUP_INTERVAL_MINUTES || 5
+    ),
   };
 }

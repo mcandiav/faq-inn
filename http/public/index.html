@@ -11,7 +11,7 @@
     <link rel="icon" type="image/png" sizes="512x512" href="/favicon.png" />
     <link rel="apple-touch-icon" href="/favicon.png" />
     <title>FAQ Inn</title>
-    <link rel="stylesheet" href="/styles.css?v=1.2.7" />
+    <link rel="stylesheet" href="/styles.css?v=1.3.3" />
   </head>
   <body>
     <div id="app" class="app hidden">
@@ -276,7 +276,7 @@
                 <span class="flow-time" data-i18n="landing.step3Time">~5 min</span>
               </div>
               <p data-i18n="landing.step3Desc">Escaneas el código y conectas el número de tu negocio.</p>
-              <span class="flow-badge flow-badge--soon" data-i18n="landing.badgeSoon">Próxima etapa</span>
+              <span class="flow-badge" data-i18n="landing.badgeAfterRegister">Justo después del registro</span>
             </div>
           </li>
           <li class="flow-step flow-step--next">
@@ -302,32 +302,28 @@
           </li>
         </ol>
         <p class="flow-total" data-i18n="landing.flowTotal">
-          MVP actual: registro mínimo + conectar WhatsApp (~8 min). FAQs y agente automático vienen después.
+          Hoy: registro y vinculación WhatsApp (~8 min). FAQs y agente automático en etapas siguientes.
         </p>
       </section>
 
-      <div class="landing-tabs" role="tablist">
-        <button type="button" class="landing-tab active" id="tab-signup" data-i18n="landing.tabSignup">
-          Conectar WhatsApp
-        </button>
-        <button type="button" class="landing-tab" id="tab-login" data-i18n="landing.tabLogin">
-          Iniciar sesión
-        </button>
-      </div>
-
       <form id="provision-form" class="card login-card landing-panel">
         <h1 data-i18n="provision.title">Registra tu negocio</h1>
-        <p class="lead" data-i18n="provision.lead">Paso 1 — nombre y correo. Luego conectas WhatsApp con QR.</p>
+        <p class="lead" data-i18n="provision.lead">Nombre comercial y correo. Al continuar verás el QR para vincular WhatsApp.</p>
         <label>
           <span data-i18n="provision.commercialName">Nombre comercial</span>
-          <input type="text" id="provision-commercial-name" required placeholder="Hotel Vista Mar" autocomplete="organization" />
+          <input type="text" id="provision-commercial-name" required placeholder="Hotel Savoy" autocomplete="organization" />
         </label>
         <label>
           <span data-i18n="provision.email">Correo electrónico</span>
           <input type="email" id="provision-email" required autocomplete="email" placeholder="reservas@ejemplo.cl" />
         </label>
-        <button type="submit" class="btn primary block" data-i18n="provision.submit">Continuar y conectar WhatsApp</button>
+        <button type="submit" class="btn primary block" data-i18n="provision.submit">Registrar y continuar</button>
         <p class="form-msg" id="provision-msg"></p>
+        <p class="landing-switch">
+          <button type="button" class="link-btn" id="link-show-login" data-i18n="landing.hasAccount">
+            ¿Ya tienes cuenta? Iniciar sesión
+          </button>
+        </p>
       </form>
 
       <section id="provision-qr-panel" class="card login-card landing-panel hidden">
@@ -394,6 +390,11 @@
         </label>
         <button type="submit" class="btn primary block" data-i18n="login.submit">Entrar</button>
         <p class="form-msg" id="login-msg"></p>
+        <p class="landing-switch">
+          <button type="button" class="link-btn" id="link-show-signup" data-i18n="landing.newBusiness">
+            Registrar un negocio nuevo
+          </button>
+        </p>
       </form>
     </div>
 
@@ -432,7 +433,7 @@
       </form>
     </dialog>
 
-    <script src="/i18n.js?v=1.2.7"></script>
-    <script src="/app.js?v=1.2.7"></script>
+    <script src="/i18n.js?v=1.3.3"></script>
+    <script src="/app.js?v=1.3.3"></script>
   </body>
 </html>

@@ -57,10 +57,24 @@ export function isConnectedState(state, expected = 'open') {
   return String(state || '').toLowerCase() === String(expected || 'open').toLowerCase();
 }
 
+function digitsFromJid(value) {
+  if (!value) {
+    return null;
+  }
+  const text = String(value);
+  const beforeAt = text.split('@')[0] || text;
+  const beforeColon = beforeAt.split(':')[0] || beforeAt;
+  const digits = beforeColon.replace(/\D/g, '');
+  return digits.length >= 8 && digits.length <= 15 ? digits : null;
+}
+
 function extractPhoneNumber(payload) {
   const candidates = [
     payload?.instance?.ownerJid,
     payload?.instance?.owner,
+    payload?.instance?.wuid,
+    payload?.instance?.number,
+    payload?.instance?.phoneNumber,
     payload?.ownerJid,
     payload?.owner,
     payload?.phoneNumber,
@@ -70,17 +84,50 @@ function extractPhoneNumber(payload) {
   ];
 
   for (const value of candidates) {
-    if (!value) {
-      continue;
-    }
-    const text = String(value);
-    const digits = text.replace(/@.+$/, '').replace(/\D/g, '');
-    if (digits.length >= 8) {
+    const digits = digitsFromJid(value);
+    if (digits) {
       return digits;
     }
   }
 
+  // Búsqueda profunda por JID típico de WhatsApp.
+  try {
+    const json = JSON.stringify(payload);
+    const matches = json.match(
+      /(\d{10,15})(?::\d+)?@(?:s\.whatsapp\.net|c\.us)/g
+    );
+    if (matches?.length) {
+      return digitsFromJid(matches[0]);
+    }
+  } catch {
+    /* ignore */
+  }
+
   return null;
+}
+
+const DEFAULT_WEBHOOK_EVENTS = ['MESSAGES_UPSERT'];
+
+function buildWebhookConfig(webhookUrl) {
+  return {
+    enabled: true,
+    url: webhookUrl,
+    byEvents: false,
+    base64: false,
+    events: DEFAULT_WEBHOOK_EVENTS,
+  };
+}
+
+function buildInstanceSettings() {
+  return {
+    rejectCall: false,
+    msgCall: '',
+    groupsIgnore: true,
+    alwaysOnline: false,
+    readMessages: false,
+    readStatus: false,
+    syncFullHistory: false,
+  };
 }
 
 export function createEvolutionClient(config) {
@@ -163,11 +210,59 @@ export function createEvolutionClient(config) {
     },
 
     async createInstance(instanceName) {
-      return request('POST', '/instance/create', {
+      const body = {
         instanceName,
         qrcode: true,
         integration: 'WHATSAPP-BAILEYS',
-      });
+      };
+
+      // Webhook en el create (MESSAGES_UPSERT obligatorio para mensajes entrantes).
+      if (config.evolutionWebhookUrl) {
+        body.webhook = buildWebhookConfig(config.evolutionWebhookUrl);
+      }
+
+      return request('POST', '/instance/create', body);
+    },
+
+    async setWebhook(instanceName) {
+      if (!config.evolutionWebhookUrl) {
+        return null;
+      }
+
+      // Evolution v2.3.x exige objeto anidado { webhook: { enabled, url, byEvents, ... } }.
+      return request(
+        'POST',
+        `/webhook/set/${encodeURIComponent(instanceName)}`,
+        {
+          webhook: buildWebhookConfig(config.evolutionWebhookUrl),
+        }
+      );
+    },
+
+    async setSettings(instanceName) {
+      return request(
+        'POST',
+        `/settings/set/${encodeURIComponent(instanceName)}`,
+        buildInstanceSettings()
+      );
+    },
+
+    /** Aplica webhook (MESSAGES_UPSERT) + settings a una instancia existente. */
+    async ensureIntegrations(instanceName) {
+      const result = { webhook: false, settings: false, errors: [] };
+      try {
+        await this.setWebhook(instanceName);
+        result.webhook = Boolean(config.evolutionWebhookUrl);
+      } catch (error) {
+        result.errors.push(`webhook: ${error.message}`);
+      }
+      try {
+        await this.setSettings(instanceName);
+        result.settings = true;
+      } catch (error) {
+        result.errors.push(`settings: ${error.message}`);
+      }
+      return result;
     },
 
     async getQr(instanceName) {
@@ -216,6 +311,17 @@ export function createEvolutionClient(config) {
       };
     },
 
+    async listInstances() {
+      const payload = await request('GET', '/instance/fetchInstances');
+      if (Array.isArray(payload)) {
+        return payload;
+      }
+      if (Array.isArray(payload?.instance)) {
+        return payload.instance;
+      }
+      return [];
+    },
+
     async resolvePhoneNumber(instanceName) {
       try {
         const fetched = await this.fetchInstance(instanceName);
@@ -235,7 +341,7 @@ export function createEvolutionClient(config) {
     },
 
     /**
-     * Sesión limpia: logout + delete + create.
+     * Sesión limpia: logout + delete + create + webhook + settings.
      * Evita instancias en limbo "connecting" que impiden vincular el dispositivo.
      */
     async createFreshQrSession(instanceName) {
@@ -246,6 +352,21 @@ export function createEvolutionClient(config) {
       await new Promise((resolve) => setTimeout(resolve, 800));
 
       const created = await this.createInstance(instanceName);
+
+      // Asegurar webhook (MESSAGES_UPSERT) y settings aunque el create los ignore.
+      try {
+        await this.setWebhook(instanceName);
+      } catch (error) {
+        // No bloquear el QR si el webhook falla; se registra en el caller.
+        created._webhookError = error.message;
+      }
+
+      try {
+        await this.setSettings(instanceName);
+      } catch (error) {
+        created._settingsError = error.message;
+      }
+
       let qrBase64 = extractQrBase64(created);
 
       if (!qrBase64) {
@@ -255,7 +376,11 @@ export function createEvolutionClient(config) {
         qrBase64 = qr.qrBase64;
       }
 
-      return { qrBase64, created };
+      return {
+        qrBase64,
+        created,
+        webhookUrl: config.evolutionWebhookUrl || '',
+      };
     },
   };
 }
