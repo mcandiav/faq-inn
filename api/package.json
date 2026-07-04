@@ -1,6 +1,6 @@
 {
   "name": "faq-inn-api",
-  "version": "1.2.2",
+  "version": "1.2.3",
   "description": "FAQ Inn API — backend Fastify + PostgreSQL",
   "type": "module",
   "main": "src/index.js",
