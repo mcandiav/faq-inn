@@ -1,4 +1,4 @@
-const APP_VERSION = '1.1.0';
+const APP_VERSION = '1.2.0';
 const apiBase = window.FAQ_INN_API_URL || window.DFAQ_API_URL || '/api';
 const VIEW_STORAGE_KEY = 'faq-inn-current-view';
 const VALID_VIEWS = ['dashboard', 'unanswered', 'profile', 'admin'];
@@ -60,16 +60,17 @@ async function loadDeployVersion() {
 }
 
 async function api(path, options = {}) {
+  const { headers: optionHeaders, ...rest } = options;
   const response = await fetch(`${apiBase}${path}`, {
     credentials: 'same-origin',
+    ...rest,
     headers: {
       Accept: 'application/json',
       ...(options.body && !(options.body instanceof FormData)
         ? { 'Content-Type': 'application/json' }
         : {}),
-      ...options.headers,
+      ...optionHeaders,
     },
-    ...options,
   });
 
   let data = null;
@@ -100,13 +101,167 @@ function showLanding(tab = 'signup') {
   setLandingTab(tab);
 }
 
+const provisionState = {
+  token: '',
+  tenant: null,
+  instanceName: '',
+  pollTimer: null,
+  startedAt: 0,
+  pollIntervalSeconds: 3,
+  timeoutSeconds: 180,
+};
+
+function clearProvisionPoll() {
+  if (provisionState.pollTimer) {
+    clearInterval(provisionState.pollTimer);
+    provisionState.pollTimer = null;
+  }
+}
+
+function hideProvisionPanels() {
+  $('#provision-form')?.classList.add('hidden');
+  $('#provision-qr-panel')?.classList.add('hidden');
+  $('#provision-success-panel')?.classList.add('hidden');
+}
+
 function setLandingTab(tab) {
   const signup = tab === 'signup';
   $('#tab-signup')?.classList.toggle('active', signup);
   $('#tab-login')?.classList.toggle('active', !signup);
-  $('#onboarding-form')?.classList.toggle('hidden', !signup);
   $('#login-form')?.classList.toggle('hidden', signup);
   document.querySelector('.landing-hero')?.classList.toggle('hidden', !signup);
+  if (signup) {
+    hideProvisionPanels();
+    $('#provision-form')?.classList.remove('hidden');
+  } else {
+    clearProvisionPoll();
+    hideProvisionPanels();
+  }
+}
+
+function provisionHeaders() {
+  return provisionState.token
+    ? { Authorization: `Bearer ${provisionState.token}` }
+    : {};
+}
+
+function showProvisionQr(qrBase64, instanceName) {
+  hideProvisionPanels();
+  $('#provision-qr-panel')?.classList.remove('hidden');
+  const img = $('#provision-qr-image');
+  const waiting = $('#provision-qr-waiting');
+  const label = $('#provision-instance-label');
+  if (label) {
+    label.textContent = instanceName
+      ? `Instancia: ${instanceName}`
+      : '';
+  }
+  if (qrBase64 && img) {
+    img.src = qrBase64;
+    img.classList.remove('hidden');
+    waiting?.classList.add('hidden');
+  } else {
+    img?.classList.add('hidden');
+    waiting?.classList.remove('hidden');
+  }
+}
+
+function showProvisionSuccess(phoneNumber, tenant) {
+  clearProvisionPoll();
+  hideProvisionPanels();
+  document.querySelector('.landing-hero')?.classList.add('hidden');
+  $('#provision-success-panel')?.classList.remove('hidden');
+  const phone = $('#provision-phone');
+  if (phone) {
+    phone.textContent = phoneNumber
+      ? `+${String(phoneNumber).replace(/^\+/, '')}`
+      : 'Número vinculado';
+  }
+  const meta = $('#provision-success-meta');
+  if (meta && tenant) {
+    meta.textContent = `${tenant.commercial_name || tenant.name || ''} · ${tenant.slug || ''}`;
+  }
+}
+
+async function pollProvisionStatus() {
+  const msg = $('#provision-qr-msg');
+  if (!provisionState.instanceName) {
+    return;
+  }
+
+  const elapsed = (Date.now() - provisionState.startedAt) / 1000;
+  if (elapsed > provisionState.timeoutSeconds) {
+    clearProvisionPoll();
+    if (msg) {
+      msg.textContent =
+        'Se agotó el tiempo de espera del QR. Pulsa «Actualizar QR» e inténtalo de nuevo.';
+      msg.className = 'form-msg error';
+    }
+    return;
+  }
+
+  try {
+    const data = await api(
+      `/provision/status/${encodeURIComponent(provisionState.instanceName)}`,
+      { headers: provisionHeaders() }
+    );
+
+    if (data.qr_base64) {
+      showProvisionQr(data.qr_base64, data.instance_name);
+    }
+
+    if (data.connection_status === 'connected') {
+      showProvisionSuccess(data.phone_number, provisionState.tenant);
+      return;
+    }
+
+    if (msg) {
+      msg.textContent = `Esperando escaneo… (${Math.floor(elapsed)}s)`;
+      msg.className = 'form-msg';
+    }
+  } catch (error) {
+    if (msg) {
+      msg.textContent = error.message;
+      msg.className = 'form-msg error';
+    }
+  }
+}
+
+function startProvisionPolling() {
+  clearProvisionPoll();
+  provisionState.startedAt = Date.now();
+  const intervalMs = Math.max(1, provisionState.pollIntervalSeconds) * 1000;
+  provisionState.pollTimer = setInterval(pollProvisionStatus, intervalMs);
+  pollProvisionStatus();
+}
+
+async function startWhatsappProvision() {
+  const msg = $('#provision-msg') || $('#provision-qr-msg');
+  showProvisionQr(null, '');
+  const qrMsg = $('#provision-qr-msg');
+  if (qrMsg) {
+    qrMsg.textContent = 'Creando instancia en Evolution API…';
+    qrMsg.className = 'form-msg';
+  }
+
+  const data = await api('/provision/whatsapp', {
+    method: 'POST',
+    headers: provisionHeaders(),
+  });
+
+  provisionState.instanceName = data.instance_name;
+  provisionState.pollIntervalSeconds =
+    data.poll_interval_seconds || provisionState.pollIntervalSeconds;
+  provisionState.timeoutSeconds =
+    data.timeout_seconds || provisionState.timeoutSeconds;
+
+  if (data.connection_status === 'connected') {
+    showProvisionSuccess(data.phone_number, provisionState.tenant);
+    return;
+  }
+
+  showProvisionQr(data.qr_base64, data.instance_name);
+  startProvisionPolling();
 }
 
 function showLogin() {
@@ -931,70 +1086,54 @@ $('#login-form').addEventListener('submit', async (event) => {
 $('#tab-signup')?.addEventListener('click', () => setLandingTab('signup'));
 $('#tab-login')?.addEventListener('click', () => setLandingTab('login'));
 
-function slugifyBusinessName(value) {
-  return String(value || '')
-    .trim()
-    .toLowerCase()
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-+|-+$/g, '')
-    .slice(0, 48);
-}
-
-let slugTouched = false;
-
-$('#onboarding-slug')?.addEventListener('input', () => {
-  slugTouched = true;
-});
-
-$('#onboarding-business')?.addEventListener('input', () => {
-  if (slugTouched) {
-    return;
-  }
-  const slugInput = $('#onboarding-slug');
-  if (slugInput) {
-    slugInput.value = slugifyBusinessName($('#onboarding-business').value);
-  }
-});
-
-$('#onboarding-form')?.addEventListener('submit', async (event) => {
+$('#provision-form')?.addEventListener('submit', async (event) => {
   event.preventDefault();
-  const msg = $('#onboarding-msg');
+  const msg = $('#provision-msg');
   msg.textContent = '';
   msg.className = 'form-msg';
 
   try {
-    const data = await api('/onboarding/hotel', {
+    const data = await api('/provision/register', {
       method: 'POST',
       body: JSON.stringify({
-        business_name: $('#onboarding-business').value.trim(),
-        tenant_slug: $('#onboarding-slug').value.trim(),
-        email: $('#onboarding-email').value.trim(),
-        password: $('#onboarding-password').value,
-        primary_language: $('#onboarding-language').value,
-        lodging_type: $('#onboarding-lodging').value,
-        booking_url_base: $('#onboarding-booking-url').value.trim(),
-        booking_url_template: $('#onboarding-booking-template').value.trim(),
-        welcome_message: $('#onboarding-welcome').value.trim(),
+        commercial_name: $('#provision-commercial-name').value.trim(),
+        email: $('#provision-email').value.trim(),
       }),
     });
-    state.user = data.user;
-    slugTouched = false;
-    showApp();
-    renderHeader();
-    await openView('dashboard');
-    await refreshUnanswered();
-    if (data.message) {
-      const hint = $('#dashboard-hint');
-      if (hint) {
-        hint.textContent = data.message;
-      }
-    }
+
+    provisionState.token = data.token || '';
+    provisionState.tenant = data.tenant;
+    provisionState.pollIntervalSeconds =
+      data.poll_interval_seconds || provisionState.pollIntervalSeconds;
+    provisionState.timeoutSeconds =
+      data.timeout_seconds || provisionState.timeoutSeconds;
+
+    await startWhatsappProvision();
   } catch (error) {
     msg.textContent = error.message;
     msg.classList.add('error');
   }
+});
+
+$('#provision-qr-refresh')?.addEventListener('click', async () => {
+  const msg = $('#provision-qr-msg');
+  try {
+    await startWhatsappProvision();
+  } catch (error) {
+    if (msg) {
+      msg.textContent = error.message;
+      msg.className = 'form-msg error';
+    }
+  }
+});
+
+$('#provision-success-again')?.addEventListener('click', () => {
+  clearProvisionPoll();
+  provisionState.token = '';
+  provisionState.tenant = null;
+  provisionState.instanceName = '';
+  $('#provision-form')?.reset();
+  setLandingTab('signup');
 });
 
 async function logout() {
@@ -1003,6 +1142,7 @@ async function logout() {
   } catch {
     /* ignore */
   }
+  clearProvisionPoll();
   state.user = null;
   state.faqs = [];
   state.unanswered = [];

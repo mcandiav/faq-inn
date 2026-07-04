@@ -1,4 +1,4 @@
-export const APP_VERSION = '1.1.0';
+export const APP_VERSION = '1.2.0';
 export const DEFAULT_TENANT = 'FAQ-INN';
 export const DEFAULT_TENANT_SLUG = 'faq-inn';
 export const DEFAULT_DB_NAME = 'faq-inn';

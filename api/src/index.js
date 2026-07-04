@@ -16,6 +16,7 @@ import { adminRoutes } from './routes/admin.js';
 import { faqRoutes } from './routes/faqs.js';
 import { unansweredRoutes } from './routes/unanswered.js';
 import { onboardingRoutes } from './routes/onboarding.js';
+import { provisionRoutes } from './routes/provision.js';
 
 const config = loadConfig();
 
@@ -50,6 +51,7 @@ await adminRoutes(app, config);
 await faqRoutes(app, config);
 await unansweredRoutes(app, config);
 await onboardingRoutes(app, config);
+await provisionRoutes(app, config);
 
 try {
   await app.listen({ port: config.port, host: config.host });
@@ -67,6 +69,10 @@ try {
             : config.openaiEmbeddingModel,
       ollamaApiBase:
         config.embeddingProvider === 'ollama' ? config.ollamaApiBase : undefined,
+      evolutionApiBaseUrl: config.evolutionApiBaseUrl || undefined,
+      evolutionConfigured: Boolean(
+        config.evolutionApiBaseUrl && config.evolutionApiKey
+      ),
       databaseUrl: config.databaseUrl.replace(/:([^:@]+)@/, ':***@'),
     },
     'faq-inn-api started'

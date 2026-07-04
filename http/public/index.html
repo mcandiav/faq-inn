@@ -11,7 +11,7 @@
     <link rel="icon" type="image/png" sizes="512x512" href="/favicon.png" />
     <link rel="apple-touch-icon" href="/favicon.png" />
     <title>FAQ Inn FAQ-INN</title>
-    <link rel="stylesheet" href="/styles.css?v=1.1.1" />
+    <link rel="stylesheet" href="/styles.css?v=1.2.0" />
   </head>
   <body>
     <div id="app" class="app hidden">
@@ -302,76 +302,57 @@
           </li>
         </ol>
         <p class="flow-total" data-i18n="landing.flowTotal">
-          Tiempo total estimado: <strong>~25 min</strong> (hoy puedes completar los pasos 1 y 2).
+          MVP actual: registro mínimo + conectar WhatsApp (~8 min). FAQs y agente automático vienen después.
         </p>
       </section>
 
       <div class="landing-tabs" role="tablist">
         <button type="button" class="landing-tab active" id="tab-signup" data-i18n="landing.tabSignup">
-          Crear mi hotel
+          Conectar WhatsApp
         </button>
         <button type="button" class="landing-tab" id="tab-login" data-i18n="landing.tabLogin">
           Iniciar sesión
         </button>
       </div>
 
-      <form id="onboarding-form" class="card login-card landing-panel">
-        <h1 data-i18n="onboarding.title">Alta de hotel</h1>
-        <p class="lead" data-i18n="onboarding.lead">Paso 1 de 5 — comienza aquí.</p>
+      <form id="provision-form" class="card login-card landing-panel">
+        <h1 data-i18n="provision.title">Registra tu negocio</h1>
+        <p class="lead" data-i18n="provision.lead">Paso 1 — nombre y correo. Luego conectas WhatsApp con QR.</p>
         <label>
-          <span data-i18n="onboarding.businessName">Nombre comercial</span>
-          <input type="text" id="onboarding-business" required placeholder="Hotel Vista Mar" />
+          <span data-i18n="provision.commercialName">Nombre comercial</span>
+          <input type="text" id="provision-commercial-name" required placeholder="Hotel Vista Mar" autocomplete="organization" />
         </label>
         <label>
-          <span data-i18n="onboarding.slug">Identificador técnico</span>
-          <input type="text" id="onboarding-slug" required placeholder="hotel-vista-mar" />
-          <span class="hint" data-i18n="onboarding.slugHint">Se usa en Qdrant, n8n y base de datos lógica del tenant.</span>
+          <span data-i18n="provision.email">Correo electrónico</span>
+          <input type="email" id="provision-email" required autocomplete="email" placeholder="reservas@ejemplo.cl" />
         </label>
-        <label>
-          <span data-i18n="onboarding.email">Email (login)</span>
-          <input type="email" id="onboarding-email" required autocomplete="email" />
-        </label>
-        <label>
-          <span data-i18n="onboarding.password">Contraseña</span>
-          <input type="password" id="onboarding-password" required minlength="8" autocomplete="new-password" />
-        </label>
-        <label>
-          <span data-i18n="onboarding.language">Idioma principal</span>
-          <select id="onboarding-language" class="select-inline block">
-            <option value="es">Español</option>
-            <option value="pt">Português</option>
-            <option value="en">English</option>
-          </select>
-        </label>
-        <label>
-          <span data-i18n="onboarding.lodgingType">Tipo de alojamiento</span>
-          <select id="onboarding-lodging" class="select-inline block">
-            <option value="hotel">Hotel</option>
-            <option value="hostel">Hostel</option>
-            <option value="posada">Posada</option>
-            <option value="apartamento">Apartamento</option>
-            <option value="cabana">Cabaña</option>
-          </select>
-        </label>
-        <label>
-          <span data-i18n="onboarding.bookingUrl">URL de reservas</span>
-          <input type="url" id="onboarding-booking-url" required placeholder="https://reservas.ejemplo.cl" />
-        </label>
-        <label>
-          <span data-i18n="onboarding.bookingTemplate">Plantilla URL reservas (opcional)</span>
-          <input
-            type="text"
-            id="onboarding-booking-template"
-            placeholder="https://reservas.ejemplo.cl?in={{checkin}}&out={{checkout}}&guests={{guests}}"
-          />
-        </label>
-        <label>
-          <span data-i18n="onboarding.welcome">Mensaje de bienvenida (opcional)</span>
-          <textarea id="onboarding-welcome" rows="2" placeholder="Bienvenido a nuestro hotel..."></textarea>
-        </label>
-        <button type="submit" class="btn primary block" data-i18n="onboarding.submit">Crear hotel y entrar</button>
-        <p class="form-msg" id="onboarding-msg"></p>
+        <button type="submit" class="btn primary block" data-i18n="provision.submit">Continuar y conectar WhatsApp</button>
+        <p class="form-msg" id="provision-msg"></p>
       </form>
+
+      <section id="provision-qr-panel" class="card login-card landing-panel hidden">
+        <h1 data-i18n="provision.qrTitle">Escanea el QR</h1>
+        <p class="lead" id="provision-qr-lead">
+          Abre WhatsApp en tu teléfono → Dispositivos vinculados → Vincular un dispositivo.
+        </p>
+        <p class="hint" id="provision-instance-label"></p>
+        <div class="qr-wrap">
+          <img id="provision-qr-image" alt="Código QR de WhatsApp" class="qr-image hidden" />
+          <p class="hint" id="provision-qr-waiting">Generando código QR…</p>
+        </div>
+        <p class="form-msg" id="provision-qr-msg"></p>
+        <button type="button" class="btn ghost block" id="provision-qr-refresh">Actualizar QR</button>
+      </section>
+
+      <section id="provision-success-panel" class="card login-card landing-panel hidden">
+        <h1 data-i18n="provision.successTitle">WhatsApp conectado</h1>
+        <p class="lead" data-i18n="provision.successLead">
+          Tu número quedó vinculado en Evolution API. El agente conversacional se activará en una próxima etapa.
+        </p>
+        <p class="success-phone" id="provision-phone"></p>
+        <p class="hint" id="provision-success-meta"></p>
+        <button type="button" class="btn primary block" id="provision-success-again">Registrar otro negocio</button>
+      </section>
 
       <form id="login-form" class="card login-card landing-panel hidden">
         <h1 data-i18n="login.title">Iniciar sesión</h1>
@@ -451,7 +432,7 @@
       </form>
     </dialog>
 
-    <script src="/i18n.js?v=1.1.1"></script>
-    <script src="/app.js?v=1.1.1"></script>
+    <script src="/i18n.js?v=1.2.0"></script>
+    <script src="/app.js?v=1.2.0"></script>
   </body>
 </html>
