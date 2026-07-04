@@ -168,6 +168,50 @@ export async function cleanupStaleEvolutionInstances(pool, config, logger = cons
     }
   }
 
+  // Instancias connected: asegurar webhook MESSAGES_UPSERT + settings y número.
+  try {
+    const [connectedRows] = await pool.query(
+      `SELECT id, instance_name, phone_number, webhook_url
+       FROM evolution_instances
+       WHERE status = 'connected' AND instance_name LIKE ?
+       LIMIT 50`,
+      [likePrefix]
+    );
+
+    for (const row of connectedRows) {
+      if (!isFaqInnInstance(row.instance_name, prefix)) {
+        continue;
+      }
+      try {
+        await evolution.ensureIntegrations(row.instance_name);
+        const phone =
+          (await evolution.resolvePhoneNumber(row.instance_name)) ||
+          row.phone_number ||
+          '';
+        await pool.query(
+          `UPDATE evolution_instances
+           SET phone_number = ?,
+               webhook_url = COALESCE(NULLIF(webhook_url, ''), ?),
+               updated_at = NOW()
+           WHERE id = ?`,
+          [phone, config.evolutionWebhookUrl || '', row.id]
+        );
+      } catch (error) {
+        summary.errors += 1;
+        logger.warn?.(
+          { err: error, instance: row.instance_name },
+          'evolution cleanup: no se pudo aplicar webhook/settings a connected'
+        );
+      }
+    }
+  } catch (error) {
+    summary.errors += 1;
+    logger.warn?.(
+      { err: error },
+      'evolution cleanup: fallo al sincronizar instancias connected'
+    );
+  }
+
   // Huérfanas en Evolution: SOLO prefijo faqinn_, no conectadas, sin fila connected.
   try {
     const [connectedRows] = await pool.query(
