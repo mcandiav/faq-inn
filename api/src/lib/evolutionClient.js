@@ -106,12 +106,7 @@ function extractPhoneNumber(payload) {
   return null;
 }
 
-const DEFAULT_WEBHOOK_EVENTS = [
-  'MESSAGES_UPSERT',
-  'MESSAGES_UPDATE',
-  'CONNECTION_UPDATE',
-  'QRCODE_UPDATED',
-];
+const DEFAULT_WEBHOOK_EVENTS = ['MESSAGES_UPSERT'];
 
 function buildWebhookConfig(webhookUrl) {
   return {
