@@ -142,6 +142,7 @@ CREATE TABLE IF NOT EXISTS evolution_instances (
   status VARCHAR(32) NOT NULL DEFAULT 'draft'
     CHECK (status IN ('draft', 'qr_pending', 'connected', 'error')),
   phone_number VARCHAR(64) NOT NULL DEFAULT '',
+  last_qr_base64 TEXT NOT NULL DEFAULT '',
   last_qr_at TIMESTAMPTZ NULL,
   connected_at TIMESTAMPTZ NULL,
   last_error TEXT NOT NULL DEFAULT '',
@@ -200,6 +201,21 @@ async function applySchemaPatches(pool) {
        'error'
      ))`
   );
+
+  const [qrCol] = await pool.query(
+    `SELECT column_name
+     FROM information_schema.columns
+     WHERE table_schema = current_schema()
+       AND table_name = 'evolution_instances'
+       AND column_name = 'last_qr_base64'`
+  );
+
+  if (qrCol.length === 0) {
+    await pool.query(
+      `ALTER TABLE evolution_instances
+       ADD COLUMN last_qr_base64 TEXT NOT NULL DEFAULT ''`
+    );
+  }
 }
 
 export async function runMigrations(pool, _config) {

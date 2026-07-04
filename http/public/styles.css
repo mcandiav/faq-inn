@@ -9,9 +9,19 @@
   box-sizing: border-box;
 }
 
+html {
+  height: auto;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
 body {
   margin: 0;
   min-height: 100vh;
+  height: auto;
+  overflow-x: hidden;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
   background: radial-gradient(circle at top, #1e293b, #0f172a 55%);
 }
 
@@ -86,7 +96,19 @@ body {
   gap: 1rem;
   padding: 1rem;
   padding-top: calc(3.25rem + env(safe-area-inset-top, 0px));
-  padding-bottom: 2rem;
+  padding-bottom: calc(3rem + env(safe-area-inset-bottom, 0px));
+  overflow: visible;
+}
+
+.login-screen.provision-focus .landing-hero,
+.login-screen.provision-focus .landing-tabs,
+.login-screen.provision-focus .login-brand {
+  display: none;
+}
+
+.login-screen.provision-focus {
+  justify-content: flex-start;
+  padding-top: calc(1rem + env(safe-area-inset-top, 0px));
 }
 
 .landing-hero {
@@ -224,11 +246,18 @@ body {
 }
 
 .qr-image {
-  width: min(280px, 70vw);
+  display: block;
+  width: min(260px, 72vw);
+  max-width: 100%;
   height: auto;
   border-radius: 8px;
   background: #fff;
   padding: 0.5rem;
+}
+
+#provision-qr-panel {
+  scroll-margin-top: 1rem;
+  margin-bottom: 2rem;
 }
 
 .success-phone {
