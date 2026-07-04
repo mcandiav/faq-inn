@@ -11,17 +11,16 @@ No incluye todavía lógica conversacional, n8n productivo, carga de FAQs, promp
 ```text
 1. Usuario entra a inn.at-once.cl.
 2. Ingresa nombre comercial y correo electrónico.
-3. Backend FAQ Inn genera tenant_slug único.
-4. Backend crea tenant en PostgreSQL con estado draft.
-5. Usuario hace clic en Conectar WhatsApp.
-6. Frontend llama POST /api/provision/whatsapp.
-7. Backend crea instancia Evolution API con instance_name = faqinn_<tenant_slug>.
-8. Backend obtiene QR en Base64 desde Evolution API.
-9. Frontend muestra QR e instrucciones de escaneo.
-10. Frontend consulta GET /api/provision/status/:instance cada 3 segundos.
-11. Cuando Evolution reporta state=open, backend captura phone_number.
-12. Backend actualiza tenant a connected.
-13. Frontend muestra pantalla de éxito con número vinculado.
+3. Pulsa Registrar y continuar.
+4. Backend FAQ Inn genera tenant_slug único y crea tenant en PostgreSQL (draft).
+5. Backend crea instancia Evolution API con instance_name = faqinn_<tenant_slug>.
+6. Backend configura webhook (MESSAGES_UPSERT) y settings de instancia.
+7. Backend obtiene QR en Base64 desde Evolution API.
+8. Frontend muestra QR e instrucciones de escaneo.
+9. Frontend consulta GET /api/provision/status/:instance cada 3 segundos (sin pedir QR nuevo).
+10. Cuando Evolution reporta state=open, backend captura phone_number.
+11. Backend actualiza tenant a connected.
+12. Frontend muestra pantalla de éxito con número vinculado.
 ```
 
 ## Endpoints propios del MVP
@@ -71,11 +70,22 @@ tenant_id
 instance_name
 status
 phone_number
+webhook_url
 last_qr_at
 connected_at
 created_at
 updated_at
 ```
+
+Campo definido por arquitecto para etapa posterior (no implementado en MVP onboarding):
+
+```text
+instance_token_encrypted
+```
+
+## Cierre MVP Evolution
+
+Validado en producción. Ver [../evolution-api/ESTADO-MODULO.md](../evolution-api/ESTADO-MODULO.md).
 
 ## Estados del MVP
 

@@ -10,7 +10,7 @@ Esta carpeta concentra documentos complementarios del proyecto FAQ Inn.
 | `onboarding/` | Flujos de alta de tenants, QR WhatsApp, estados y validaciones. |
 | `prompts/` | Plantillas de prompts por vertical. |
 | `n8n/` | Plantillas y contratos de workflows n8n. |
-| `evolution-api/` | Contratos y decisiones de integración con Evolution API. |
+| `evolution-api/` | Contratos, cierre del módulo onboarding y decisiones de integración con Evolution API. |
 | `pruebas/` | Subproyectos de prueba controlados, criterios de éxito, descarte y decisión final. |
 
 El README principal del proyecto sigue siendo `FAQ Inn/README.md`.
