@@ -2074,11 +2074,14 @@ $('#view-booking-engine')?.addEventListener('click', async (event) => {
   }
 });
 
-$('#btn-booking-reconfigure')?.addEventListener('click', async () => {
+async function restartBookingEngineWizard() {
   state.bookingEngine.forceWizard = true;
   await ensureBookingSession(true);
   renderBookingEngineView();
-});
+}
+
+$('#btn-booking-reconfigure')?.addEventListener('click', restartBookingEngineWizard);
+$('#btn-booking-reconfigure-wizard')?.addEventListener('click', restartBookingEngineWizard);
 
 $('#btn-booking-discover')?.addEventListener('click', async () => {
   const msg = $('#booking-msg');
@@ -2118,31 +2121,6 @@ $('#btn-booking-discover')?.addEventListener('click', async () => {
     }
     msg.textContent = t('booking.msgAnalyzeOk');
     msg.classList.add('ok');
-  } catch (error) {
-    msg.textContent = error.message || t('booking.msgError');
-    msg.classList.add('error');
-  }
-});
-
-$('#btn-booking-retry')?.addEventListener('click', async () => {
-  const msg = $('#booking-msg');
-  msg.textContent = '';
-  msg.className = 'form-msg';
-
-  try {
-    const data = await api('/booking-engine/reject', {
-      method: 'POST',
-      body: JSON.stringify({ session_id: state.bookingEngine.sessionId }),
-    });
-    state.bookingEngine.sessionId = data.session_id;
-    state.bookingEngine.scenarios = data.scenarios || [];
-    state.bookingEngine.verification = null;
-    state.bookingEngine.previewUrl = '';
-    state.bookingEngine.previewValues = null;
-    state.bookingEngine.candidateTemplate = '';
-    state.bookingEngine.confidenceScore = 0;
-    state.bookingEngine.warnings = [];
-    renderBookingEngineView();
   } catch (error) {
     msg.textContent = error.message || t('booking.msgError');
     msg.classList.add('error');

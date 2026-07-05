@@ -164,6 +164,7 @@ const MESSAGES = {
       'Para que el agente envíe links correctos, pegue tres búsquedas específicas de su motor. FAQ Inn detectará la plantilla y usted la verificará antes de aprobarla.',
     'booking.approvedTitle': 'Plantilla aprobada',
     'booking.reconfigure': 'Configurar de nuevo',
+    'booking.linkApproved': 'Link aprobado',
     'booking.stepScenarios': 'Paso 1 — Pegar links de prueba',
     'booking.stepScenariosHint':
       'En su motor de reservas real, haga exactamente estas búsquedas y pegue el link resultante en cada campo.',
@@ -452,6 +453,7 @@ const MESSAGES = {
       'Para o assistente enviar links corretos, cole três buscas específicas do seu motor. O FAQ Inn detectará o modelo e você verificará antes de aprovar.',
     'booking.approvedTitle': 'Modelo aprovado',
     'booking.reconfigure': 'Configurar novamente',
+    'booking.linkApproved': 'Link aprovado',
     'booking.stepScenarios': 'Passo 1 — Colar links de teste',
     'booking.stepScenariosHint':
       'No seu motor real, faça exatamente estas buscas e cole o link resultante em cada campo.',
@@ -739,6 +741,7 @@ const MESSAGES = {
       'For the agent to send correct links, paste three specific searches from your engine. FAQ Inn will detect the template and you verify it before approving.',
     'booking.approvedTitle': 'Approved template',
     'booking.reconfigure': 'Configure again',
+    'booking.linkApproved': 'Link approved',
     'booking.stepScenarios': 'Step 1 — Paste test links',
     'booking.stepScenariosHint':
       'In your real booking engine, run exactly these searches and paste the resulting link in each field.',

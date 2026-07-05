@@ -250,9 +250,12 @@
           <div id="booking-approved-panel" class="card card-inner hidden">
             <h3 data-i18n="booking.approvedTitle">Plantilla aprobada</h3>
             <div id="booking-approved-preview" class="booking-preview-form"></div>
-            <button type="button" class="btn ghost" id="btn-booking-reconfigure" data-i18n="booking.reconfigure">
-              Configurar de nuevo
-            </button>
+            <div class="dialog-actions booking-actions">
+              <span class="pill ok booking-approved-badge" data-i18n="booking.linkApproved">Link aprobado</span>
+              <button type="button" class="btn ghost" id="btn-booking-reconfigure" data-i18n="booking.reconfigure">
+                Configurar de nuevo
+              </button>
+            </div>
           </div>
 
           <div id="booking-wizard" class="form card-inner">
@@ -280,11 +283,11 @@
                 <p class="booking-template-preview" id="booking-candidate-template"></p>
               </details>
               <div class="dialog-actions booking-actions">
-                <button type="button" class="btn ghost" id="btn-booking-retry" data-i18n="booking.retry">
-                  No coincide — volver a pegar links
+                <button type="button" class="btn ghost" id="btn-booking-reconfigure-wizard" data-i18n="booking.reconfigure">
+                  Configurar de nuevo
                 </button>
-                <button type="button" class="btn primary" id="btn-booking-approve" data-i18n="booking.approve">
-                  Sí, el link está correcto
+                <button type="button" class="btn primary" id="btn-booking-approve" data-i18n="booking.linkApproved">
+                  Link aprobado
                 </button>
               </div>
             </div>
@@ -621,7 +624,7 @@
       </form>
     </dialog>
 
-    <script src="/i18n.js?v=1.7.1"></script>
-    <script src="/app.js?v=1.7.1"></script>
+    <script src="/i18n.js?v=1.7.2"></script>
+    <script src="/app.js?v=1.7.2"></script>
   </body>
 </html>
