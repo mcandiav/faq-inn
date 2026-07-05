@@ -159,6 +159,14 @@ const MESSAGES = {
     'admin.deleteTitle': 'Borrar tenant',
     'admin.resetPassword': 'Resetear contraseña',
     'admin.resetPasswordShort': 'Reset pwd',
+    'admin.resetAccessTitle': 'Acceso del tenant',
+    'admin.resetAccessHint':
+      'Define el email y la contraseña de login. Si dejas la contraseña vacía, se generará una automática.',
+    'admin.resetAccessEmail': 'Email de login',
+    'admin.resetAccessPassword': 'Contraseña',
+    'admin.resetAccessPasswordPlaceholder': 'Vacío = generar automática',
+    'admin.resetAccessSave': 'Guardar acceso',
+    'admin.resetAccessSaved': 'Acceso guardado — copia antes de cerrar:',
     'admin.deleteTenant': 'Borrar tenant',
     'admin.deleteConfirmLabel': 'Escribe el slug para confirmar borrado',
     'admin.deleteWarning':
@@ -384,6 +392,14 @@ const MESSAGES = {
     'admin.deleteTitle': 'Excluir tenant',
     'admin.resetPassword': 'Redefinir senha',
     'admin.resetPasswordShort': 'Reset pwd',
+    'admin.resetAccessTitle': 'Acesso do tenant',
+    'admin.resetAccessHint':
+      'Defina o email e a senha de login. Se deixar a senha vazia, será gerada automaticamente.',
+    'admin.resetAccessEmail': 'Email de login',
+    'admin.resetAccessPassword': 'Senha',
+    'admin.resetAccessPasswordPlaceholder': 'Vazio = gerar automaticamente',
+    'admin.resetAccessSave': 'Salvar acesso',
+    'admin.resetAccessSaved': 'Acesso salvo — copie antes de fechar:',
     'admin.deleteTenant': 'Excluir tenant',
     'admin.deleteConfirmLabel': 'Digite o slug para confirmar a exclusão',
     'admin.deleteWarning':
@@ -608,6 +624,14 @@ const MESSAGES = {
     'admin.deleteTitle': 'Delete tenant',
     'admin.resetPassword': 'Reset password',
     'admin.resetPasswordShort': 'Reset pwd',
+    'admin.resetAccessTitle': 'Tenant login',
+    'admin.resetAccessHint':
+      'Set login email and password. Leave password empty to auto-generate one.',
+    'admin.resetAccessEmail': 'Login email',
+    'admin.resetAccessPassword': 'Password',
+    'admin.resetAccessPasswordPlaceholder': 'Empty = auto-generate',
+    'admin.resetAccessSave': 'Save access',
+    'admin.resetAccessSaved': 'Access saved — copy before closing:',
     'admin.deleteTenant': 'Delete tenant',
     'admin.deleteConfirmLabel': 'Type the slug to confirm deletion',
     'admin.deleteWarning':
