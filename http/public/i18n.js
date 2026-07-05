@@ -58,7 +58,7 @@ const MESSAGES = {
       'Tu número quedó vinculado. Completa tu negocio en Mi cuenta y prueba enviando un mensaje desde otro teléfono.',
     'dashboard.title': 'Preguntas y respuestas',
     'dashboard.hint':
-      'Columna A: pregunta, columna B: respuesta. Formatos: .xlsx, .xls, .csv. Al guardar o importar, cada FAQ queda lista para el asistente.',
+      'Columna A: pregunta, B: respuesta. Opcional: keywords y categoría (columnas C/D o encabezados en fila 1). Formatos: .xlsx, .xls, .csv.',
     'dashboard.hintAdmin':
       'Como administrador, crea posadas en Admin. Los clientes editan sus FAQs.',
     'dashboard.import': 'Importar Excel',
@@ -92,7 +92,7 @@ const MESSAGES = {
     'btn.delete': 'Eliminar',
     'btn.cancel': 'Cancelar',
     'btn.save': 'Guardar cambios',
-    'btn.saveIndex': 'Guardar e indexar',
+    'btn.saveIndex': 'Guardar respuesta',
     'btn.respond': 'Responderla',
     'btn.saveQuestion': 'Guardar consulta',
     'btn.createTenant': 'Crear posada',
@@ -215,7 +215,7 @@ const MESSAGES = {
       '¿Borrar esta pregunta?\n\n"{q}"\n\nSe eliminará de forma permanente.',
     'msg.deleting': 'Borrando…',
     'msg.questionDeleted': 'Pregunta borrada.',
-    'msg.importing': 'Importando e indexando… puede tardar unos segundos.',
+    'msg.importing': 'Importando… puede tardar unos segundos.',
     'msg.importDone': 'Importación completada.',
     'msg.importDeleted': ' ({n} eliminadas antes de importar)',
     'msg.importErrors': ' — {n} fila(s) con error.',
@@ -230,7 +230,7 @@ const MESSAGES = {
       '¿Limpiar el índice de búsqueda? No hay FAQs guardadas.',
     'msg.syncing': 'Sincronizando… puede tardar unos segundos.',
     'msg.synced': 'Sincronización completada.',
-    'msg.savingIndexing': 'Guardando e indexando…',
+    'msg.savingIndexing': 'Guardando respuesta…',
     'msg.profileSaved': 'Cambios guardados.',
     'msg.passwordRequiredForEmail':
       'Ingresa tu contraseña actual para cambiar el email.',
@@ -291,7 +291,7 @@ const MESSAGES = {
     'provision.qrTitle': 'Escaneie o QR',
     'dashboard.title': 'Perguntas e respostas',
     'dashboard.hint':
-      'Coluna A: pergunta, coluna B: resposta. Formatos: .xlsx, .xls, .csv. Ao salvar ou importar, cada FAQ fica pronta para o assistente.',
+      'Coluna A: pergunta, B: resposta. Opcional: keywords e categoria (colunas C/D ou cabeçalhos na linha 1). Formatos: .xlsx, .xls, .csv.',
     'dashboard.hintAdmin':
       'Como administrador, crie pousadas em Admin. Os clientes editam suas FAQs.',
     'dashboard.import': 'Importar Excel',
@@ -325,7 +325,7 @@ const MESSAGES = {
     'btn.delete': 'Excluir',
     'btn.cancel': 'Cancelar',
     'btn.save': 'Salvar alterações',
-    'btn.saveIndex': 'Salvar e indexar',
+    'btn.saveIndex': 'Salvar resposta',
     'btn.respond': 'Responder',
     'btn.saveQuestion': 'Salvar consulta',
     'btn.createTenant': 'Criar pousada',
@@ -448,7 +448,7 @@ const MESSAGES = {
       'Excluir esta pergunta?\n\n"{q}"\n\nSerá removida permanentemente.',
     'msg.deleting': 'Excluindo…',
     'msg.questionDeleted': 'Pergunta excluída.',
-    'msg.importing': 'Importando e indexando… pode levar alguns segundos.',
+    'msg.importing': 'Importando… pode levar alguns segundos.',
     'msg.importDone': 'Importação concluída.',
     'msg.importDeleted': ' ({n} removidas antes de importar)',
     'msg.importErrors': ' — {n} linha(s) com erro.',
@@ -463,7 +463,7 @@ const MESSAGES = {
       'Limpar o índice de busca? Não há FAQs salvas.',
     'msg.syncing': 'Sincronizando… pode levar alguns segundos.',
     'msg.synced': 'Sincronização concluída.',
-    'msg.savingIndexing': 'Salvando e indexando…',
+    'msg.savingIndexing': 'Salvando resposta…',
     'msg.profileSaved': 'Alterações salvas.',
     'msg.passwordRequiredForEmail':
       'Informe sua senha atual para alterar o email.',
@@ -523,7 +523,7 @@ const MESSAGES = {
     'provision.qrTitle': 'Scan the QR code',
     'dashboard.title': 'Questions and answers',
     'dashboard.hint':
-      'Column A: question, column B: answer. Formats: .xlsx, .xls, .csv. When saving or importing, each FAQ is ready for the assistant.',
+      'Column A: question, B: answer. Optional: keywords and category (columns C/D or headers in row 1). Formats: .xlsx, .xls, .csv.',
     'dashboard.hintAdmin':
       'As administrator, create lodgings in Admin. Clients edit their FAQs.',
     'dashboard.import': 'Import Excel',
@@ -557,7 +557,7 @@ const MESSAGES = {
     'btn.delete': 'Delete',
     'btn.cancel': 'Cancel',
     'btn.save': 'Save changes',
-    'btn.saveIndex': 'Save and index',
+    'btn.saveIndex': 'Save answer',
     'btn.respond': 'Answer it',
     'btn.saveQuestion': 'Save question',
     'btn.createTenant': 'Create lodging',
@@ -680,7 +680,7 @@ const MESSAGES = {
       'Delete this question?\n\n"{q}"\n\nIt will be permanently removed.',
     'msg.deleting': 'Deleting…',
     'msg.questionDeleted': 'Question deleted.',
-    'msg.importing': 'Importing and indexing… this may take a few seconds.',
+    'msg.importing': 'Importing… this may take a few seconds.',
     'msg.importDone': 'Import completed.',
     'msg.importDeleted': ' ({n} deleted before import)',
     'msg.importErrors': ' — {n} row(s) with errors.',
@@ -695,7 +695,7 @@ const MESSAGES = {
       'Clear the search index? There are no saved FAQs.',
     'msg.syncing': 'Syncing… this may take a few seconds.',
     'msg.synced': 'Sync completed.',
-    'msg.savingIndexing': 'Saving and indexing…',
+    'msg.savingIndexing': 'Saving answer…',
     'msg.profileSaved': 'Changes saved.',
     'msg.passwordRequiredForEmail':
       'Enter your current password to change your email.',
