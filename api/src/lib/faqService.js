@@ -201,7 +201,9 @@ export async function importFaqRows(pool, config, user, rows, options = {}) {
   const maxRows = options.maxRows ?? 300;
 
   if (rows.length === 0) {
-    const error = new Error('El archivo no tiene filas válidas (columna A: pregunta, B: respuesta)');
+    const error = new Error(
+      'El archivo no tiene filas válidas (columna A: pregunta, B: respuesta; C: keywords opcional)'
+    );
     error.statusCode = 400;
     throw error;
   }
@@ -225,6 +227,8 @@ export async function importFaqRows(pool, config, user, rows, options = {}) {
       const faq = await createFaqRecord(pool, config, user, {
         question: row.question,
         answer: row.answer,
+        keywords: row.keywords,
+        category: row.category,
       });
       created.push({ id: faq.id, row: row.row });
     } catch (error) {

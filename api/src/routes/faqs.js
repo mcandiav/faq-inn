@@ -160,7 +160,7 @@ export async function faqRoutes(app, config) {
       return {
         status: 'ok',
         import: result,
-        message: `${result.created} FAQ(s) importadas e indexadas`,
+        message: `${result.created} FAQ(s) importadas`,
       };
     } catch (error) {
       const code = error.statusCode || 500;
@@ -183,7 +183,7 @@ export async function faqRoutes(app, config) {
       return {
         status: 'ok',
         reindex: result,
-        message: `${result.reindexed} FAQ(s) reindexadas; Qdrant limpiado de huérfanos`,
+        message: `${result.reindexed} FAQ(s) sincronizadas`,
       };
     } catch (error) {
       const code = error.statusCode || 500;
@@ -265,7 +265,7 @@ export async function faqRoutes(app, config) {
       reply.code(502);
       return {
         status: 'error',
-        error: 'Cambios guardados pero falló reindexación Qdrant',
+        error: 'Cambios guardados pero falló la sincronización con el asistente',
         detail: error.message,
       };
     }
@@ -299,7 +299,7 @@ export async function faqRoutes(app, config) {
         ? {}
         : {
             warning:
-              'FAQ borrada en MariaDB pero quedaron restos en Qdrant. Usa «Sincronizar Qdrant».',
+              'FAQ borrada pero quedaron restos en el índice de búsqueda. Usa «Sincronizar respuestas».',
           }),
     };
   });
