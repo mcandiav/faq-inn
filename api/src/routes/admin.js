@@ -68,8 +68,13 @@ export async function adminRoutes(app, config) {
         const tenantId = Number(request.params.id);
         const result = await resetAdminTenantPassword(
           pool,
+          config,
           tenantId,
-          request.body?.password
+          {
+            password: request.body?.password,
+            email: request.body?.email,
+          },
+          app.log
         );
         return { status: 'ok', ...result };
       } catch (error) {
