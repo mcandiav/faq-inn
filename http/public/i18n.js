@@ -160,6 +160,7 @@ const MESSAGES = {
     'profile.whatsappReconnect': 'Reconectar WhatsApp',
     'profile.whatsappRefreshQr': 'Actualizar QR',
     'booking.title': 'Motor de reservas',
+    'booking.back': '← Volver a Mi cuenta',
     'booking.intro':
       'Para que el agente envíe links correctos, pegue tres búsquedas específicas de su motor. FAQ Inn detectará la plantilla y usted la verificará antes de aprobarla.',
     'booking.approvedTitle': 'Plantilla aprobada',
@@ -449,6 +450,7 @@ const MESSAGES = {
     'profile.whatsappReconnect': 'Reconectar WhatsApp',
     'profile.whatsappRefreshQr': 'Atualizar QR',
     'booking.title': 'Motor de reservas',
+    'booking.back': '← Voltar à Minha conta',
     'booking.intro':
       'Para o assistente enviar links corretos, cole três buscas específicas do seu motor. O FAQ Inn detectará o modelo e você verificará antes de aprovar.',
     'booking.approvedTitle': 'Modelo aprovado',
@@ -737,6 +739,7 @@ const MESSAGES = {
     'profile.whatsappReconnect': 'Reconnect WhatsApp',
     'profile.whatsappRefreshQr': 'Refresh QR',
     'booking.title': 'Booking engine',
+    'booking.back': '← Back to My account',
     'booking.intro':
       'For the agent to send correct links, paste three specific searches from your engine. FAQ Inn will detect the template and you verify it before approving.',
     'booking.approvedTitle': 'Approved template',
