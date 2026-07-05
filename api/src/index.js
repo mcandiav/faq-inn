@@ -56,7 +56,7 @@ await faqRoutes(app, config);
 await unansweredRoutes(app, config);
 await onboardingRoutes(app, config);
 await provisionRoutes(app, config);
-await accountRoutes(app);
+await accountRoutes(app, config);
 await whatsappRoutes(app, config);
 await runtimeRoutes(app, config);
 

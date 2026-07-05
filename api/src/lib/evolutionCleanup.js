@@ -1,4 +1,5 @@
 import { createEvolutionClient } from './evolutionClient.js';
+import { syncWhatsappConnectionStatus } from './provisionService.js';
 
 function normalizePrefix(prefix) {
   return String(prefix || 'faqinn_').replace(/_+$/, '_') || 'faqinn_';
@@ -44,6 +45,7 @@ export async function cleanupStaleEvolutionInstances(pool, config, logger = cons
     prefix,
     checked: 0,
     syncedConnected: 0,
+    markedDisconnected: 0,
     deleted: 0,
     orphansDeleted: 0,
     skippedForeign: 0,
@@ -171,7 +173,7 @@ export async function cleanupStaleEvolutionInstances(pool, config, logger = cons
   // Instancias connected: asegurar webhook MESSAGES_UPSERT + settings y número.
   try {
     const [connectedRows] = await pool.query(
-      `SELECT id, instance_name, phone_number, webhook_url
+      `SELECT id, tenant_id, instance_name, phone_number, webhook_url
        FROM evolution_instances
        WHERE status = 'connected' AND instance_name LIKE ?
        LIMIT 50`,
@@ -183,6 +185,23 @@ export async function cleanupStaleEvolutionInstances(pool, config, logger = cons
         continue;
       }
       try {
+        const synced = await syncWhatsappConnectionStatus(
+          pool,
+          config,
+          row.tenant_id,
+          row.instance_name
+        );
+        if (synced.status === 'disconnected') {
+          summary.markedDisconnected += 1;
+          logger.info?.(
+            { instance: row.instance_name, state: synced.evolutionState },
+            'evolution cleanup: instancia marcada disconnected'
+          );
+          continue;
+        }
+        if (synced.evolutionUnreachable) {
+          continue;
+        }
         await evolution.ensureIntegrations(row.instance_name);
         const phone =
           (await evolution.resolvePhoneNumber(row.instance_name)) ||

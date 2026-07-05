@@ -199,8 +199,18 @@ async function applySchemaPatches(pool) {
        'draft',
        'qr_pending',
        'connected',
+       'disconnected',
        'error'
      ))`
+  );
+
+  await pool.query(
+    `ALTER TABLE evolution_instances DROP CONSTRAINT IF EXISTS evolution_instances_status_check`
+  );
+  await pool.query(
+    `ALTER TABLE evolution_instances
+     ADD CONSTRAINT evolution_instances_status_check
+     CHECK (status IN ('draft', 'qr_pending', 'connected', 'disconnected', 'error'))`
   );
 
   const [qrCol] = await pool.query(
