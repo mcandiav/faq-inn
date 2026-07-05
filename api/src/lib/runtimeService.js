@@ -17,10 +17,22 @@ function slugFromInstanceName(instanceName, prefix) {
   return name.slice(p.length);
 }
 
+function parseBookingConfig(raw) {
+  if (!raw) return {};
+  if (typeof raw === 'object') return raw;
+  try {
+    return JSON.parse(raw);
+  } catch {
+    return {};
+  }
+}
+
 function mapRuntimeRow(row, config) {
   const agentSlug = row.agent_slug || 'principal';
   const evolutionApiKey = config.evolutionApiKey || '';
   const tenantSlug = row.tenant_slug || '';
+  const bookingApproved = row.validation_status === 'approved';
+  const bookingConfig = parseBookingConfig(row.booking_config);
   return {
     // Slug técnico (filtro Qdrant, SemResposta, clave Redis). No es el id numérico de PostgreSQL.
     tenant_id: tenantSlug,
@@ -33,12 +45,12 @@ function mapRuntimeRow(row, config) {
     vertical: row.vertical_slug || 'hotel',
     primary_language: row.primary_language || 'es',
     initial_greeting: row.initial_greeting || '',
-    booking_url_base: row.booking_url_base || '',
-    booking_url_template: row.booking_url_template || '',
-    booking_url_mode: row.booking_url_mode || '',
+    booking_url_base: bookingApproved ? row.booking_url_base || '' : '',
+    booking_url_template: bookingApproved ? row.booking_url_template || '' : '',
+    booking_url_mode: bookingApproved ? row.booking_url_mode || '' : '',
     validation_status: row.validation_status || 'pending',
-    confidence_score: Number(row.confidence_score || 0),
-    booking_config: row.booking_config || '{}',
+    confidence_score: bookingApproved ? Number(row.confidence_score || 0) : 0,
+    booking_config: bookingApproved ? bookingConfig : {},
     business_hours: row.business_hours || '',
     policies: row.policies || '',
     evolution_instance_name: row.evolution_instance_name || '',
