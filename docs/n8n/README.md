@@ -1,5 +1,25 @@
 # n8n en FAQ Inn
 
+## Hostnames internos EasyPanel (proyecto `n8n`)
+
+| Servicio EasyPanel | Hostname interno | Puerto |
+|---|---|---|
+| API FAQ Inn (`inn-api`) | `n8n_inn-api` | 3000 |
+| HTTP FAQ Inn | `n8n_inn-http` (si aplica) | 80 |
+| PostgreSQL | `n8n_faq-inn_postgres` | 5432 |
+| Evolution API | `n8n_evolution-api` | 8080 |
+| n8n | `n8n_n8n` | 5678 |
+
+Los nodos HTTP del workflow **FAQ prototipo** deben apuntar a:
+
+```text
+http://n8n_inn-api:3000/api/runtime/tenant-config
+http://n8n_inn-api:3000/api/search
+http://n8n_inn-api:3000/api/unanswered
+```
+
+Solo resuelven desde contenedores en la red `easypanel-n8n`.
+
 ## Rol de n8n
 
 n8n será el runtime de ejecución conversacional, no la fuente de verdad del onboarding.

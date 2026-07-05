@@ -24,6 +24,16 @@ FAQ prototipo
 
 Actualmente el workflow usa un nodo Set llamado `Config Tenant` para simular la configuración que luego debe venir desde PostgreSQL/API.
 
+## Endpoints API (red interna)
+
+```text
+http://n8n_inn-api:3000/api/runtime/tenant-config?instance_name=...
+http://n8n_inn-api:3000/api/search
+http://n8n_inn-api:3000/api/unanswered
+```
+
+Hostname documentado en EasyPanel: **`n8n_inn-api`** (servicio `inn-api`).
+
 ## Criterio de éxito
 
 ```text
