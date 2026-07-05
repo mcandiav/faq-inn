@@ -11,6 +11,7 @@ const state = {
   faqs: [],
   unanswered: [],
   currentView: 'dashboard',
+  bookingReturnView: 'profile',
   bookingEngine: {
     sessionId: null,
     scenarios: [],
@@ -493,6 +494,10 @@ async function refreshViewData(view) {
 
 async function openView(name) {
   const view = resolveView(name);
+  const previousView = state.currentView;
+  if (view === 'booking-engine' && previousView !== 'booking-engine') {
+    state.bookingReturnView = resolveView(previousView);
+  }
   const hash = `#${view}`;
   setView(view);
   if (location.hash !== hash) {
@@ -2049,6 +2054,7 @@ $$('[data-view]').forEach((btn) => {
 });
 
 $('#btn-go-booking-engine')?.addEventListener('click', () => openView('booking-engine'));
+$('#btn-booking-back')?.addEventListener('click', () => openView(state.bookingReturnView || 'profile'));
 
 $('#view-booking-engine')?.addEventListener('click', async (event) => {
   const btn = event.target.closest('.booking-preview-generate');
