@@ -1064,24 +1064,31 @@ async function openAdminResetDialog(id) {
   }
 
   const dialog = $('#admin-reset-dialog');
-  const form = $('#admin-reset-form');
   const msg = $('#admin-reset-msg');
   const result = $('#admin-reset-result');
   const submitBtn = $('#admin-reset-submit');
 
   $('#admin-reset-dialog-title').textContent = `${t('admin.resetAccessTitle')}: ${tenant.slug}`;
+  $('#admin-reset-dialog-hint').textContent = t('admin.resetAccessHint');
+  $('#admin-reset-email-label').textContent = t('admin.resetAccessEmail');
+  $('#admin-reset-password-label').textContent = t('admin.resetAccessPassword');
+  $('#admin-reset-result-title').textContent = t('admin.resetAccessSaved');
+  $('#admin-reset-submit').textContent = t('admin.resetAccessSave');
+
+  const passwordInput = $('#admin-reset-password-input');
+  if (passwordInput) {
+    passwordInput.placeholder = t('admin.resetAccessPasswordPlaceholder');
+    passwordInput.value = '';
+  }
+
   $('#admin-reset-email').value =
     tenant.client_email || tenant.registration_email || '';
-  $('#admin-reset-password').value = '';
   if (msg) {
     msg.textContent = '';
     msg.className = 'form-msg';
   }
   result?.classList.add('hidden');
   submitBtn?.classList.remove('hidden');
-  form?.reset();
-  $('#admin-reset-email').value =
-    tenant.client_email || tenant.registration_email || '';
 
   dialog?.showModal();
   $('#admin-reset-email')?.focus();
@@ -1097,7 +1104,7 @@ async function submitAdminResetAccess(event) {
   }
 
   const email = $('#admin-reset-email')?.value.trim() || '';
-  const password = $('#admin-reset-password')?.value || '';
+  const password = $('#admin-reset-password-input')?.value || '';
   const msg = $('#admin-reset-msg');
   const result = $('#admin-reset-result');
   const submitBtn = $('#admin-reset-submit');

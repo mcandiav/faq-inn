@@ -53,6 +53,9 @@ const MESSAGES = {
     'signup.password': 'Contraseña',
     'signup.submit': 'Crear cuenta y vincular WhatsApp',
     'provision.qrTitle': 'Escanea el QR',
+    'provision.successTitle': 'WhatsApp conectado',
+    'provision.successLead':
+      'Tu número quedó vinculado. Completa tu negocio en Mi cuenta y prueba enviando un mensaje desde otro teléfono.',
     'dashboard.title': 'Preguntas y respuestas',
     'dashboard.hint':
       'Columna A: pregunta, columna B: respuesta. Formatos: .xlsx, .xls, .csv. Al guardar o importar, cada FAQ se indexa en Qdrant.',
@@ -74,7 +77,7 @@ const MESSAGES = {
     'table.slug': 'Slug',
     'table.businessName': 'Nombre negocio',
     'table.clientEmail': 'Email login',
-    'table.registrationEmail': 'Email registro (onboarding)',
+    'table.registrationEmail': 'Email del alta (formulario)',
     'table.agent': 'Agente',
     'status.active': 'Activa',
     'status.inactive': 'Inactiva',
@@ -157,16 +160,16 @@ const MESSAGES = {
     'admin.viewDetail': 'Ver',
     'admin.detailTitle': 'Detalle del tenant',
     'admin.deleteTitle': 'Borrar tenant',
-    'admin.resetPassword': 'Resetear contraseña',
-    'admin.resetPasswordShort': 'Reset pwd',
-    'admin.resetAccessTitle': 'Acceso del tenant',
+    'admin.resetPassword': 'Gestionar acceso',
+    'admin.resetPasswordShort': 'Acceso',
+    'admin.resetAccessTitle': 'Login del cliente',
     'admin.resetAccessHint':
-      'Define el email y la contraseña de login. Si dejas la contraseña vacía, se generará una automática.',
-    'admin.resetAccessEmail': 'Email de login',
-    'admin.resetAccessPassword': 'Contraseña',
-    'admin.resetAccessPasswordPlaceholder': 'Vacío = generar automática',
-    'admin.resetAccessSave': 'Guardar acceso',
-    'admin.resetAccessSaved': 'Acceso guardado — copia antes de cerrar:',
+      'Credenciales para que el dueño del negocio entre a FAQ Inn. No uses el email de admin global.',
+    'admin.resetAccessEmail': 'Correo para iniciar sesión',
+    'admin.resetAccessPassword': 'Nueva contraseña',
+    'admin.resetAccessPasswordPlaceholder': 'Opcional: vacío = se genera sola',
+    'admin.resetAccessSave': 'Guardar',
+    'admin.resetAccessSaved': 'Listo — copia email y contraseña antes de cerrar:',
     'admin.deleteTenant': 'Borrar tenant',
     'admin.deleteConfirmLabel': 'Escribe el slug para confirmar borrado',
     'admin.deleteWarning':
@@ -307,7 +310,7 @@ const MESSAGES = {
     'table.slug': 'Slug',
     'table.businessName': 'Nome do negócio',
     'table.clientEmail': 'Email login',
-    'table.registrationEmail': 'Email cadastro (onboarding)',
+    'table.registrationEmail': 'Email do cadastro (formulário)',
     'table.agent': 'Agente',
     'status.active': 'Ativa',
     'status.inactive': 'Inativa',
@@ -539,7 +542,7 @@ const MESSAGES = {
     'table.slug': 'Slug',
     'table.businessName': 'Business name',
     'table.clientEmail': 'Login email',
-    'table.registrationEmail': 'Registration email (onboarding)',
+    'table.registrationEmail': 'Signup form email',
     'table.agent': 'Agent',
     'status.active': 'Active',
     'status.inactive': 'Inactive',
@@ -777,8 +780,8 @@ function setLang(lang, { persist = true } = {}) {
   }
 }
 
-function applyI18n() {
-  document.querySelectorAll('[data-i18n]').forEach((el) => {
+function applyI18nScope(root = document) {
+  root.querySelectorAll('[data-i18n]').forEach((el) => {
     const key = el.dataset.i18n;
     const text = t(key);
     if (el.dataset.i18nAttr) {
@@ -792,9 +795,13 @@ function applyI18n() {
     }
   });
 
-  document.querySelectorAll('[data-i18n-placeholder]').forEach((el) => {
+  root.querySelectorAll('[data-i18n-placeholder]').forEach((el) => {
     el.placeholder = t(el.dataset.i18nPlaceholder);
   });
+}
+
+function applyI18n() {
+  applyI18nScope(document);
 }
 
 function langPickerHtml() {
