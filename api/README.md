@@ -21,7 +21,7 @@ Arquitectura: `faq-inn-api` + `faq-inn-http` + `faq-inn_postgres`. Ver [DEPLOY.m
 |---|---|
 | Repositorio | `mcandiav/faq-inn` |
 | Rama | `api` |
-| App Service | `faq-inn-api` (interno: `n8n_faq-inn-api`) |
+| App Service | `inn-api` (interno: `n8n_inn-api:3000`) |
 
 ## Endpoints
 

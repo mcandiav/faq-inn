@@ -1,7 +1,7 @@
 #!/bin/sh
 set -eu
 
-API_UPSTREAM="${API_UPSTREAM:-http://faq-inn-api:3000}"
+API_UPSTREAM="${API_UPSTREAM:-http://n8n_inn-api:3000}"
 export API_UPSTREAM
 
 envsubst '${API_UPSTREAM}' < /etc/nginx/templates/default.conf.template > /etc/nginx/conf.d/default.conf
