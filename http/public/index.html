@@ -11,7 +11,7 @@
     <link rel="icon" type="image/png" sizes="512x512" href="/favicon.png" />
     <link rel="apple-touch-icon" href="/favicon.png" />
     <title>FAQ Inn</title>
-    <link rel="stylesheet" href="/styles.css?v=1.4.3" />
+    <link rel="stylesheet" href="/styles.css?v=1.5.0" />
   </head>
   <body>
     <div id="app" class="app hidden">
@@ -224,7 +224,10 @@
                   <th data-i18n="table.slug">Slug</th>
                   <th data-i18n="table.businessName">Nombre negocio</th>
                   <th data-i18n="table.clientEmail">Email cliente</th>
-                  <th data-i18n="table.agent">Agente</th>
+                  <th data-i18n="table.status">Estado</th>
+                  <th data-i18n="admin.whatsapp">WhatsApp</th>
+                  <th data-i18n="admin.createdAt">Alta</th>
+                  <th data-i18n="table.actions">Acciones</th>
                 </tr>
               </thead>
               <tbody id="admin-tbody"></tbody>
@@ -414,6 +417,30 @@
       </form>
     </div>
 
+    <dialog id="admin-tenant-dialog">
+      <form id="admin-tenant-detail-form" method="dialog" class="form">
+        <h3 id="admin-tenant-dialog-title" data-i18n="admin.detailTitle">Detalle del tenant</h3>
+        <input type="hidden" id="admin-tenant-id" />
+        <dl class="admin-detail-list" id="admin-tenant-detail"></dl>
+        <label id="admin-delete-confirm-wrap" class="hidden">
+          <span data-i18n="admin.deleteConfirmLabel">Escribe el slug para confirmar borrado</span>
+          <input type="text" id="admin-delete-confirm-slug" autocomplete="off" />
+        </label>
+        <div class="dialog-actions">
+          <button type="button" class="btn danger hidden" id="admin-delete-tenant" data-i18n="admin.deleteTenant">
+            Borrar tenant
+          </button>
+          <div class="dialog-actions-right">
+            <button type="button" class="btn ghost" id="admin-detail-cancel" data-i18n="btn.cancel">Cancelar</button>
+            <button type="button" class="btn" id="admin-reset-password" data-i18n="admin.resetPassword">
+              Resetear contraseña
+            </button>
+          </div>
+        </div>
+        <p class="form-msg" id="admin-detail-msg"></p>
+      </form>
+    </dialog>
+
     <dialog id="faq-dialog">
       <form id="faq-form" method="dialog" class="form">
         <h3 id="faq-dialog-title" data-i18n="faq.edit">Editar FAQ</h3>
@@ -449,7 +476,7 @@
       </form>
     </dialog>
 
-    <script src="/i18n.js?v=1.4.3"></script>
-    <script src="/app.js?v=1.4.3"></script>
+    <script src="/i18n.js?v=1.5.0"></script>
+    <script src="/app.js?v=1.5.0"></script>
   </body>
 </html>

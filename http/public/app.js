@@ -1,4 +1,4 @@
-const APP_VERSION = '1.4.3';
+const APP_VERSION = '1.5.0';
 const APP_PRODUCT_NAME = 'FAQ Inn';
 const apiBase = window.FAQ_INN_API_URL || window.DFAQ_API_URL || '/api';
 const VIEW_STORAGE_KEY = 'faq-inn-current-view';
@@ -7,6 +7,7 @@ const VALID_VIEWS = ['dashboard', 'unanswered', 'profile', 'admin'];
 const state = {
   user: null,
   account: null,
+  adminTenants: [],
   faqs: [],
   unanswered: [],
   currentView: 'dashboard',
@@ -921,6 +922,208 @@ async function deleteUnanswered(id) {
   }
 }
 
+function adminTenantStatusLabel(status) {
+  const map = {
+    draft: ['admin.statusDraft', 'warn'],
+    qr_pending: ['admin.statusQrPending', 'warn'],
+    connected: ['admin.statusConnected', 'ok'],
+    active: ['admin.statusActive', 'ok'],
+    inactive: ['admin.statusInactive', 'off'],
+    error: ['admin.statusError', 'off'],
+  };
+  const [key, kind] = map[status] || [status, 'off'];
+  const label = typeof key === 'string' && key.startsWith('admin.') ? t(key) : key;
+  return `<span class="pill ${kind}">${escapeHtml(label)}</span>`;
+}
+
+function adminWhatsappLabel(tenant) {
+  const status = tenant.whatsapp_status || 'none';
+  const map = {
+    none: ['admin.whatsappNone', 'off'],
+    draft: ['admin.whatsappPending', 'warn'],
+    qr_pending: ['admin.whatsappPending', 'warn'],
+    connected: ['admin.whatsappConnected', 'ok'],
+    error: ['admin.whatsappError', 'off'],
+  };
+  const [key, kind] = map[status] || [status, 'off'];
+  const label = typeof key === 'string' && key.startsWith('admin.') ? t(key) : key;
+  let html = `<span class="pill ${kind}">${escapeHtml(label)}</span>`;
+  if (tenant.whatsapp_phone) {
+    html += ` <span class="admin-phone">${escapeHtml(`+${String(tenant.whatsapp_phone).replace(/^\+/, '')}`)}</span>`;
+  }
+  return html;
+}
+
+function attachAdminActions(root) {
+  root.querySelectorAll('[data-admin-view]').forEach((btn) => {
+    btn.addEventListener('click', () => openAdminTenantDialog(Number(btn.dataset.adminView)));
+  });
+  root.querySelectorAll('[data-admin-reset]').forEach((btn) => {
+    btn.addEventListener('click', () => resetAdminTenantPassword(Number(btn.dataset.adminReset)));
+  });
+  root.querySelectorAll('[data-admin-delete]').forEach((btn) => {
+    btn.addEventListener('click', () => openAdminDeleteConfirm(Number(btn.dataset.adminDelete)));
+  });
+}
+
+function renderAdminTenantDetail(tenant) {
+  const list = $('#admin-tenant-detail');
+  if (!list || !tenant) {
+    return;
+  }
+
+  const rows = [
+    [t('table.slug'), `<code>${escapeHtml(tenant.slug)}</code>`],
+    [t('table.businessName'), escapeHtml(tenant.name || '—')],
+    [t('table.clientEmail'), escapeHtml(tenant.client_email || '—')],
+    [t('table.status'), adminTenantStatusLabel(tenant.status)],
+    [t('admin.provisioning'), tenant.provisioning_status ? adminTenantStatusLabel(tenant.provisioning_status) : '—'],
+    [t('admin.whatsapp'), adminWhatsappLabel(tenant)],
+    [t('admin.instance'), escapeHtml(tenant.whatsapp_instance || '—')],
+    [t('admin.createdAt'), escapeHtml(formatDate(tenant.created_at))],
+    [t('admin.faqCount'), escapeHtml(String(tenant.faq_count ?? '—'))],
+    [t('admin.unansweredCount'), escapeHtml(String(tenant.unanswered_count ?? '—'))],
+  ];
+
+  list.innerHTML = rows
+    .map(
+      ([label, value]) => `
+        <div class="admin-detail-row">
+          <dt>${escapeHtml(label)}</dt>
+          <dd>${value}</dd>
+        </div>
+      `
+    )
+    .join('');
+}
+
+async function openAdminTenantDialog(id) {
+  const dialog = $('#admin-tenant-dialog');
+  const msg = $('#admin-detail-msg');
+  const deleteWrap = $('#admin-delete-confirm-wrap');
+  const deleteInput = $('#admin-delete-confirm-slug');
+  const deleteBtn = $('#admin-delete-tenant');
+
+  msg.textContent = '';
+  msg.className = 'form-msg';
+  deleteWrap?.classList.add('hidden');
+  deleteBtn?.classList.add('hidden');
+  if (deleteInput) {
+    deleteInput.value = '';
+  }
+
+  try {
+    const data = await api(`/admin/tenants/${id}`);
+    const tenant = data.tenant;
+    state.adminTenants = state.adminTenants.map((row) =>
+      row.id === tenant.id ? { ...row, ...tenant } : row
+    );
+    $('#admin-tenant-id').value = String(tenant.id);
+    $('#admin-tenant-dialog-title').textContent = `${t('admin.detailTitle')}: ${tenant.slug}`;
+    renderAdminTenantDetail(tenant);
+    dialog.showModal();
+  } catch (error) {
+    const listMsg = $('#admin-msg');
+    if (listMsg) {
+      listMsg.textContent = error.message;
+      listMsg.className = 'form-msg error';
+    }
+  }
+}
+
+function openAdminDeleteConfirm(id) {
+  const tenant = state.adminTenants.find((row) => Number(row.id) === Number(id));
+  if (!tenant) {
+    return;
+  }
+  renderAdminTenantDetail(tenant);
+  $('#admin-tenant-id').value = String(tenant.id);
+  $('#admin-tenant-dialog-title').textContent = `${t('admin.deleteTitle')}: ${tenant.slug}`;
+  $('#admin-delete-confirm-wrap')?.classList.remove('hidden');
+  $('#admin-delete-tenant')?.classList.remove('hidden');
+  $('#admin-delete-confirm-slug').value = '';
+  $('#admin-detail-msg').textContent = t('admin.deleteWarning', { slug: tenant.slug });
+  $('#admin-detail-msg').className = 'form-msg warn';
+  $('#admin-tenant-dialog')?.showModal();
+  $('#admin-delete-confirm-slug')?.focus();
+}
+
+async function resetAdminTenantPassword(id) {
+  const tenantId = Number(id || $('#admin-tenant-id')?.value);
+  const tenant = state.adminTenants.find((row) => Number(row.id) === tenantId);
+  if (!tenant) {
+    return;
+  }
+
+  const ok = window.confirm(t('admin.resetPasswordConfirm', { email: tenant.client_email || tenant.slug }));
+  if (!ok) {
+    return;
+  }
+
+  const msg = $('#admin-detail-msg') || $('#admin-msg');
+  msg.textContent = t('admin.resettingPassword');
+  msg.className = 'form-msg';
+
+  try {
+    const data = await api(`/admin/tenants/${tenantId}/reset-password`, {
+      method: 'POST',
+      body: JSON.stringify({}),
+    });
+    msg.textContent = t('admin.resetPasswordDone', {
+      email: data.email,
+      password: data.temporary_password,
+    });
+    msg.className = 'form-msg ok';
+  } catch (error) {
+    msg.textContent = error.message;
+    msg.className = 'form-msg error';
+  }
+}
+
+async function deleteAdminTenant(id) {
+  const tenantId = Number(id || $('#admin-tenant-id')?.value);
+  const tenant = state.adminTenants.find((row) => Number(row.id) === tenantId);
+  const confirmSlug = $('#admin-delete-confirm-slug')?.value.trim() || '';
+  const msg = $('#admin-detail-msg') || $('#admin-msg');
+
+  if (!tenant) {
+    return;
+  }
+
+  if (confirmSlug !== tenant.slug) {
+    msg.textContent = t('admin.deleteSlugMismatch');
+    msg.className = 'form-msg error';
+    $('#admin-delete-confirm-slug')?.focus();
+    return;
+  }
+
+  const ok = window.confirm(t('admin.deleteFinalConfirm', { slug: tenant.slug }));
+  if (!ok) {
+    return;
+  }
+
+  msg.textContent = t('admin.deletingTenant');
+  msg.className = 'form-msg';
+
+  try {
+    await api(`/admin/tenants/${tenantId}`, {
+      method: 'DELETE',
+      body: JSON.stringify({ confirm_slug: confirmSlug }),
+    });
+    $('#admin-tenant-dialog')?.close();
+    msg.textContent = '';
+    const listMsg = $('#admin-msg');
+    if (listMsg) {
+      listMsg.textContent = t('admin.deleteDone', { slug: tenant.slug });
+      listMsg.className = 'form-msg ok';
+    }
+    await refreshAdmin();
+  } catch (error) {
+    msg.textContent = error.message;
+    msg.className = 'form-msg error';
+  }
+}
+
 function renderAdminTenants(tenants) {
   const tbody = $('#admin-tbody');
   const cards = $('#admin-cards');
@@ -930,7 +1133,7 @@ function renderAdminTenants(tenants) {
   }
 
   if (!tenants.length) {
-    tbody.innerHTML = `<tr><td colspan="4" class="empty">${escapeHtml(t('admin.empty'))}</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="7" class="empty">${escapeHtml(t('admin.empty'))}</td></tr>`;
     if (cards) {
       cards.innerHTML = `<p class="empty-block">${escapeHtml(t('admin.empty'))}</p>`;
     }
@@ -943,7 +1146,14 @@ function renderAdminTenants(tenants) {
       <td><code>${escapeHtml(tenant.slug)}</code></td>
       <td>${escapeHtml(tenant.name || '—')}</td>
       <td>${escapeHtml(tenant.client_email || '—')}</td>
-      <td>${escapeHtml(tenant.agent_slug || '—')}</td>
+      <td>${adminTenantStatusLabel(tenant.status)}</td>
+      <td>${adminWhatsappLabel(tenant)}</td>
+      <td>${escapeHtml(formatDate(tenant.created_at))}</td>
+      <td class="row-actions">
+        <button type="button" class="btn small" data-admin-view="${tenant.id}">${escapeHtml(t('admin.viewDetail'))}</button>
+        <button type="button" class="btn small" data-admin-reset="${tenant.id}">${escapeHtml(t('admin.resetPasswordShort'))}</button>
+        <button type="button" class="btn small danger" data-admin-delete="${tenant.id}">${escapeHtml(t('btn.delete'))}</button>
+      </td>
     `;
     tbody.appendChild(tr);
 
@@ -953,6 +1163,7 @@ function renderAdminTenants(tenants) {
       card.innerHTML = `
         <div class="admin-card-head">
           <p class="admin-card-slug"><code>${escapeHtml(tenant.slug)}</code></p>
+          ${adminTenantStatusLabel(tenant.status)}
         </div>
         <dl class="admin-card-body">
           <div class="admin-card-row">
@@ -964,13 +1175,27 @@ function renderAdminTenants(tenants) {
             <dd>${escapeHtml(tenant.client_email || '—')}</dd>
           </div>
           <div class="admin-card-row">
-            <dt>${escapeHtml(t('admin.cardAgent'))}</dt>
-            <dd>${escapeHtml(tenant.agent_slug || '—')}</dd>
+            <dt>${escapeHtml(t('admin.whatsapp'))}</dt>
+            <dd>${adminWhatsappLabel(tenant)}</dd>
+          </div>
+          <div class="admin-card-row">
+            <dt>${escapeHtml(t('admin.createdAt'))}</dt>
+            <dd>${escapeHtml(formatDate(tenant.created_at))}</dd>
           </div>
         </dl>
+        <div class="admin-card-actions row-actions">
+          <button type="button" class="btn small" data-admin-view="${tenant.id}">${escapeHtml(t('admin.viewDetail'))}</button>
+          <button type="button" class="btn small" data-admin-reset="${tenant.id}">${escapeHtml(t('admin.resetPasswordShort'))}</button>
+          <button type="button" class="btn small danger" data-admin-delete="${tenant.id}">${escapeHtml(t('btn.delete'))}</button>
+        </div>
       `;
       cards.appendChild(card);
     }
+  }
+
+  attachAdminActions(tbody);
+  if (cards) {
+    attachAdminActions(cards);
   }
 }
 
@@ -1055,7 +1280,8 @@ async function importFaqsFromFile(file) {
 
 async function refreshAdmin() {
   const data = await api('/admin/tenants');
-  renderAdminTenants(data.tenants);
+  state.adminTenants = data.tenants || [];
+  renderAdminTenants(state.adminTenants);
 }
 
 function openFaqDialog(id) {
@@ -1434,6 +1660,18 @@ $('#admin-tenant-form').addEventListener('submit', async (event) => {
     msg.textContent = error.message;
     msg.classList.add('error');
   }
+});
+
+$('#admin-detail-cancel')?.addEventListener('click', () => {
+  $('#admin-tenant-dialog')?.close();
+});
+
+$('#admin-reset-password')?.addEventListener('click', () => {
+  resetAdminTenantPassword(Number($('#admin-tenant-id')?.value));
+});
+
+$('#admin-delete-tenant')?.addEventListener('click', () => {
+  deleteAdminTenant(Number($('#admin-tenant-id')?.value));
 });
 
 loadDeployVersion();
