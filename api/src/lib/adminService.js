@@ -1,0 +1,175 @@
+import { randomBytes } from 'node:crypto';
+import { createEvolutionClient } from './evolutionClient.js';
+import { isFaqInnInstance } from './evolutionCleanup.js';
+import { deleteAllTenantPoints } from './indexer.js';
+import { hashPassword } from './password.js';
+
+function validationError(message, statusCode = 400) {
+  const error = new Error(message);
+  error.statusCode = statusCode;
+  return error;
+}
+
+function generateTempPassword() {
+  return randomBytes(9).toString('base64url');
+}
+
+const TENANT_BASE_SQL = `
+  SELECT t.id, t.slug, t.name, t.status, t.created_at, t.updated_at,
+         u.email AS client_email,
+         a.slug AS agent_slug,
+         tp.status AS provisioning_status,
+         ev.instance_name AS whatsapp_instance,
+         ev.status AS whatsapp_status,
+         ev.phone_number AS whatsapp_phone,
+         ev.connected_at AS whatsapp_connected_at
+  FROM tenants t
+  LEFT JOIN users u ON u.tenant_id = t.id AND u.role = 'client'
+  LEFT JOIN agents a ON a.tenant_id = t.id
+  LEFT JOIN tenant_provisioning tp ON tp.tenant_id = t.id
+  LEFT JOIN LATERAL (
+    SELECT instance_name, status, phone_number, connected_at
+    FROM evolution_instances
+    WHERE tenant_id = t.id
+    ORDER BY id DESC
+    LIMIT 1
+  ) ev ON true
+`;
+
+export async function listAdminTenants(pool) {
+  const [rows] = await pool.query(`${TENANT_BASE_SQL} ORDER BY t.created_at DESC`);
+  return rows;
+}
+
+export async function getAdminTenantDetail(pool, tenantId) {
+  const [rows] = await pool.query(`${TENANT_BASE_SQL} WHERE t.id = ?`, [tenantId]);
+  const tenant = rows[0];
+  if (!tenant) {
+    throw validationError('Tenant no encontrado', 404);
+  }
+
+  const [faqCount] = await pool.query(
+    `SELECT COUNT(*) AS total FROM faq_items WHERE tenant_id = ?`,
+    [tenantId]
+  );
+
+  const [unansweredCount] = await pool.query(
+    `SELECT COUNT(*) AS total FROM unanswered_questions WHERE tenant_id = ?`,
+    [tenantId]
+  );
+
+  return {
+    ...tenant,
+    faq_count: Number(faqCount[0]?.total || 0),
+    unanswered_count: Number(unansweredCount[0]?.total || 0),
+  };
+}
+
+async function teardownEvolutionInstances(config, instanceNames, logger) {
+  if (!config.evolutionApiBaseUrl || !config.evolutionApiKey) {
+    return { skipped: true, deleted: [] };
+  }
+
+  const evolution = createEvolutionClient(config);
+  const prefix = config.evolutionInstancePrefix || 'faqinn_';
+  const deleted = [];
+
+  for (const instanceName of instanceNames) {
+    if (!instanceName || !isFaqInnInstance(instanceName, prefix)) {
+      continue;
+    }
+    try {
+      await evolution.logoutInstance(instanceName);
+      await evolution.deleteInstance(instanceName);
+      deleted.push(instanceName);
+    } catch (error) {
+      logger?.warn?.({ err: error, instanceName }, 'admin: evolution delete failed');
+    }
+  }
+
+  return { skipped: false, deleted };
+}
+
+export async function deleteAdminTenant(pool, config, tenantId, confirmSlug, logger) {
+  const slug = String(confirmSlug || '').trim();
+  if (!slug) {
+    throw validationError('confirm_slug es obligatorio');
+  }
+
+  const tenant = await getAdminTenantDetail(pool, tenantId);
+  if (tenant.slug !== slug) {
+    throw validationError('El slug de confirmación no coincide');
+  }
+
+  const [evoRows] = await pool.query(
+    `SELECT instance_name FROM evolution_instances WHERE tenant_id = ?`,
+    [tenantId]
+  );
+  const instanceNames = evoRows.map((row) => row.instance_name).filter(Boolean);
+
+  const evolutionResult = await teardownEvolutionInstances(
+    config,
+    instanceNames,
+    logger
+  );
+
+  let qdrantResult = { deleted: false };
+  try {
+    qdrantResult = await deleteAllTenantPoints(config, tenant.slug);
+  } catch (error) {
+    logger?.warn?.({ err: error, slug: tenant.slug }, 'admin: qdrant cleanup failed');
+    qdrantResult = { deleted: false, error: error.message };
+  }
+
+  const conn = await pool.getConnection();
+  try {
+    await conn.beginTransaction();
+    await conn.query(`DELETE FROM users WHERE tenant_id = ?`, [tenantId]);
+    await conn.query(`DELETE FROM tenants WHERE id = ?`, [tenantId]);
+    await conn.commit();
+  } catch (error) {
+    await conn.rollback();
+    throw error;
+  } finally {
+    conn.release();
+  }
+
+  return {
+    tenant_id: tenantId,
+    slug: tenant.slug,
+    evolution: evolutionResult,
+    qdrant: qdrantResult,
+  };
+}
+
+export async function resetAdminTenantPassword(pool, tenantId, passwordInput) {
+  const tenant = await getAdminTenantDetail(pool, tenantId);
+  const tempPassword =
+    String(passwordInput || '').trim() || generateTempPassword();
+
+  if (tempPassword.length < 8) {
+    throw validationError('La contraseña debe tener al menos 8 caracteres');
+  }
+
+  const [userRows] = await pool.query(
+    `SELECT id, email FROM users WHERE tenant_id = ? AND role = 'client' LIMIT 1`,
+    [tenantId]
+  );
+  const user = userRows[0];
+  if (!user) {
+    throw validationError('No hay usuario cliente para este tenant', 404);
+  }
+
+  const passwordHash = await hashPassword(tempPassword);
+  await pool.query(`UPDATE users SET password_hash = ? WHERE id = ?`, [
+    passwordHash,
+    user.id,
+  ]);
+
+  return {
+    tenant_id: tenantId,
+    slug: tenant.slug,
+    email: user.email,
+    temporary_password: tempPassword,
+  };
+}
