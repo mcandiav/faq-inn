@@ -1,10 +1,24 @@
+import { syncWhatsappConnectionStatus } from './provisionService.js';
+
 function validationError(message, statusCode = 400) {
   const error = new Error(message);
   error.statusCode = statusCode;
   return error;
 }
 
-export async function getAccountSettings(pool, userId, tenantId) {
+async function loadEvolutionRow(pool, tenantId) {
+  const [evoRows] = await pool.query(
+    `SELECT instance_name, status, phone_number, last_qr_base64, last_qr_at, connected_at
+     FROM evolution_instances
+     WHERE tenant_id = ?
+     ORDER BY id DESC
+     LIMIT 1`,
+    [tenantId]
+  );
+  return evoRows[0] || null;
+}
+
+export async function getAccountSettings(pool, config, userId, tenantId) {
   const [userRows] = await pool.query(
     `SELECT u.id, u.email, u.role, u.tenant_id,
             t.slug, t.name, t.email AS tenant_email, t.status AS tenant_status
@@ -36,16 +50,16 @@ export async function getAccountSettings(pool, userId, tenantId) {
     [tenantId]
   );
 
-  const [evoRows] = await pool.query(
-    `SELECT instance_name, status, phone_number, last_qr_base64, last_qr_at, connected_at
-     FROM evolution_instances
-     WHERE tenant_id = ?
-     ORDER BY id DESC
-     LIMIT 1`,
-    [tenantId]
-  );
-
-  const evo = evoRows[0];
+  let evo = await loadEvolutionRow(pool, tenantId);
+  if (evo?.instance_name && evo.status === 'connected' && config) {
+    await syncWhatsappConnectionStatus(
+      pool,
+      config,
+      tenantId,
+      evo.instance_name
+    );
+    evo = await loadEvolutionRow(pool, tenantId);
+  }
   const settings = settingsRows[0] || {};
 
   return {
@@ -87,8 +101,8 @@ export async function getAccountSettings(pool, userId, tenantId) {
   };
 }
 
-export async function updateAccountSettings(pool, userId, tenantId, input) {
-  const account = await getAccountSettings(pool, userId, tenantId);
+export async function updateAccountSettings(pool, config, userId, tenantId, input) {
+  const account = await getAccountSettings(pool, config, userId, tenantId);
 
   const businessName = input.business_name?.trim();
   const address = input.address?.trim();
@@ -160,5 +174,5 @@ export async function updateAccountSettings(pool, userId, tenantId, input) {
     );
   }
 
-  return getAccountSettings(pool, userId, tenantId);
+  return getAccountSettings(pool, config, userId, tenantId);
 }

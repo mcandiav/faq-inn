@@ -11,7 +11,7 @@ function requireClient(request, reply) {
   return true;
 }
 
-export async function accountRoutes(app) {
+export async function accountRoutes(app, config) {
   const pool = app.db.pool;
 
   app.get(
@@ -25,6 +25,7 @@ export async function accountRoutes(app) {
       try {
         const account = await getAccountSettings(
           pool,
+          config,
           request.user.id,
           request.user.tenant_id
         );
@@ -50,6 +51,7 @@ export async function accountRoutes(app) {
       try {
         const account = await updateAccountSettings(
           pool,
+          config,
           request.user.id,
           request.user.tenant_id,
           request.body || {}

@@ -86,6 +86,84 @@ export async function registerProvisionTenant(pool, input) {
   }
 }
 
+async function markInstanceDisconnected(pool, tenantId, instanceRow, evolutionState) {
+  const reason = `evolution:${String(evolutionState || 'disconnected')}`.slice(0, 500);
+  if (instanceRow?.id) {
+    await pool.query(
+      `UPDATE evolution_instances
+       SET status = 'disconnected',
+           last_error = ?,
+           updated_at = NOW()
+       WHERE id = ?`,
+      [reason, instanceRow.id]
+    );
+  }
+  await pool.query(
+    `UPDATE tenants
+     SET status = CASE WHEN status = 'connected' THEN 'disconnected' ELSE status END,
+         updated_at = NOW()
+     WHERE id = ?`,
+    [tenantId]
+  );
+  await pool.query(
+    `UPDATE tenant_provisioning
+     SET last_error = 'whatsapp_disconnected',
+         updated_at = NOW()
+     WHERE tenant_id = ?`,
+    [tenantId]
+  );
+}
+
+/**
+ * Provisioner: si PostgreSQL dice connected pero Evolution no, actualiza a disconnected.
+ * No usar en runtime n8n (path conversacional).
+ */
+export async function syncWhatsappConnectionStatus(pool, config, tenantId, instanceName) {
+  const name = String(instanceName || '').trim();
+  if (!name) {
+    return { status: 'none', changed: false };
+  }
+
+  const [rows] = await pool.query(
+    `SELECT id, instance_name, status, phone_number
+     FROM evolution_instances
+     WHERE tenant_id = ? AND instance_name = ?
+     LIMIT 1`,
+    [tenantId, name]
+  );
+  const row = rows[0];
+  if (!row || row.status !== 'connected') {
+    return { status: row?.status || 'none', changed: false };
+  }
+
+  if (!config.evolutionApiBaseUrl || !config.evolutionApiKey) {
+    return { status: 'connected', changed: false };
+  }
+
+  const evolution = createEvolutionClient(config);
+  let connection;
+  try {
+    connection = await evolution.getConnectionState(name);
+  } catch {
+    return { status: 'connected', changed: false, evolutionUnreachable: true };
+  }
+
+  if (connection.connected) {
+    return {
+      status: 'connected',
+      changed: false,
+      evolutionState: connection.state,
+    };
+  }
+
+  await markInstanceDisconnected(pool, tenantId, row, connection.state);
+  return {
+    status: 'disconnected',
+    changed: true,
+    evolutionState: connection.state,
+  };
+}
+
 async function markTenantConnected(pool, tenant, instanceRow, instanceName, phoneNumber) {
   if (instanceRow?.id) {
     await pool.query(
@@ -134,13 +212,21 @@ export async function startWhatsappProvision(pool, config, tenant) {
   );
 
   if (existing[0]?.status === 'connected' && existing[0].phone_number) {
-    return {
-      instanceName: existing[0].instance_name,
-      status: 'connected',
-      phoneNumber: existing[0].phone_number,
-      qrBase64: null,
-      message: 'WhatsApp ya está vinculado.',
-    };
+    const synced = await syncWhatsappConnectionStatus(
+      pool,
+      config,
+      tenant.id,
+      existing[0].instance_name
+    );
+    if (synced.status === 'connected') {
+      return {
+        instanceName: existing[0].instance_name,
+        status: 'connected',
+        phoneNumber: existing[0].phone_number,
+        qrBase64: null,
+        message: 'WhatsApp ya está vinculado.',
+      };
+    }
   }
 
   // Si Evolution ya está open (p. ej. se vinculó y se cerró la pestaña),
@@ -264,12 +350,43 @@ export async function getProvisionStatus(pool, config, tenant, instanceName) {
   }
 
   if (row.status === 'connected' && row.phone_number) {
+    const synced = await syncWhatsappConnectionStatus(
+      pool,
+      config,
+      tenant.id,
+      instanceName
+    );
+    if (synced.status === 'connected') {
+      return {
+        instanceName: row.instance_name,
+        status: 'connected',
+        phoneNumber: row.phone_number,
+        qrBase64: null,
+        tenantStatus: 'connected',
+        evolutionState: synced.evolutionState || null,
+      };
+    }
     return {
       instanceName: row.instance_name,
-      status: 'connected',
+      status: 'disconnected',
       phoneNumber: row.phone_number,
       qrBase64: null,
-      tenantStatus: 'connected',
+      tenantStatus: 'disconnected',
+      evolutionState: synced.evolutionState || null,
+      message:
+        'WhatsApp fue desvinculado desde el teléfono. Pulsa Reconectar para escanear un nuevo QR.',
+    };
+  }
+
+  if (row.status === 'disconnected') {
+    return {
+      instanceName: row.instance_name,
+      status: 'disconnected',
+      phoneNumber: row.phone_number || null,
+      qrBase64: null,
+      tenantStatus: 'disconnected',
+      message:
+        'WhatsApp fue desvinculado desde el teléfono. Pulsa Reconectar para escanear un nuevo QR.',
     };
   }
 

@@ -154,6 +154,7 @@ function formatWhatsappPhone(phone) {
 function whatsappStatusLabel(status) {
   const key = {
     connected: 'profile.whatsappStatusConnected',
+    disconnected: 'profile.whatsappStatusDisconnected',
     qr_pending: 'profile.whatsappStatusQrPending',
     error: 'profile.whatsappStatusError',
     draft: 'profile.whatsappStatusPending',
