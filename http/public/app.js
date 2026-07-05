@@ -1,4 +1,4 @@
-const APP_VERSION = '1.4.0';
+const APP_VERSION = '1.4.3';
 const APP_PRODUCT_NAME = 'FAQ Inn';
 const apiBase = window.FAQ_INN_API_URL || window.DFAQ_API_URL || '/api';
 const VIEW_STORAGE_KEY = 'faq-inn-current-view';
@@ -165,7 +165,8 @@ function showWhatsappQr(qrBase64, instanceName) {
   const waiting = $('#provision-qr-waiting');
   const label = $('#provision-instance-label');
   if (label) {
-    label.textContent = instanceName ? `Instancia: ${instanceName}` : '';
+    label.textContent = '';
+    label.classList.add('hidden');
   }
   if (qrBase64 && img) {
     img.src = qrBase64;
@@ -451,7 +452,6 @@ function renderProfile() {
   const user = state.user;
   const emailEl = $('#profile-email');
   const businessInput = $('#profile-business');
-  const slugWrap = $('#profile-slug-wrap');
   const onboardHint = $('#profile-onboard-hint');
 
   if (!user || !emailEl || !businessInput) {
@@ -466,26 +466,15 @@ function renderProfile() {
     businessInput.disabled = false;
     businessInput.value =
       account?.tenant?.name || user.tenant?.name || '';
-    businessInput.placeholder = user.tenant?.slug
-      ? t('profile.businessExample', { name: user.tenant.slug })
-      : t('profile.businessPlaceholder');
-    slugWrap?.classList.remove('hidden');
-    const slugInput = $('#profile-slug');
-    if (slugInput) {
-      slugInput.value = account?.tenant?.slug || user.tenant?.slug || '—';
-    }
+    businessInput.placeholder = t('profile.businessPlaceholder');
 
     const addressEl = $('#profile-address');
-    const agentNameEl = $('#profile-agent-name');
     const welcomeEl = $('#profile-welcome-message');
     const bookingEl = $('#profile-booking-url');
     const langEl = $('#profile-primary-language');
 
     if (addressEl) {
       addressEl.value = account?.settings?.address || '';
-    }
-    if (agentNameEl) {
-      agentNameEl.value = account?.agent?.name || '';
     }
     if (welcomeEl) {
       welcomeEl.value = account?.settings?.welcome_message || '';
@@ -501,15 +490,16 @@ function renderProfile() {
   } else {
     businessInput.disabled = true;
     businessInput.value = t('profile.globalAdmin');
-    slugWrap?.classList.add('hidden');
     onboardHint?.classList.add('hidden');
   }
 
   const currentPassword = $('#profile-current-password');
   const newPassword = $('#profile-new-password');
+  const confirmPassword = $('#profile-confirm-password');
   const profileMsg = $('#profile-msg');
   if (currentPassword) currentPassword.value = '';
   if (newPassword) newPassword.value = '';
+  if (confirmPassword) confirmPassword.value = '';
   if (profileMsg && !profileMsg.classList.contains('ok')) {
     profileMsg.textContent = '';
     profileMsg.className = 'form-msg';
@@ -1342,6 +1332,7 @@ $('#profile-form').addEventListener('submit', async (event) => {
   const emailChanged = Boolean(email && email !== currentEmail);
   const current = $('#profile-current-password').value;
   const next = $('#profile-new-password').value;
+  const confirm = $('#profile-confirm-password')?.value || '';
 
   if (emailChanged && !current) {
     msg.textContent = t('msg.passwordRequiredForEmail');
@@ -1350,12 +1341,31 @@ $('#profile-form').addEventListener('submit', async (event) => {
     return;
   }
 
+  if (next && next.length < 8) {
+    msg.textContent = t('msg.passwordTooShort');
+    msg.classList.add('error');
+    $('#profile-new-password').focus();
+    return;
+  }
+
+  if (next && next !== confirm) {
+    msg.textContent = t('msg.passwordMismatch');
+    msg.classList.add('error');
+    $('#profile-confirm-password')?.focus();
+    return;
+  }
+
+  if (next && !current) {
+    msg.textContent = t('msg.passwordRequiredForChange');
+    msg.classList.add('error');
+    $('#profile-current-password').focus();
+    return;
+  }
+
   try {
     if (emailChanged || next) {
       const authBody = { email };
-      if (emailChanged || next) {
-        authBody.current_password = current;
-      }
+      authBody.current_password = current;
       if (next) {
         authBody.new_password = next;
       }
@@ -1374,12 +1384,8 @@ $('#profile-form').addEventListener('submit', async (event) => {
         primary_language: $('#profile-primary-language')?.value || 'es',
       };
       const businessName = $('#profile-business').value.trim();
-      const agentName = $('#profile-agent-name')?.value.trim() || '';
       if (businessName.length >= 2) {
         accountBody.business_name = businessName;
-      }
-      if (agentName.length >= 2) {
-        accountBody.agent_name = agentName;
       }
 
       const accountData = await api('/account/settings', {
@@ -1397,6 +1403,7 @@ $('#profile-form').addEventListener('submit', async (event) => {
     msg.classList.add('ok');
     $('#profile-current-password').value = '';
     $('#profile-new-password').value = '';
+    $('#profile-confirm-password').value = '';
   } catch (error) {
     msg.textContent = error.message;
     msg.classList.add('error');
