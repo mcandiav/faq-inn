@@ -17,6 +17,8 @@ function slugFromInstanceName(instanceName, prefix) {
   return name.slice(p.length);
 }
 
+import { buildPlaceholderMap, buildRequiredFields } from './bookingApprovedFormat.js';
+
 function parseBookingConfig(raw) {
   if (!raw) return {};
   if (typeof raw === 'object') return raw;
@@ -27,18 +29,31 @@ function parseBookingConfig(raw) {
   }
 }
 
+export function enrichBookingConfig(rawConfig = {}) {
+  const config = { ...parseBookingConfig(rawConfig) };
+  if (!config.placeholder_map || Object.keys(config.placeholder_map).length === 0) {
+    config.placeholder_map = buildPlaceholderMap(config.variable_params || {});
+  }
+  if (!Array.isArray(config.required_fields) || config.required_fields.length === 0) {
+    config.required_fields = buildRequiredFields(config);
+  }
+  return config;
+}
+
 function mapRuntimeRow(row, config) {
   const agentSlug = row.agent_slug || 'principal';
   const evolutionApiKey = config.evolutionApiKey || '';
   const tenantSlug = row.tenant_slug || '';
   const bookingApproved = row.validation_status === 'approved';
-  const bookingConfig = parseBookingConfig(row.booking_config);
+  const bookingConfig = bookingApproved ? enrichBookingConfig(row.booking_config) : {};
   return {
     // Slug técnico (filtro Qdrant, SemResposta, clave Redis). No es el id numérico de PostgreSQL.
     tenant_id: tenantSlug,
     tenant_slug: tenantSlug,
     tenant_db_id: String(row.tenant_id),
     tenant_name: row.tenant_name || '',
+    tenant_display_name: row.tenant_name || '',
+    business_type: row.vertical_slug || 'hotel',
     agent_id: agentSlug,
     agent_slug: agentSlug,
     agent_name: row.agent_name || 'Agente',
@@ -51,6 +66,13 @@ function mapRuntimeRow(row, config) {
     validation_status: row.validation_status || 'pending',
     confidence_score: bookingApproved ? Number(row.confidence_score || 0) : 0,
     booking_config: bookingApproved ? bookingConfig : {},
+    booking_config_json: bookingApproved ? JSON.stringify(bookingConfig) : '{}',
+    placeholder_map: bookingApproved ? bookingConfig.placeholder_map || {} : {},
+    required_fields: bookingApproved ? bookingConfig.required_fields || [] : [],
+    date_format: bookingApproved ? bookingConfig.date_format || '' : '',
+    supports_rooms: bookingApproved ? Boolean(bookingConfig.supports_rooms) : false,
+    supports_children: bookingApproved ? Boolean(bookingConfig.supports_children) : false,
+    supports_child_ages: bookingApproved ? Boolean(bookingConfig.supports_child_ages) : false,
     business_hours: row.business_hours || '',
     policies: row.policies || '',
     evolution_instance_name: row.evolution_instance_name || '',
