@@ -11,6 +11,7 @@ Esta carpeta concentra documentos complementarios del proyecto FAQ Inn.
 | `prompts/` | Plantillas de prompts por vertical. |
 | `n8n/` | Plantillas y contratos de workflows n8n. |
 | `evolution-api/` | Contratos, cierre del módulo onboarding y decisiones de integración con Evolution API. |
+| `motor-reservas/` | Módulo para descubrir, validar y guardar la plantilla de URL de reservas por tenant. |
 | `pruebas/` | Subproyectos de prueba controlados, criterios de éxito, descarte y decisión final. |
 
 El README principal del proyecto sigue siendo `FAQ Inn/README.md`.

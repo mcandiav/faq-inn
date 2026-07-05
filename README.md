@@ -4,6 +4,7 @@
 
 | Fecha | Versión | Cambio realizado | Motivo | Impacto | Sección afectada |
 |---|---|---|---|---|---|
+| 2026-07-05 | V1.11 | Se crea módulo documental `motor-reservas`. | Separar la lógica de descubrimiento y validación de URLs de reserva del prompt y del runtime conversacional n8n. | FAQ Inn tendrá una página/servicio para construir `booking_url_template` por tenant usando links de prueba; n8n consumirá solo plantillas aprobadas. | docs/motor-reservas, n8n como motor de conversaciones, Estado actual |
 | 2026-07-04 | V1.10 | Cierre documental del módulo Evolution API (onboarding MVP). | Validación operativa en inn.at-once.cl y alineación con arquitectura V1.9. | Subproyecto `01-evolution-onboarding-mvp` aprobado; pendientes explícitos (token instancia, desconexión teléfono, payload n8n) fuera de alcance. | docs/evolution-api, docs/pruebas, Estado actual |
 | 2026-07-04 | V1.9 | Se define la resolución runtime del tenant desde webhook Evolution API. | El onboarding debe guardar todos los datos del cliente y n8n debe operar sin datos hardcodeados. | El runtime n8n identificará la instancia Evolution recibida en el webhook, consultará PostgreSQL/API y cargará configuración completa del tenant/agente antes de conversar. | Arquitectura objetivo, Evolution API, n8n, Datos por tenant, Estado actual |
 | 2026-07-04 | V1.8 | Se acota el MVP inmediato a onboarding automático de WhatsApp con Evolution API. | El auditor recomienda validar primero la creación de tenant, instancia Evolution, QR y conexión antes de invertir en n8n conversacional o FAQs. | El primer MVP queda limitado a registro mínimo, creación de instancia `faqinn_<tenant_slug>`, QR, polling de estado y marcado `connected`; n8n, FAQs, prompts y conversación quedan fuera de alcance de este MVP. | Alcance inicial, Arquitectura objetivo, Onboarding, Evolution API, Estado actual |
@@ -367,7 +368,38 @@ Mientras exista la clave Redis de pausa, n8n no debe responder al cliente, para 
 
 ---
 
-## 9. Modelo multivertical
+## 9. Motor de reservas por tenant
+
+FAQ Inn tendrá un módulo separado para descubrir, validar y guardar la lógica de URL de reservas de cada tenant.
+
+Documento oficial del módulo:
+
+```text
+docs/motor-reservas/README.md
+```
+
+Decisión arquitectónica:
+
+```text
+La URL de reserva no se define en el prompt del agente ni queda hardcodeada en n8n.
+La configuración se realiza en una página especial del perfil del tenant.
+FAQ Inn solicita escenarios controlados, recibe links de prueba, detecta una plantilla, la valida y la guarda como booking_url_template aprobada.
+El runtime conversacional solo consume plantillas aprobadas.
+```
+
+La página de configuración debe permitir al tenant pegar links de prueba generados desde escenarios controlados, por ejemplo:
+
+```text
+1 habitación, hoy por 3 noches, 2 adultos y 1 menor de 10 años.
+1 habitación, hoy por 7 noches, 3 adultos y 2 menores de 10 y 11 años.
+2 habitaciones, hoy por 3 noches, 2 adultos y sin menores.
+```
+
+El backend de FAQ Inn será responsable de extraer y validar la plantilla. Un helper n8n o agente auxiliar puede apoyar casos ambiguos, pero no será fuente final de verdad.
+
+---
+
+## 10. Modelo multivertical
 
 FAQ Inn debe evitar hardcodear reglas de hotel dentro del motor.
 
@@ -415,7 +447,7 @@ tenants.vertical_slug = hotel
 
 ---
 
-## 10. Datos mínimos por tenant hotelero
+## 11. Datos mínimos por tenant hotelero
 
 ```text
 id
@@ -485,7 +517,7 @@ cancelled
 
 ---
 
-## 11. Relación con dominios
+## 12. Relación con dominios
 
 | Dominio | Uso |
 |---|---|
@@ -500,7 +532,7 @@ No usar dfaq.at-once.cl como laboratorio de FAQ Inn.
 
 ---
 
-## 12. Repositorio GitHub oficial
+## 13. Repositorio GitHub oficial
 
 El repositorio GitHub oficial del proyecto FAQ Inn es:
 
@@ -520,13 +552,13 @@ El Programador debe trabajar sobre `faq-inn` como repositorio oficial del produc
 
 ---
 
-## 13. Variables obligatorias por tenant
+## 14. Variables obligatorias por tenant
 
 FAQ Inn debe reconstruirse como aplicación parametrizada por tenant desde el inicio del desarrollo.
 
 El primer cambio que debe realizar el Programador es iniciar una nueva versión de código **1.0** para FAQ Inn, reemplazando valores heredados o fijos de DFAQ/MorroReservas por variables de tenant.
 
-### 13.1 Tenant de desarrollo
+### 14.1 Tenant de desarrollo
 
 Para desarrollo, pruebas iniciales y validación local, el tenant oficial será:
 
@@ -536,7 +568,7 @@ FAQ-INN
 
 Este valor debe tratarse como variable, no como texto fijo definitivo del producto.
 
-### 13.2 Variables base
+### 14.2 Variables base
 
 | Variable | Valor en desarrollo | Uso obligatorio |
 |---|---|---|
@@ -553,7 +585,7 @@ Ningún valor heredado de DFAQ/MorroReservas debe quedar hardcodeado como identi
 FAQ Inn debe tomar nombre visible, título HTTP, base MariaDB, workflows, endpoints y configuración desde variables de tenant.
 ```
 
-### 13.3 Título HTTP/frontend
+### 14.3 Título HTTP/frontend
 
 El título visible de la aplicación debe construirse con esta plantilla:
 
@@ -569,7 +601,7 @@ FAQ Inn FAQ-INN
 
 Este título debe aplicarse al HTML/HTTP servido por la app, especialmente en el frontend o página principal que entrega `http/`.
 
-### 13.4 Base de datos PostgreSQL
+### 14.4 Base de datos PostgreSQL
 
 FAQ Inn usará una instancia PostgreSQL propia, independiente de bases compartidas existentes.
 
@@ -606,7 +638,7 @@ FAQ-INN
 
 Si PostgreSQL, Docker, scripts o librerías no aceptan directamente el carácter `-` sin escape o normalización, el Programador debe implementar una derivación técnica segura desde `$tenant_slug`, pero manteniendo documentado que la fuente funcional es `$tenant`.
 
-### 13.5 Alcance de reconstrucción inicial
+### 14.5 Alcance de reconstrucción inicial
 
 El Programador debe revisar y reconstruir con variables de tenant, como mínimo:
 
@@ -621,7 +653,7 @@ El Programador debe revisar y reconstruir con variables de tenant, como mínimo:
 
 ---
 
-## 14. Configuración EasyPanel PostgreSQL
+## 15. Configuración EasyPanel PostgreSQL
 
 Para crear la instancia PostgreSQL propia de FAQ Inn en EasyPanel, usar estos valores base:
 
@@ -654,16 +686,16 @@ La base técnica inicial en PostgreSQL se crea como faq-inn para mantener compat
 
 ---
 
-## 15. Próxima etapa recomendada
+## 16. Próxima etapa recomendada
 
-### 14.1 Etapa documental inmediata
+### 16.1 Etapa documental inmediata
 
 1. Registrar FAQ Inn en el README raíz de @Acer.
 2. Mantener DFAQ sin cambios operativos.
 3. Usar este README como fuente oficial inicial del nuevo proyecto.
 4. Mantener `faq-inn` como repositorio GitHub oficial del proyecto.
 
-### 14.2 Etapa técnica inicial
+### 16.2 Etapa técnica inicial
 
 1. Crear o vincular el repositorio GitHub `faq-inn` como repositorio propio del proyecto.
 2. Iniciar versión de código **1.0** de FAQ Inn usando variables de tenant.
@@ -685,7 +717,7 @@ La base técnica inicial en PostgreSQL se crea como faq-inn para mantener compat
 
 ---
 
-## 16. Base técnica heredada desde DFAQ
+## 17. Base técnica heredada desde DFAQ
 
 Para que el Programador pueda partir desde una base ya validada, se copió una base técnica limpia desde `FAQ multiusuario` hacia `FAQ Inn`.
 
@@ -704,7 +736,7 @@ Detalle oficial: [docs/base-heredada-dfaq.md](docs/base-heredada-dfaq.md).
 
 ---
 
-## 17. Estado actual
+## 18. Estado actual
 
 ```text
 Proyecto documental creado.
@@ -718,6 +750,7 @@ MorroReservas permanece congelado.
 Dominio objetivo definido: inn.at-once.cl.
 Vertical inicial definida: Hotel v1.
 Arquitectura SaaS/multivertical definida a nivel conceptual.
+Módulo documental `motor-reservas` creado para descubrir, validar y guardar `booking_url_template` por tenant.
 MVP Evolution onboarding validado en inn.at-once.cl (V1.3.x): registro, QR, conexión, webhook MESSAGES_UPSERT. Ver docs/evolution-api/ESTADO-MODULO.md.
 Siguiente etapa: 02-n8n-multitenant-runtime (payload webhook + resolución tenant por evolution_instance_name).
 Pendiente arquitecto: cleanup al desvincular WhatsApp desde teléfono; persistencia instance_token_encrypted.

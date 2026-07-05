@@ -40,6 +40,9 @@
             <span data-i18n="nav.unanswered">Sin respuesta</span>
             <span class="nav-badge hidden" id="unanswered-badge">0</span>
           </button>
+          <button type="button" class="btn ghost hidden" id="nav-booking-engine" data-view="booking-engine" data-i18n="nav.bookingEngine">
+            Motor reservas
+          </button>
           <button type="button" class="btn ghost" data-view="profile" data-i18n="nav.profile">Mi cuenta</button>
           <button type="button" class="btn ghost hidden" id="nav-admin" data-view="admin" data-i18n="nav.admin">
             Admin
@@ -192,11 +195,15 @@
                 <textarea id="profile-welcome-message" rows="3" placeholder="¡Hola! Soy Concierge del Hotel Savoy…"></textarea>
                 <span class="field-hint" data-i18n="profile.welcomeHint">Cómo se presenta el asistente en el primer contacto (incluye nombre si quieres).</span>
               </label>
-              <label>
-                <span data-i18n="profile.bookingUrl">URL de reservas</span>
-                <input type="url" id="profile-booking-url" placeholder="https://…" />
-                <span class="field-hint" data-i18n="profile.bookingUrlHint">Enlace donde el huésped puede reservar.</span>
-              </label>
+              <div class="profile-booking-setup">
+                <p class="field-hint" data-i18n="profile.bookingSetupHint">
+                  Configura cómo se construyen los links de reserva de tu motor.
+                </p>
+                <button type="button" class="btn ghost" id="btn-go-booking-engine" data-i18n="profile.bookingSetupBtn">
+                  Configurar motor de reservas
+                </button>
+                <p class="field-hint" id="profile-booking-status"></p>
+              </div>
               <label>
                 <span data-i18n="profile.primaryLanguage">Idioma principal</span>
                 <select id="profile-primary-language" class="select-inline">
@@ -227,6 +234,62 @@
             </button>
             <p class="form-msg" id="profile-msg"></p>
           </form>
+        </section>
+
+        <section id="view-booking-engine" class="view hidden">
+          <div class="toolbar">
+            <div>
+              <h2 data-i18n="booking.title">Motor de reservas</h2>
+              <p class="faq-count" id="booking-status-label"></p>
+            </div>
+          </div>
+          <p class="hint" data-i18n="booking.intro">
+            Para que el agente envíe links de reserva correctos, pegue tres búsquedas específicas de su motor. FAQ Inn detectará la plantilla y usted la verificará antes de aprobarla.
+          </p>
+
+          <div id="booking-approved-panel" class="card card-inner hidden">
+            <h3 data-i18n="booking.approvedTitle">Plantilla aprobada</h3>
+            <p id="booking-approved-template" class="booking-template-preview"></p>
+            <button type="button" class="btn ghost" id="btn-booking-reconfigure" data-i18n="booking.reconfigure">
+              Configurar de nuevo
+            </button>
+          </div>
+
+          <div id="booking-wizard" class="form card-inner">
+            <div id="booking-step-scenarios">
+              <h3 data-i18n="booking.stepScenarios">Paso 1 — Pegar links de prueba</h3>
+              <p class="field-hint" data-i18n="booking.stepScenariosHint">
+                En su motor de reservas real, haga exactamente estas búsquedas y pegue el link resultante en cada campo.
+              </p>
+              <div id="booking-scenarios-list" class="booking-scenarios"></div>
+              <button type="button" class="btn primary" id="btn-booking-discover" data-i18n="booking.analyze">
+                Analizar links
+              </button>
+            </div>
+
+            <div id="booking-step-verify" class="hidden">
+              <h3 data-i18n="booking.stepVerify">Paso 2 — Verificar link de prueba</h3>
+              <p class="field-hint" data-i18n="booking.stepVerifyHint">
+                Abra este link en su motor. Debe mostrar 1 adulto, 1 menor, entrada hoy y salida mañana. Si coincide, apruebe. Si no, vuelva a pegar los 3 links.
+              </p>
+              <p id="booking-confidence" class="booking-meta"></p>
+              <ul id="booking-warnings" class="booking-warnings"></ul>
+              <p class="booking-template-preview" id="booking-candidate-template"></p>
+              <a id="booking-verify-link" class="btn primary" href="#" target="_blank" rel="noopener noreferrer" data-i18n="booking.openVerify">
+                Abrir link de verificación
+              </a>
+              <div class="dialog-actions booking-actions">
+                <button type="button" class="btn ghost" id="btn-booking-retry" data-i18n="booking.retry">
+                  No coincide — volver a pegar links
+                </button>
+                <button type="button" class="btn primary" id="btn-booking-approve" data-i18n="booking.approve">
+                  Sí, el link está correcto
+                </button>
+              </div>
+            </div>
+
+            <p class="form-msg" id="booking-msg"></p>
+          </div>
         </section>
 
         <section id="view-admin" class="view hidden">
@@ -557,7 +620,7 @@
       </form>
     </dialog>
 
-    <script src="/i18n.js?v=1.6.13"></script>
-    <script src="/app.js?v=1.6.13"></script>
+    <script src="/i18n.js?v=1.7.0"></script>
+    <script src="/app.js?v=1.7.0"></script>
   </body>
 </html>
