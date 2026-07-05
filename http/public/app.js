@@ -966,6 +966,10 @@ function attachAdminActions(root) {
   });
 }
 
+function adminTenantEmailLabel(tenant) {
+  return tenant.client_email || tenant.registration_email || '—';
+}
+
 function renderAdminTenantDetail(tenant) {
   const list = $('#admin-tenant-detail');
   if (!list || !tenant) {
@@ -976,6 +980,10 @@ function renderAdminTenantDetail(tenant) {
     [t('table.slug'), `<code>${escapeHtml(tenant.slug)}</code>`],
     [t('table.businessName'), escapeHtml(tenant.name || '—')],
     [t('table.clientEmail'), escapeHtml(tenant.client_email || '—')],
+    [
+      t('table.registrationEmail'),
+      escapeHtml(tenant.registration_email || '—'),
+    ],
     [t('table.status'), adminTenantStatusLabel(tenant.status)],
     [t('admin.provisioning'), tenant.provisioning_status ? adminTenantStatusLabel(tenant.provisioning_status) : '—'],
     [t('admin.whatsapp'), adminWhatsappLabel(tenant)],
@@ -1055,7 +1063,28 @@ async function resetAdminTenantPassword(id) {
     return;
   }
 
-  const ok = window.confirm(t('admin.resetPasswordConfirm', { email: tenant.client_email || tenant.slug }));
+  let loginEmail = tenant.client_email || '';
+  if (!loginEmail) {
+    const suggested = tenant.registration_email || '';
+    const input = window.prompt(
+      t('admin.createLoginPrompt', {
+        slug: tenant.slug,
+        email: suggested || '—',
+      }),
+      suggested
+    );
+    if (input === null) {
+      return;
+    }
+    loginEmail = input.trim();
+    if (!loginEmail) {
+      return;
+    }
+  }
+
+  const ok = window.confirm(
+    t('admin.resetPasswordConfirm', { email: loginEmail })
+  );
   if (!ok) {
     return;
   }
@@ -1067,13 +1096,19 @@ async function resetAdminTenantPassword(id) {
   try {
     const data = await api(`/admin/tenants/${tenantId}/reset-password`, {
       method: 'POST',
-      body: JSON.stringify({}),
+      body: JSON.stringify({ email: loginEmail }),
     });
-    msg.textContent = t('admin.resetPasswordDone', {
-      email: data.email,
-      password: data.temporary_password,
-    });
+    msg.textContent = data.user_created
+      ? t('admin.resetPasswordCreated', {
+          email: data.email,
+          password: data.temporary_password,
+        })
+      : t('admin.resetPasswordDone', {
+          email: data.email,
+          password: data.temporary_password,
+        });
     msg.className = 'form-msg ok';
+    await refreshAdmin();
   } catch (error) {
     msg.textContent = error.message;
     msg.className = 'form-msg error';
@@ -1145,7 +1180,7 @@ function renderAdminTenants(tenants) {
     tr.innerHTML = `
       <td><code>${escapeHtml(tenant.slug)}</code></td>
       <td>${escapeHtml(tenant.name || '—')}</td>
-      <td>${escapeHtml(tenant.client_email || '—')}</td>
+      <td>${escapeHtml(adminTenantEmailLabel(tenant))}</td>
       <td>${adminTenantStatusLabel(tenant.status)}</td>
       <td>${adminWhatsappLabel(tenant)}</td>
       <td>${escapeHtml(formatDate(tenant.created_at))}</td>
@@ -1172,7 +1207,7 @@ function renderAdminTenants(tenants) {
           </div>
           <div class="admin-card-row">
             <dt>${escapeHtml(t('admin.cardEmail'))}</dt>
-            <dd>${escapeHtml(tenant.client_email || '—')}</dd>
+            <dd>${escapeHtml(adminTenantEmailLabel(tenant))}</dd>
           </div>
           <div class="admin-card-row">
             <dt>${escapeHtml(t('admin.whatsapp'))}</dt>

@@ -19,6 +19,7 @@ import { onboardingRoutes } from './routes/onboarding.js';
 import { provisionRoutes } from './routes/provision.js';
 import { accountRoutes } from './routes/account.js';
 import { whatsappRoutes } from './routes/whatsapp.js';
+import { runtimeRoutes } from './routes/runtime.js';
 import { startEvolutionCleanupScheduler } from './lib/evolutionCleanup.js';
 
 const config = loadConfig();
@@ -57,6 +58,7 @@ await onboardingRoutes(app, config);
 await provisionRoutes(app, config);
 await accountRoutes(app);
 await whatsappRoutes(app, config);
+await runtimeRoutes(app, config);
 
 const stopEvolutionCleanup = startEvolutionCleanupScheduler(
   pool,

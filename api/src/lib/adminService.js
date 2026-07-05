@@ -1,7 +1,7 @@
 import { randomBytes } from 'node:crypto';
 import { createEvolutionClient } from './evolutionClient.js';
 import { isFaqInnInstance } from './evolutionCleanup.js';
-import { deleteAllTenantPoints } from './indexer.js';
+import { deleteAllTenantPoints, ensureTenantCollection } from './indexer.js';
 import { hashPassword } from './password.js';
 
 function validationError(message, statusCode = 400) {
@@ -15,7 +15,8 @@ function generateTempPassword() {
 }
 
 const TENANT_BASE_SQL = `
-  SELECT t.id, t.slug, t.name, t.status, t.created_at, t.updated_at,
+  SELECT t.id, t.slug, t.name, t.email AS registration_email, t.status,
+         t.created_at, t.updated_at,
          u.email AS client_email,
          a.slug AS agent_slug,
          tp.status AS provisioning_status,
@@ -142,7 +143,49 @@ export async function deleteAdminTenant(pool, config, tenantId, confirmSlug, log
   };
 }
 
-export async function resetAdminTenantPassword(pool, tenantId, passwordInput) {
+async function ensureClientTenantBootstrap(pool, config, tenant, logger) {
+  const tenantId = tenant.id;
+  const slug = tenant.slug;
+
+  const [agents] = await pool.query(
+    `SELECT id FROM agents WHERE tenant_id = ? LIMIT 1`,
+    [tenantId]
+  );
+  if (!agents.length) {
+    await pool.query(
+      `INSERT INTO agents (tenant_id, slug, name, channel, status)
+       VALUES (?, 'principal', 'Agente', 'whatsapp', 'active')`,
+      [tenantId]
+    );
+  }
+
+  const [settings] = await pool.query(
+    `SELECT tenant_id FROM tenant_settings WHERE tenant_id = ?`,
+    [tenantId]
+  );
+  if (!settings.length) {
+    await pool.query(
+      `INSERT INTO tenant_settings
+       (tenant_id, vertical_slug, primary_language, postgres_database)
+       VALUES (?, 'hotel', 'es', ?)`,
+      [tenantId, slug]
+    );
+  }
+
+  try {
+    await ensureTenantCollection(config, slug);
+  } catch (error) {
+    logger?.warn?.({ err: error, slug }, 'admin: qdrant bootstrap skipped');
+  }
+}
+
+export async function resetAdminTenantPassword(
+  pool,
+  config,
+  tenantId,
+  { password: passwordInput, email: emailInput } = {},
+  logger
+) {
   const tenant = await getAdminTenantDetail(pool, tenantId);
   const tempPassword =
     String(passwordInput || '').trim() || generateTempPassword();
@@ -155,21 +198,61 @@ export async function resetAdminTenantPassword(pool, tenantId, passwordInput) {
     `SELECT id, email FROM users WHERE tenant_id = ? AND role = 'client' LIMIT 1`,
     [tenantId]
   );
-  const user = userRows[0];
-  if (!user) {
-    throw validationError('No hay usuario cliente para este tenant', 404);
-  }
+  let user = userRows[0];
+  let userCreated = false;
 
-  const passwordHash = await hashPassword(tempPassword);
-  await pool.query(`UPDATE users SET password_hash = ? WHERE id = ?`, [
-    passwordHash,
-    user.id,
-  ]);
+  if (!user) {
+    const clientEmail = String(
+      emailInput || tenant.registration_email || ''
+    )
+      .trim()
+      .toLowerCase();
+
+    if (!clientEmail || !clientEmail.includes('@')) {
+      throw validationError(
+        'Este tenant no tiene login. Indica un email en la solicitud (body.email).',
+        400
+      );
+    }
+
+    const [existingEmail] = await pool.query(
+      `SELECT id, role FROM users WHERE email = ?`,
+      [clientEmail]
+    );
+    if (existingEmail.length > 0) {
+      if (existingEmail[0].role === 'admin_global') {
+        throw validationError(
+          `El email ${clientEmail} ya es admin global. Usa otro email para el login del tenant (por ejemplo un alias +tenant).`,
+          409
+        );
+      }
+      throw validationError('email ya registrado', 409);
+    }
+
+    await ensureClientTenantBootstrap(pool, config, tenant, logger);
+
+    const passwordHash = await hashPassword(tempPassword);
+    const [, userMeta] = await pool.query(
+      `INSERT INTO users (tenant_id, email, password_hash, role, status)
+       VALUES (?, ?, ?, 'client', 'active')`,
+      [tenantId, clientEmail, passwordHash]
+    );
+
+    user = { id: userMeta.insertId, email: clientEmail };
+    userCreated = true;
+  } else {
+    const passwordHash = await hashPassword(tempPassword);
+    await pool.query(`UPDATE users SET password_hash = ? WHERE id = ?`, [
+      passwordHash,
+      user.id,
+    ]);
+  }
 
   return {
     tenant_id: tenantId,
     slug: tenant.slug,
     email: user.email,
     temporary_password: tempPassword,
+    user_created: userCreated,
   };
 }

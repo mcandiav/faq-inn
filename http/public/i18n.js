@@ -73,7 +73,8 @@ const MESSAGES = {
     'table.index': 'Índice',
     'table.slug': 'Slug',
     'table.businessName': 'Nombre negocio',
-    'table.clientEmail': 'Email cliente',
+    'table.clientEmail': 'Email login',
+    'table.registrationEmail': 'Email registro (onboarding)',
     'table.agent': 'Agente',
     'status.active': 'Activa',
     'status.inactive': 'Inactiva',
@@ -169,6 +170,10 @@ const MESSAGES = {
     'admin.deleteDone': 'Tenant «{slug}» eliminado.',
     'admin.resetPasswordConfirm':
       '¿Generar contraseña temporal para {email}?',
+    'admin.createLoginPrompt':
+      'Tenant «{slug}» sin usuario de login. Email de registro: {email}. Indica el email para crear la cuenta:',
+    'admin.resetPasswordCreated':
+      'Cuenta creada para {email}. Contraseña temporal: {password}\n\nCópiala y úsala en Iniciar sesión.',
     'admin.resettingPassword': 'Generando contraseña temporal…',
     'admin.resetPasswordDone':
       'Contraseña temporal para {email}: {password}\n\nCópiala y compártela al cliente por un canal seguro.',
@@ -293,7 +298,8 @@ const MESSAGES = {
     'table.index': 'Índice',
     'table.slug': 'Slug',
     'table.businessName': 'Nome do negócio',
-    'table.clientEmail': 'Email do cliente',
+    'table.clientEmail': 'Email login',
+    'table.registrationEmail': 'Email cadastro (onboarding)',
     'table.agent': 'Agente',
     'status.active': 'Ativa',
     'status.inactive': 'Inativa',
@@ -389,6 +395,10 @@ const MESSAGES = {
     'admin.deleteDone': 'Tenant «{slug}» excluído.',
     'admin.resetPasswordConfirm':
       'Gerar senha temporária para {email}?',
+    'admin.createLoginPrompt':
+      'Tenant «{slug}» sem usuário de login. Email de cadastro: {email}. Informe o email para criar a conta:',
+    'admin.resetPasswordCreated':
+      'Conta criada para {email}. Senha temporária: {password}\n\nCopie e use em Iniciar sessão.',
     'admin.resettingPassword': 'Gerando senha temporária…',
     'admin.resetPasswordDone':
       'Senha temporária para {email}: {password}\n\nCopie e envie ao cliente por um canal seguro.',
@@ -512,7 +522,8 @@ const MESSAGES = {
     'table.index': 'Index',
     'table.slug': 'Slug',
     'table.businessName': 'Business name',
-    'table.clientEmail': 'Client email',
+    'table.clientEmail': 'Login email',
+    'table.registrationEmail': 'Registration email (onboarding)',
     'table.agent': 'Agent',
     'status.active': 'Active',
     'status.inactive': 'Inactive',
@@ -608,6 +619,10 @@ const MESSAGES = {
     'admin.deleteDone': 'Tenant «{slug}» deleted.',
     'admin.resetPasswordConfirm':
       'Generate a temporary password for {email}?',
+    'admin.createLoginPrompt':
+      'Tenant «{slug}» has no login user. Registration email: {email}. Enter the email to create the account:',
+    'admin.resetPasswordCreated':
+      'Account created for {email}. Temporary password: {password}\n\nCopy it and use Sign in.',
     'admin.resettingPassword': 'Generating temporary password…',
     'admin.resetPasswordDone':
       'Temporary password for {email}: {password}\n\nCopy it and share with the client securely.',
