@@ -15,6 +15,7 @@ COPY api/package.json ./
 RUN npm install --omit=dev
 
 COPY api/src ./src
+COPY VERSION ./VERSION
 COPY api/docker/entrypoint.sh /entrypoint.sh
 RUN chmod +x /entrypoint.sh \
   && printf '%.7s\n' "${GIT_SHA}" > /app/.git-commit
