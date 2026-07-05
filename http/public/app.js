@@ -1364,10 +1364,14 @@ async function refreshAdmin() {
 
 function openFaqDialog(id) {
   const dialog = $('#faq-dialog');
-  const faq = state.faqs.find((f) => f.id === id);
+  const faqId = id == null || id === '' ? null : Number(id);
+  const faq =
+    faqId != null && !Number.isNaN(faqId)
+      ? state.faqs.find((f) => Number(f.id) === faqId)
+      : null;
 
-  $('#faq-dialog-title').textContent = id ? t('faq.edit') : t('faq.new');
-  $('#faq-id').value = id || '';
+  $('#faq-dialog-title').textContent = faqId ? t('faq.edit') : t('faq.new');
+  $('#faq-id').value = faqId != null && !Number.isNaN(faqId) ? String(faqId) : '';
   $('#faq-question').value = faq?.question || '';
   $('#faq-answer').value = faq?.answer || '';
   $('#faq-category').value = faq?.category || '';
