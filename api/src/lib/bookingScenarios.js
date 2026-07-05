@@ -80,6 +80,57 @@ export function buildVerificationScenario(baseDate) {
   };
 }
 
+function daysBetween(checkin, checkout) {
+  const start = new Date(`${checkin}T12:00:00Z`);
+  const end = new Date(`${checkout}T12:00:00Z`);
+  const diff = Math.round((end - start) / (1000 * 60 * 60 * 24));
+  return Math.max(1, diff);
+}
+
+function parseChildAges(raw) {
+  if (Array.isArray(raw)) {
+    return raw.map(Number).filter((n) => !Number.isNaN(n));
+  }
+  const text = String(raw ?? '').trim();
+  if (!text) {
+    return [];
+  }
+  return text
+    .split(/[,;]+/)
+    .map((part) => Number(part.trim()))
+    .filter((n) => !Number.isNaN(n));
+}
+
+export function normalizePreviewScenario(input = {}) {
+  const checkin = String(input.checkin || '').trim();
+  const checkout = String(input.checkout || '').trim();
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(checkin)) {
+    throw new Error('check-in inválido');
+  }
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(checkout)) {
+    throw new Error('check-out inválido');
+  }
+  if (checkout <= checkin) {
+    throw new Error('check-out debe ser posterior al check-in');
+  }
+
+  const childAges = parseChildAges(input.child_ages ?? input.child_age);
+  const children =
+    input.children !== undefined && input.children !== ''
+      ? Math.max(0, Number(input.children) || 0)
+      : childAges.length;
+
+  return {
+    checkin,
+    checkout,
+    nights: daysBetween(checkin, checkout),
+    adults: Math.max(1, Number(input.adults) || 1),
+    children,
+    child_ages: childAges,
+    rooms: Math.max(1, Number(input.rooms) || 1),
+  };
+}
+
 export function describeScenario(scenario, locale = 'es') {
   const ages =
     scenario.child_ages?.length > 0

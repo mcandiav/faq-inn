@@ -1,6 +1,7 @@
 import {
   buildDiscoveryScenarios,
   buildVerificationScenario,
+  normalizePreviewScenario,
 } from './bookingScenarios.js';
 import { extractBookingTemplate } from './bookingUrlExtractor.js';
 import { buildUrlFromTemplate } from './bookingTemplateBuilder.js';
@@ -266,6 +267,48 @@ export async function approveDiscovery(pool, tenantId, userId, sessionId) {
   );
 
   return loadTenantBooking(pool, tenantId);
+}
+
+async function resolveTemplateForPreview(pool, tenantId, sessionId) {
+  if (sessionId) {
+    const [rows] = await pool.query(
+      `SELECT candidate_template, status
+       FROM booking_discovery_sessions
+       WHERE id = ? AND tenant_id = ?`,
+      [sessionId, tenantId]
+    );
+    const session = rows[0];
+    if (session?.candidate_template) {
+      return session.candidate_template;
+    }
+  }
+
+  const booking = await loadTenantBooking(pool, tenantId);
+  if (booking.validation_status === 'approved' && booking.booking_url_template) {
+    return booking.booking_url_template;
+  }
+
+  throw validationError('No hay plantilla disponible para generar el link', 404);
+}
+
+export async function previewBookingUrl(pool, tenantId, input) {
+  const sessionId = Number(input.session_id) || null;
+  const template = await resolveTemplateForPreview(pool, tenantId, sessionId);
+  let scenario;
+  try {
+    scenario = normalizePreviewScenario(input);
+  } catch (error) {
+    throw validationError(error.message || 'Datos de prueba inválidos');
+  }
+  const url = buildUrlFromTemplate(template, scenario);
+
+  try {
+    new URL(url);
+  } catch {
+    throw validationError('No se pudo construir una URL válida con esos datos');
+  }
+
+  return { url, scenario, template };
 }
 
 export async function saveFixedLink(pool, tenantId, userId, url) {

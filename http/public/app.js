@@ -18,6 +18,8 @@ const state = {
     candidateTemplate: '',
     confidenceScore: 0,
     warnings: [],
+    previewUrl: '',
+    previewValues: null,
   },
 };
 const appMeta = {
@@ -667,6 +669,120 @@ function renderProfileWhatsapp() {
   }
 }
 
+function bookingTodayIso() {
+  return new Date().toISOString().slice(0, 10);
+}
+
+function bookingAddDays(iso, days) {
+  const date = new Date(`${iso}T12:00:00Z`);
+  date.setUTCDate(date.getUTCDate() + days);
+  return date.toISOString().slice(0, 10);
+}
+
+function defaultBookingPreviewValues() {
+  const checkin = bookingTodayIso();
+  return {
+    checkin,
+    checkout: bookingAddDays(checkin, 1),
+    adults: 1,
+    children: 1,
+    child_ages: '8',
+    rooms: 1,
+  };
+}
+
+function renderBookingPreviewForm(container, values, previewUrl = '', hintKey = null) {
+  if (!container) {
+    return;
+  }
+  const v = values || defaultBookingPreviewValues();
+  const hintHtml = hintKey
+    ? `<p class="field-hint">${escapeHtml(t(hintKey))}</p>`
+    : '';
+  container.innerHTML = `
+    ${hintHtml}
+    <div class="booking-preview-grid">
+      <label>
+        <span>${escapeHtml(t('booking.checkin'))}</span>
+        <input type="date" class="booking-preview-checkin" value="${escapeHtml(v.checkin)}" />
+      </label>
+      <label>
+        <span>${escapeHtml(t('booking.checkout'))}</span>
+        <input type="date" class="booking-preview-checkout" value="${escapeHtml(v.checkout)}" />
+      </label>
+      <label>
+        <span>${escapeHtml(t('booking.adults'))}</span>
+        <input type="number" min="1" class="booking-preview-adults" value="${escapeHtml(String(v.adults))}" />
+      </label>
+      <label>
+        <span>${escapeHtml(t('booking.children'))}</span>
+        <input type="number" min="0" class="booking-preview-children" value="${escapeHtml(String(v.children))}" />
+      </label>
+      <label>
+        <span>${escapeHtml(t('booking.childAges'))}</span>
+        <input type="text" class="booking-preview-child-ages" value="${escapeHtml(v.child_ages || '')}" placeholder="8" />
+      </label>
+      <label>
+        <span>${escapeHtml(t('booking.rooms'))}</span>
+        <input type="number" min="1" class="booking-preview-rooms" value="${escapeHtml(String(v.rooms))}" />
+      </label>
+    </div>
+    <button type="button" class="btn primary booking-preview-generate">${escapeHtml(t('booking.generateLink'))}</button>
+    <div class="booking-preview-result ${previewUrl ? '' : 'hidden'}">
+      <a class="btn primary booking-preview-open" href="${escapeHtml(previewUrl)}" target="_blank" rel="noopener noreferrer">${escapeHtml(t('booking.previewLink'))}</a>
+      <p class="booking-preview-link">${escapeHtml(previewUrl)}</p>
+    </div>
+  `;
+}
+
+function readBookingPreviewValues(container) {
+  if (!container) {
+    return defaultBookingPreviewValues();
+  }
+  return {
+    checkin: container.querySelector('.booking-preview-checkin')?.value || '',
+    checkout: container.querySelector('.booking-preview-checkout')?.value || '',
+    adults: container.querySelector('.booking-preview-adults')?.value || '1',
+    children: container.querySelector('.booking-preview-children')?.value || '0',
+    child_ages: container.querySelector('.booking-preview-child-ages')?.value || '',
+    rooms: container.querySelector('.booking-preview-rooms')?.value || '1',
+  };
+}
+
+function updateBookingPreviewResult(container, url) {
+  const result = container?.querySelector('.booking-preview-result');
+  const openLink = container?.querySelector('.booking-preview-open');
+  const urlEl = container?.querySelector('.booking-preview-link');
+  if (!result || !openLink || !urlEl) {
+    return;
+  }
+  if (!url) {
+    result.classList.add('hidden');
+    openLink.removeAttribute('href');
+    urlEl.textContent = '';
+    return;
+  }
+  result.classList.remove('hidden');
+  openLink.href = url;
+  urlEl.textContent = url;
+}
+
+async function generateBookingPreview(container, { sessionId = null } = {}) {
+  const values = readBookingPreviewValues(container);
+  const body = { ...values };
+  if (sessionId) {
+    body.session_id = sessionId;
+  }
+  const data = await api('/booking-engine/preview', {
+    method: 'POST',
+    body: JSON.stringify(body),
+  });
+  state.bookingEngine.previewValues = values;
+  state.bookingEngine.previewUrl = data.url;
+  updateBookingPreviewResult(container, data.url);
+  return data;
+}
+
 function formatScenarioAges(scenario) {
   if (!scenario.child_ages?.length) {
     return getLang() === 'en' ? 'none' : getLang() === 'pt' ? 'nenhum' : 'ninguno';
@@ -726,10 +842,15 @@ function renderBookingEngineView() {
   if (approved && !state.bookingEngine.forceWizard) {
     approvedPanel?.classList.remove('hidden');
     wizard?.classList.add('hidden');
-    const templateEl = $('#booking-approved-template');
-    if (templateEl) {
-      templateEl.textContent = state.account.settings.booking_url_template;
-    }
+    const approvedPreview = $('#booking-approved-preview');
+    const values =
+      state.bookingEngine.previewValues || defaultBookingPreviewValues();
+    renderBookingPreviewForm(
+      approvedPreview,
+      values,
+      state.bookingEngine.previewUrl || '',
+      'booking.previewApprovedHint'
+    );
     return;
   }
 
@@ -739,7 +860,7 @@ function renderBookingEngineView() {
 
   const verifyStep = $('#booking-step-verify');
   const scenarioStep = $('#booking-step-scenarios');
-  const hasVerification = Boolean(state.bookingEngine.verification?.url);
+  const hasVerification = Boolean(state.bookingEngine.candidateTemplate);
 
   verifyStep?.classList.toggle('hidden', !hasVerification);
   scenarioStep?.classList.toggle('hidden', hasVerification);
@@ -765,10 +886,28 @@ function renderBookingEngineView() {
       templateEl.textContent = state.bookingEngine.candidateTemplate || '';
     }
 
-    const verifyLink = $('#booking-verify-link');
-    if (verifyLink) {
-      verifyLink.href = state.bookingEngine.verification.url;
-    }
+    const verifyPreview = $('#booking-verify-preview');
+    const scenario = state.bookingEngine.verification?.scenario;
+    const values =
+      state.bookingEngine.previewValues ||
+      (scenario
+        ? {
+            checkin: scenario.checkin,
+            checkout: scenario.checkout,
+            adults: scenario.adults,
+            children: scenario.children,
+            child_ages: (scenario.child_ages || []).join(','),
+            rooms: scenario.rooms,
+          }
+        : defaultBookingPreviewValues());
+    renderBookingPreviewForm(
+      verifyPreview,
+      values,
+      state.bookingEngine.previewUrl ||
+        state.bookingEngine.verification?.url ||
+        '',
+      null
+    );
   }
 }
 
@@ -781,6 +920,8 @@ async function ensureBookingSession(forceNew = false) {
   state.bookingEngine.sessionId = data.session_id;
   state.bookingEngine.scenarios = data.scenarios || [];
   state.bookingEngine.verification = null;
+  state.bookingEngine.previewUrl = '';
+  state.bookingEngine.previewValues = null;
   state.bookingEngine.candidateTemplate = '';
   state.bookingEngine.confidenceScore = 0;
   state.bookingEngine.warnings = [];
@@ -1909,6 +2050,30 @@ $$('[data-view]').forEach((btn) => {
 
 $('#btn-go-booking-engine')?.addEventListener('click', () => openView('booking-engine'));
 
+$('#view-booking-engine')?.addEventListener('click', async (event) => {
+  const btn = event.target.closest('.booking-preview-generate');
+  if (!btn) {
+    return;
+  }
+  const container = btn.closest('.booking-preview-form');
+  const msg = $('#booking-msg');
+  if (msg) {
+    msg.textContent = '';
+    msg.className = 'form-msg';
+  }
+  try {
+    const sessionId = container?.closest('#booking-verify-preview')
+      ? state.bookingEngine.sessionId
+      : null;
+    await generateBookingPreview(container, { sessionId });
+  } catch (error) {
+    if (msg) {
+      msg.textContent = error.message || t('booking.msgError');
+      msg.classList.add('error');
+    }
+  }
+});
+
 $('#btn-booking-reconfigure')?.addEventListener('click', async () => {
   state.bookingEngine.forceWizard = true;
   await ensureBookingSession(true);
@@ -1939,7 +2104,18 @@ $('#btn-booking-discover')?.addEventListener('click', async () => {
     state.bookingEngine.confidenceScore = data.confidence_score || 0;
     state.bookingEngine.warnings = data.warnings || [];
     state.bookingEngine.verification = data.verification || null;
+    state.bookingEngine.previewUrl = data.verification?.url || '';
     renderBookingEngineView();
+    const verifyPreview = $('#booking-verify-preview');
+    if (verifyPreview) {
+      try {
+        await generateBookingPreview(verifyPreview, {
+          sessionId: state.bookingEngine.sessionId,
+        });
+      } catch {
+        /* preview se genera al pulsar el botón */
+      }
+    }
     msg.textContent = t('booking.msgAnalyzeOk');
     msg.classList.add('ok');
   } catch (error) {
@@ -1961,6 +2137,8 @@ $('#btn-booking-retry')?.addEventListener('click', async () => {
     state.bookingEngine.sessionId = data.session_id;
     state.bookingEngine.scenarios = data.scenarios || [];
     state.bookingEngine.verification = null;
+    state.bookingEngine.previewUrl = '';
+    state.bookingEngine.previewValues = null;
     state.bookingEngine.candidateTemplate = '';
     state.bookingEngine.confidenceScore = 0;
     state.bookingEngine.warnings = [];
@@ -1989,6 +2167,8 @@ $('#btn-booking-approve')?.addEventListener('click', async () => {
     }
     state.bookingEngine.forceWizard = false;
     state.bookingEngine.verification = null;
+    state.bookingEngine.previewUrl = '';
+    state.bookingEngine.previewValues = null;
     renderBookingEngineView();
     renderProfile();
     msg.textContent = t('booking.msgApproved');
