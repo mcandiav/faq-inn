@@ -1390,6 +1390,11 @@ code {
 
 .booking-actions {
   margin-top: 1rem;
+  align-items: center;
+}
+
+.booking-approved-badge {
+  align-self: center;
 }
 
 .profile-booking-setup {
