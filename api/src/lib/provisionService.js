@@ -263,17 +263,44 @@ export async function getProvisionStatus(pool, config, tenant, instanceName) {
     throw validationError('instancia no encontrada', 404);
   }
 
+  const evolution = createEvolutionClient(config);
+
   if (row.status === 'connected' && row.phone_number) {
-    return {
-      instanceName: row.instance_name,
-      status: 'connected',
-      phoneNumber: row.phone_number,
-      qrBase64: null,
-      tenantStatus: 'connected',
-    };
+    try {
+      const connection = await evolution.getConnectionState(instanceName);
+      if (connection.connected) {
+        return {
+          instanceName: row.instance_name,
+          status: 'connected',
+          phoneNumber: row.phone_number,
+          qrBase64: null,
+          tenantStatus: 'connected',
+          evolutionState: connection.state,
+        };
+      }
+    } catch {
+      return {
+        instanceName: row.instance_name,
+        status: 'connected',
+        phoneNumber: row.phone_number,
+        qrBase64: null,
+        tenantStatus: 'connected',
+      };
+    }
+
+    await pool.query(
+      `UPDATE evolution_instances
+       SET status = 'qr_pending', updated_at = NOW()
+       WHERE id = ?`,
+      [row.id]
+    );
+    await pool.query(
+      `UPDATE tenants SET status = 'qr_pending', updated_at = NOW() WHERE id = ?`,
+      [tenant.id]
+    );
+    row.status = 'qr_pending';
   }
 
-  const evolution = createEvolutionClient(config);
   let connection;
   try {
     connection = await evolution.getConnectionState(instanceName);

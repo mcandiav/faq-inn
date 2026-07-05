@@ -122,7 +122,45 @@ const whatsappState = {
   startedAt: 0,
   pollIntervalSeconds: 3,
   timeoutSeconds: 180,
+  uiTarget: 'landing',
 };
+
+function getWhatsappUi() {
+  if (whatsappState.uiTarget === 'profile') {
+    return {
+      qrPanel: $('#profile-whatsapp-qr-panel'),
+      qrImage: $('#profile-whatsapp-qr-image'),
+      qrWaiting: $('#profile-whatsapp-qr-waiting'),
+      qrMsg: $('#profile-whatsapp-qr-msg'),
+      reconnectBtn: $('#btn-profile-whatsapp-reconnect'),
+    };
+  }
+  return {
+    qrPanel: $('#provision-qr-panel'),
+    qrImage: $('#provision-qr-image'),
+    qrWaiting: $('#provision-qr-waiting'),
+    qrMsg: $('#provision-qr-msg'),
+    reconnectBtn: null,
+  };
+}
+
+function formatWhatsappPhone(phone) {
+  if (!phone) {
+    return '';
+  }
+  return `+${String(phone).replace(/^\+/, '')}`;
+}
+
+function whatsappStatusLabel(status) {
+  const key = {
+    connected: 'profile.whatsappStatusConnected',
+    qr_pending: 'profile.whatsappStatusQrPending',
+    error: 'profile.whatsappStatusError',
+    draft: 'profile.whatsappStatusPending',
+    none: 'profile.whatsappStatusNone',
+  }[status || 'none'];
+  return t(key || 'profile.whatsappStatusDisconnected');
+}
 
 function clearWhatsappPoll() {
   if (whatsappState.pollTimer) {
@@ -158,34 +196,41 @@ function setWhatsappFocus(active) {
 }
 
 function showWhatsappQr(qrBase64, instanceName) {
-  hideLandingPanels();
-  setWhatsappFocus(true);
-  const panel = $('#provision-qr-panel');
-  panel?.classList.remove('hidden');
-  const img = $('#provision-qr-image');
-  const waiting = $('#provision-qr-waiting');
-  const label = $('#provision-instance-label');
-  if (label) {
-    label.textContent = '';
-    label.classList.add('hidden');
+  const ui = getWhatsappUi();
+
+  if (whatsappState.uiTarget === 'profile') {
+    ui.qrPanel?.classList.remove('hidden');
+    ui.reconnectBtn?.classList.add('hidden');
+  } else {
+    hideLandingPanels();
+    setWhatsappFocus(true);
+    ui.qrPanel?.classList.remove('hidden');
+    const label = $('#provision-instance-label');
+    if (label) {
+      label.textContent = '';
+      label.classList.add('hidden');
+    }
   }
-  if (qrBase64 && img) {
-    img.src = qrBase64;
-    img.classList.remove('hidden');
-    waiting?.classList.add('hidden');
-  } else if (!img?.src || img.classList.contains('hidden')) {
-    img?.classList.add('hidden');
-    waiting?.classList.remove('hidden');
+
+  if (qrBase64 && ui.qrImage) {
+    ui.qrImage.src = qrBase64;
+    ui.qrImage.classList.remove('hidden');
+    ui.qrWaiting?.classList.add('hidden');
+  } else if (!ui.qrImage?.src || ui.qrImage.classList.contains('hidden')) {
+    ui.qrImage?.classList.add('hidden');
+    ui.qrWaiting?.classList.remove('hidden');
   }
-  requestAnimationFrame(() => {
-    panel?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-  });
+
+  if (whatsappState.uiTarget === 'landing') {
+    requestAnimationFrame(() => {
+      ui.qrPanel?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    });
+  }
 }
 
 async function onWhatsappConnected(phoneNumber) {
   clearWhatsappPoll();
-  hideLandingPanels();
-  setWhatsappFocus(false);
+  whatsappState.uiTarget = 'landing';
 
   try {
     const data = await api('/auth/me');
@@ -194,15 +239,21 @@ async function onWhatsappConnected(phoneNumber) {
     /* session cookie should still be valid */
   }
 
+  if (state.user?.role === 'client') {
+    try {
+      state.account = await api('/account/settings');
+    } catch {
+      /* keep previous account snapshot */
+    }
+  }
+
   showApp();
   renderHeader();
   await openView('profile');
 
   const msg = $('#profile-msg');
   if (msg) {
-    const phone = phoneNumber
-      ? `+${String(phoneNumber).replace(/^\+/, '')}`
-      : '';
+    const phone = formatWhatsappPhone(phoneNumber);
     msg.textContent = phone
       ? t('msg.whatsappConnectedPhone', { phone })
       : t('msg.whatsappConnected');
@@ -211,7 +262,8 @@ async function onWhatsappConnected(phoneNumber) {
 }
 
 async function pollWhatsappStatus() {
-  const msg = $('#provision-qr-msg');
+  const ui = getWhatsappUi();
+  const msg = ui.qrMsg;
   if (!whatsappState.instanceName) {
     return;
   }
@@ -223,6 +275,7 @@ async function pollWhatsappStatus() {
       msg.textContent = t('msg.qrTimeout');
       msg.className = 'form-msg error';
     }
+    ui.reconnectBtn?.classList.remove('hidden');
     return;
   }
 
@@ -251,6 +304,7 @@ async function pollWhatsappStatus() {
       msg.textContent = error.message;
       msg.className = 'form-msg error';
     }
+    ui.reconnectBtn?.classList.remove('hidden');
   }
 }
 
@@ -263,11 +317,11 @@ function startWhatsappPolling() {
 }
 
 async function startWhatsappConnect() {
+  const ui = getWhatsappUi();
   showWhatsappQr(null, '');
-  const qrMsg = $('#provision-qr-msg');
-  if (qrMsg) {
-    qrMsg.textContent = t('msg.creatingWhatsapp');
-    qrMsg.className = 'form-msg';
+  if (ui.qrMsg) {
+    ui.qrMsg.textContent = t('msg.creatingWhatsapp');
+    ui.qrMsg.className = 'form-msg';
   }
 
   const data = await api('/whatsapp/connect', { method: 'POST' });
@@ -287,7 +341,47 @@ async function startWhatsappConnect() {
   startWhatsappPolling();
 }
 
+async function startProfileWhatsappReconnect() {
+  whatsappState.uiTarget = 'profile';
+  whatsappState.instanceName = state.account?.whatsapp?.instance_name || '';
+  const ui = getWhatsappUi();
+  if (ui.qrMsg) {
+    ui.qrMsg.textContent = '';
+    ui.qrMsg.className = 'form-msg';
+  }
+  try {
+    await startWhatsappConnect();
+  } catch (error) {
+    ui.reconnectBtn?.classList.remove('hidden');
+    if (ui.qrMsg) {
+      ui.qrMsg.textContent = error.message;
+      ui.qrMsg.className = 'form-msg error';
+    }
+  }
+}
+
+async function ensureClientAppOrWhatsapp() {
+  if (state.user?.role !== 'client') {
+    return true;
+  }
+
+  try {
+    state.account = await api('/account/settings');
+    return true;
+  } catch {
+    return true;
+  }
+}
+
+function clientNeedsWhatsappReconnect() {
+  return (
+    state.user?.role === 'client' &&
+    state.account?.whatsapp?.connection_status !== 'connected'
+  );
+}
+
 async function resumeWhatsappOnboarding(account) {
+  whatsappState.uiTarget = 'landing';
   showLanding('signup');
   hideLandingPanels();
   setWhatsappFocus(true);
@@ -306,24 +400,6 @@ async function resumeWhatsappOnboarding(account) {
 
   await startWhatsappConnect();
   return true;
-}
-
-async function ensureClientAppOrWhatsapp() {
-  if (state.user?.role !== 'client') {
-    return true;
-  }
-
-  try {
-    const account = await api('/account/settings');
-    state.account = account;
-    if (account.whatsapp?.connection_status === 'connected') {
-      return true;
-    }
-    await resumeWhatsappOnboarding(account);
-    return false;
-  } catch {
-    return true;
-  }
 }
 
 function showLogin() {
@@ -505,6 +581,94 @@ function renderProfile() {
     profileMsg.textContent = '';
     profileMsg.className = 'form-msg';
   }
+
+  renderProfileWhatsapp();
+}
+
+function renderProfileWhatsapp() {
+  const fieldset = $('#profile-whatsapp-fieldset');
+  const user = state.user;
+  if (!fieldset || user?.role !== 'client') {
+    fieldset?.classList.add('hidden');
+    return;
+  }
+
+  fieldset.classList.remove('hidden');
+  const wa = state.account?.whatsapp || {};
+  const status = wa.connection_status || 'none';
+  const connected = status === 'connected';
+  const connectedEl = $('#profile-whatsapp-connected');
+  const disconnectedEl = $('#profile-whatsapp-disconnected');
+
+  connectedEl?.classList.toggle('hidden', !connected);
+  disconnectedEl?.classList.toggle('hidden', connected);
+
+  if (connected) {
+    clearWhatsappPoll();
+    whatsappState.uiTarget = 'landing';
+    $('#profile-whatsapp-qr-panel')?.classList.add('hidden');
+    $('#btn-profile-whatsapp-reconnect')?.classList.remove('hidden');
+
+    const phoneEl = $('#profile-whatsapp-phone');
+    if (phoneEl) {
+      phoneEl.textContent = formatWhatsappPhone(wa.phone_number) || '—';
+    }
+
+    const badge = $('#profile-whatsapp-badge');
+    if (badge) {
+      badge.textContent = t('profile.whatsappStatusConnected');
+      badge.className = 'pill ok';
+    }
+
+    const meta = $('#profile-whatsapp-connected-meta');
+    if (meta) {
+      meta.textContent = wa.connected_at
+        ? t('profile.whatsappConnectedSince', {
+            date: formatDate(wa.connected_at),
+          })
+        : '';
+    }
+    return;
+  }
+
+  const badge = $('#profile-whatsapp-disconnected-badge');
+  if (badge) {
+    badge.textContent = whatsappStatusLabel(status);
+    badge.className = status === 'error' ? 'pill off' : 'pill warn';
+  }
+
+  const pollingInProfile =
+    whatsappState.uiTarget === 'profile' && Boolean(whatsappState.pollTimer);
+  if (!pollingInProfile) {
+    $('#profile-whatsapp-qr-panel')?.classList.add('hidden');
+    $('#btn-profile-whatsapp-reconnect')?.classList.remove('hidden');
+    const qrMsg = $('#profile-whatsapp-qr-msg');
+    if (qrMsg && !qrMsg.classList.contains('error')) {
+      qrMsg.textContent = '';
+      qrMsg.className = 'form-msg';
+    }
+  }
+}
+
+async function syncProfileWhatsappStatus() {
+  const wa = state.account?.whatsapp;
+  if (!wa?.instance_name || state.user?.role !== 'client') {
+    return;
+  }
+
+  try {
+    const data = await api(
+      `/whatsapp/status/${encodeURIComponent(wa.instance_name)}`
+    );
+    state.account.whatsapp = {
+      ...wa,
+      connection_status: data.connection_status,
+      phone_number: data.phone_number || wa.phone_number,
+      qr_base64: data.qr_base64 || null,
+    };
+  } catch {
+    /* keep cached account snapshot */
+  }
 }
 
 async function refreshProfile() {
@@ -517,6 +681,7 @@ async function refreshProfile() {
     if (user.role === 'client') {
       const account = await api('/account/settings');
       state.account = account;
+      await syncProfileWhatsappStatus();
       if (account.tenant?.name && state.user.tenant) {
         state.user.tenant.name = account.tenant.name;
       }
@@ -1300,7 +1465,11 @@ async function loadSession() {
 
     showApp();
     renderHeader();
-    const view = resolveView(getRequestedView());
+    const requested = getRequestedView();
+    const view =
+      clientNeedsWhatsappReconnect() && requested === 'dashboard'
+        ? 'profile'
+        : resolveView(requested);
     setView(view);
     history.replaceState({ view }, '', `#${view}`);
     await refreshViewData(view);
@@ -1475,12 +1644,11 @@ $('#login-form').addEventListener('submit', async (event) => {
       }),
     });
     state.user = data.user;
-    if (!(await ensureClientAppOrWhatsapp())) {
-      return;
-    }
+    await ensureClientAppOrWhatsapp();
     showApp();
     renderHeader();
-    await openView('dashboard');
+    const view = clientNeedsWhatsappReconnect() ? 'profile' : 'dashboard';
+    await openView(view);
     if (state.user.role === 'client') {
       await refreshUnanswered();
     }
@@ -1509,6 +1677,7 @@ $('#signup-form')?.addEventListener('submit', async (event) => {
     });
 
     state.user = data.user;
+    whatsappState.uiTarget = 'landing';
     whatsappState.pollIntervalSeconds =
       data.poll_interval_seconds || whatsappState.pollIntervalSeconds;
     whatsappState.timeoutSeconds =
@@ -1522,6 +1691,7 @@ $('#signup-form')?.addEventListener('submit', async (event) => {
 });
 
 $('#provision-qr-refresh')?.addEventListener('click', async () => {
+  whatsappState.uiTarget = 'landing';
   const msg = $('#provision-qr-msg');
   try {
     await startWhatsappConnect();
@@ -1533,6 +1703,14 @@ $('#provision-qr-refresh')?.addEventListener('click', async () => {
   }
 });
 
+$('#btn-profile-whatsapp-reconnect')?.addEventListener('click', () => {
+  startProfileWhatsappReconnect();
+});
+
+$('#btn-profile-whatsapp-refresh-qr')?.addEventListener('click', () => {
+  startProfileWhatsappReconnect();
+});
+
 async function logout() {
   try {
     await api('/auth/logout', { method: 'POST' });
@@ -1540,6 +1718,8 @@ async function logout() {
     /* ignore */
   }
   clearWhatsappPoll();
+  whatsappState.uiTarget = 'landing';
+  whatsappState.instanceName = '';
   state.user = null;
   state.account = null;
   state.faqs = [];
