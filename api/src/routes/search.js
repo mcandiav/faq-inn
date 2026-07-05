@@ -159,7 +159,15 @@ export async function searchRoutes(app, config) {
     }
 
     try {
-      const slug = tenant_slug || tenant_id;
+      let slug = String(tenant_slug || tenant_id || '').trim();
+      if (/^\d+$/.test(slug)) {
+        const pool = app.db.pool;
+        const [rows] = await pool.query(
+          'SELECT slug FROM tenants WHERE id = ? LIMIT 1',
+          [Number(slug)]
+        );
+        slug = rows[0]?.slug || slug;
+      }
       const collection = resolveCollectionName(
         config.qdrantCollectionTemplate,
         slug
@@ -172,7 +180,7 @@ export async function searchRoutes(app, config) {
         `/collections/${encodeURIComponent(collection)}/points/search`,
         {
           vector,
-          filter: searchFilter(tenant_id, agent_id),
+          filter: searchFilter(slug, agent_id),
           limit: Math.min(Number(limit) || 5, 20),
           with_payload: true,
         }

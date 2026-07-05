@@ -650,27 +650,6 @@ function renderProfileWhatsapp() {
   }
 }
 
-async function syncProfileWhatsappStatus() {
-  const wa = state.account?.whatsapp;
-  if (!wa?.instance_name || state.user?.role !== 'client') {
-    return;
-  }
-
-  try {
-    const data = await api(
-      `/whatsapp/status/${encodeURIComponent(wa.instance_name)}`
-    );
-    state.account.whatsapp = {
-      ...wa,
-      connection_status: data.connection_status,
-      phone_number: data.phone_number || wa.phone_number,
-      qr_base64: data.qr_base64 || null,
-    };
-  } catch {
-    /* keep cached account snapshot */
-  }
-}
-
 async function refreshProfile() {
   const user = state.user;
   if (!user) {
@@ -681,7 +660,6 @@ async function refreshProfile() {
     if (user.role === 'client') {
       const account = await api('/account/settings');
       state.account = account;
-      await syncProfileWhatsappStatus();
       if (account.tenant?.name && state.user.tenant) {
         state.user.tenant.name = account.tenant.name;
       }
