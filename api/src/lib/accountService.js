@@ -75,7 +75,10 @@ export async function getAccountSettings(pool, config, userId, tenantId) {
       vertical_slug: settings.vertical_slug || 'hotel',
       primary_language: settings.primary_language || 'es',
       booking_url_base: settings.booking_url_base || '',
-      booking_url_template: settings.booking_url_template || '',
+      booking_url_template:
+        settings.validation_status === 'approved'
+          ? settings.booking_url_template || ''
+          : '',
       booking_url_mode: settings.booking_url_mode || '',
       validation_status: settings.validation_status || 'pending',
       confidence_score: Number(settings.confidence_score || 0),

@@ -5,6 +5,7 @@ import {
 } from './bookingScenarios.js';
 import { extractBookingTemplate } from './bookingUrlExtractor.js';
 import { buildUrlFromTemplate } from './bookingTemplateBuilder.js';
+import { buildApprovedBookingRecord } from './bookingApprovedFormat.js';
 
 function validationError(message, statusCode = 400) {
   const error = new Error(message);
@@ -235,26 +236,30 @@ export async function approveDiscovery(pool, tenantId, userId, sessionId) {
     bookingUrlBase = '';
   }
 
+  const approved = buildApprovedBookingRecord(
+    { ...session, candidate_config: candidateConfig, warnings: parseJson(session.warnings, []) },
+    userId,
+    bookingUrlBase
+  );
+
   await pool.query(
     `UPDATE tenant_settings
      SET booking_url_template = ?,
          booking_url_base = ?,
-         booking_url_mode = 'discovered_template',
-         validation_status = 'approved',
+         booking_url_mode = ?,
+         validation_status = ?,
          confidence_score = ?,
          booking_config = ?,
          booking_approved_at = NOW(),
          updated_at = NOW()
      WHERE tenant_id = ?`,
     [
-      session.candidate_template,
-      bookingUrlBase,
-      session.confidence_score || 0,
-      serializeJson({
-        ...candidateConfig,
-        warnings: parseJson(session.warnings, []),
-        approved_by_user_id: userId,
-      }),
+      approved.booking_url_template,
+      approved.booking_url_base,
+      approved.booking_url_mode,
+      approved.validation_status,
+      approved.confidence_score,
+      serializeJson(approved.booking_config),
       tenantId,
     ]
   );
