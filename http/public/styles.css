@@ -1404,6 +1404,36 @@ code {
   margin: 0.5rem 0;
 }
 
+.booking-preview-form {
+  display: grid;
+  gap: 0.75rem;
+  margin: 1rem 0;
+}
+
+.booking-preview-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 0.75rem;
+}
+
+.booking-preview-result {
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+  margin-top: 0.5rem;
+}
+
+.booking-preview-link {
+  word-break: break-all;
+  font-size: 0.9rem;
+  color: #93c5fd;
+}
+
+.booking-template-details {
+  margin: 0.75rem 0 1rem;
+  color: #94a3b8;
+}
+
 #profile-whatsapp-qr-panel {
   margin-top: 0.5rem;
 }

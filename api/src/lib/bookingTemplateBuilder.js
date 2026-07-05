@@ -14,6 +14,7 @@ const PLACEHOLDER_RESOLVERS = {
   children: (s) => String(s.children),
   rooms: (s) => String(s.rooms),
   child_ages_csv: (s) => s.child_ages.join(','),
+  child_ages_semicolon: (s) => s.child_ages.join(';'),
   child_ages_dash: (s) => s.child_ages.join('-'),
   occupancy_path: (s) => {
     if (s.child_ages.length === 0) {
