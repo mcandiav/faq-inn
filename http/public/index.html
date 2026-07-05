@@ -11,7 +11,7 @@
     <link rel="icon" type="image/png" sizes="512x512" href="/favicon.png" />
     <link rel="apple-touch-icon" href="/favicon.png" />
     <title>FAQ Inn</title>
-    <link rel="stylesheet" href="/styles.css?v=1.6.2" />
+    <link rel="stylesheet" href="/styles.css?v=1.6.3" />
   </head>
   <body>
     <div id="app" class="app hidden">
@@ -442,28 +442,28 @@
     </dialog>
 
     <dialog id="admin-reset-dialog">
-      <form id="admin-reset-form" method="dialog" class="form">
-        <h3 id="admin-reset-dialog-title" data-i18n="admin.resetAccessTitle">Acceso del tenant</h3>
-        <p class="hint" id="admin-reset-dialog-hint" data-i18n="admin.resetAccessHint">
-          Define el email y la contraseña de login. Si dejas la contraseña vacía, se generará una automática.
+      <form id="admin-reset-form" class="form">
+        <h3 id="admin-reset-dialog-title">Login del cliente</h3>
+        <p class="hint" id="admin-reset-dialog-hint">
+          Credenciales para que el dueño del negocio entre a FAQ Inn. No uses el email de admin global.
         </p>
         <label>
-          <span data-i18n="admin.resetAccessEmail">Email de login</span>
-          <input type="email" id="admin-reset-email" required autocomplete="off" />
+          <span id="admin-reset-email-label">Correo para iniciar sesión</span>
+          <input type="email" id="admin-reset-email" required autocomplete="off" aria-labelledby="admin-reset-email-label" />
         </label>
         <label>
-          <span data-i18n="admin.resetAccessPassword">Contraseña</span>
+          <span id="admin-reset-password-label">Nueva contraseña</span>
           <input
             type="text"
-            id="admin-reset-password"
+            id="admin-reset-password-input"
             minlength="8"
             autocomplete="new-password"
-            data-i18n-placeholder="admin.resetAccessPasswordPlaceholder"
-            placeholder="Vacío = generar automática"
+            aria-labelledby="admin-reset-password-label"
+            placeholder="Opcional: vacío = se genera sola"
           />
         </label>
         <div class="admin-credentials-result hidden" id="admin-reset-result">
-          <p class="admin-credentials-title" data-i18n="admin.resetAccessSaved">Acceso guardado — copia antes de cerrar:</p>
+          <p class="admin-credentials-title" id="admin-reset-result-title">Listo — copia email y contraseña antes de cerrar:</p>
           <dl class="admin-credentials-list">
             <div class="admin-credentials-row">
               <dt data-i18n="login.email">Email</dt>
@@ -477,9 +477,9 @@
         </div>
         <div class="dialog-actions">
           <div class="dialog-actions-right">
-            <button type="button" class="btn ghost" id="admin-reset-cancel" data-i18n="btn.cancel">Cancelar</button>
-            <button type="submit" class="btn primary" id="admin-reset-submit" data-i18n="admin.resetAccessSave">
-              Guardar acceso
+            <button type="button" class="btn ghost" id="admin-reset-cancel">Cancelar</button>
+            <button type="submit" class="btn primary" id="admin-reset-submit">
+              Guardar
             </button>
           </div>
         </div>
@@ -522,7 +522,7 @@
       </form>
     </dialog>
 
-    <script src="/i18n.js?v=1.5.0"></script>
-    <script src="/app.js?v=1.6.2"></script>
+    <script src="/i18n.js?v=1.6.3"></script>
+    <script src="/app.js?v=1.6.3"></script>
   </body>
 </html>
