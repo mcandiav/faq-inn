@@ -20,11 +20,13 @@ function slugFromInstanceName(instanceName, prefix) {
 function mapRuntimeRow(row, config) {
   const agentSlug = row.agent_slug || 'principal';
   const evolutionApiKey = config.evolutionApiKey || '';
+  const tenantSlug = row.tenant_slug || '';
   return {
-    tenant_id: String(row.tenant_id),
-    tenant_slug: row.tenant_slug,
+    // Slug técnico (filtro Qdrant, SemResposta, clave Redis). No es el id numérico de PostgreSQL.
+    tenant_id: tenantSlug,
+    tenant_slug: tenantSlug,
+    tenant_db_id: String(row.tenant_id),
     tenant_name: row.tenant_name || '',
-    tenant_status: row.tenant_status,
     agent_id: agentSlug,
     agent_slug: agentSlug,
     agent_name: row.agent_name || 'Agente',
@@ -36,11 +38,11 @@ function mapRuntimeRow(row, config) {
     business_hours: row.business_hours || '',
     policies: row.policies || '',
     evolution_instance_name: row.evolution_instance_name || '',
+    // URL alcanzable desde n8n (red interna EasyPanel), no la pública del navegador.
     evolution_api_url:
-      config.evolutionApiPublicUrl || config.evolutionApiBaseUrl || '',
+      config.evolutionApiBaseUrl || config.evolutionApiPublicUrl || '',
     evolution_api_key: evolutionApiKey,
     whatsapp_phone: row.whatsapp_phone || '',
-    whatsapp_status: row.whatsapp_status || 'none',
     pause_enabled: true,
     pause_trigger: '**',
     pause_ttl_seconds: 300,
@@ -53,12 +55,11 @@ function mapRuntimeRow(row, config) {
 }
 
 const TENANT_RUNTIME_SQL = `
-  SELECT t.id AS tenant_id, t.slug AS tenant_slug, t.name AS tenant_name, t.status AS tenant_status,
+  SELECT t.id AS tenant_id, t.slug AS tenant_slug, t.name AS tenant_name,
          a.id AS agent_row_id, a.slug AS agent_slug, a.name AS agent_name,
          ts.vertical_slug, ts.primary_language, ts.welcome_message AS initial_greeting,
          ts.booking_url_base, ts.booking_url_template, ts.business_hours, ts.policies,
-         ev.instance_name AS evolution_instance_name, ev.phone_number AS whatsapp_phone,
-         ev.status AS whatsapp_status
+         ev.instance_name AS evolution_instance_name, ev.phone_number AS whatsapp_phone
   FROM tenants t
   LEFT JOIN agents a ON a.tenant_id = t.id AND a.status = 'active'
   LEFT JOIN tenant_settings ts ON ts.tenant_id = t.id
@@ -113,14 +114,6 @@ export async function getRuntimeTenantConfig(pool, config, instanceName) {
 
   if (!row) {
     throw validationError(`Instancia no registrada: ${name}`, 404);
-  }
-
-  const allowedStatuses = new Set(['active', 'connected', 'qr_pending']);
-  if (!allowedStatuses.has(row.tenant_status)) {
-    throw validationError(
-      `Tenant ${row.tenant_slug} no está activo (status=${row.tenant_status})`,
-      403
-    );
   }
 
   return mapRuntimeRow(row, config);

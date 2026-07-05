@@ -70,9 +70,10 @@ Webhook Evolution -> n8n Webhook inicial -> extraer instance_name -> consultar A
 ## Variables mínimas cargadas por runtime
 
 ```text
-tenant_id
-agent_id
+tenant_id          (slug técnico, mismo valor que tenant_slug)
 tenant_slug
+agent_id
+tenant_db_id       (id numérico PostgreSQL; solo auditoría, no usar en tools)
 vertical
 agent_name
 initial_greeting
@@ -81,7 +82,7 @@ timezone
 booking_url_base
 booking_url_template
 evolution_instance_name
-evolution_api_url
+evolution_api_url   (interna: n8n_evolution-api:8080)
 webhook_path
 faq_search_endpoint
 unanswered_endpoint
@@ -109,6 +110,29 @@ Datos normaliza tenant, agent, chat y question.
 initial_greeting vive como variable, no como texto fijo del prompt.
 Respostas y SemResposta reciben tenant_id, tenant_slug y agent_id.
 ```
+
+`tenant_id` en runtime es el **slug** (`miguel-telefono`), no el id numérico de PostgreSQL. Coincide con el filtro Qdrant y con `docs/N8N-SEARCH.md`.
+
+## Sin verificación de conexión en runtime
+
+Regla alineada con [Evolution API](../evolution-api/README.md):
+
+```text
+Si la instancia no está connected, Evolution no entrega MESSAGES_UPSERT al webhook.
+n8n no debe revalidar whatsapp_status, tenant_status ni consultar Evolution en el path conversacional.
+```
+
+Prohibido en el workflow (nodos IF / HTTP extra):
+
+```text
+Consultar Evolution getConnectionState antes de responder
+Rechazar mensaje si tenant_status != active
+Rechazar mensaje si whatsapp_status != connected
+```
+
+La API `/api/runtime/tenant-config` resuelve solo por `instance_name` registrado en PostgreSQL. No devuelve campos de estado de conexión para evitar gates redundantes.
+
+`evolution_api_url` en runtime apunta a la **URL interna** (`http://n8n_evolution-api:8080`) para el nodo Enviar WhatsApp desde n8n.
 
 ## Pausa humana
 
