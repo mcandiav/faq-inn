@@ -179,6 +179,24 @@ async function ensureClientTenantBootstrap(pool, config, tenant, logger) {
   }
 }
 
+async function assertClientEmailAvailable(pool, clientEmail, excludeUserId = null) {
+  const [existingEmail] = await pool.query(
+    `SELECT id, role FROM users WHERE email = ?`,
+    [clientEmail]
+  );
+  const row = existingEmail[0];
+  if (!row || row.id === excludeUserId) {
+    return;
+  }
+  if (row.role === 'admin_global') {
+    throw validationError(
+      `El email ${clientEmail} ya es admin global. Usa otro email para el login del tenant (por ejemplo un alias +tenant).`,
+      409
+    );
+  }
+  throw validationError('email ya registrado', 409);
+}
+
 export async function resetAdminTenantPassword(
   pool,
   config,
@@ -200,6 +218,7 @@ export async function resetAdminTenantPassword(
   );
   let user = userRows[0];
   let userCreated = false;
+  let emailUpdated = false;
 
   if (!user) {
     const clientEmail = String(
@@ -215,19 +234,7 @@ export async function resetAdminTenantPassword(
       );
     }
 
-    const [existingEmail] = await pool.query(
-      `SELECT id, role FROM users WHERE email = ?`,
-      [clientEmail]
-    );
-    if (existingEmail.length > 0) {
-      if (existingEmail[0].role === 'admin_global') {
-        throw validationError(
-          `El email ${clientEmail} ya es admin global. Usa otro email para el login del tenant (por ejemplo un alias +tenant).`,
-          409
-        );
-      }
-      throw validationError('email ya registrado', 409);
-    }
+    await assertClientEmailAvailable(pool, clientEmail);
 
     await ensureClientTenantBootstrap(pool, config, tenant, logger);
 
@@ -241,11 +248,25 @@ export async function resetAdminTenantPassword(
     user = { id: userMeta.insertId, email: clientEmail };
     userCreated = true;
   } else {
+    const clientEmail = String(emailInput || user.email)
+      .trim()
+      .toLowerCase();
+
+    if (!clientEmail || !clientEmail.includes('@')) {
+      throw validationError('email inválido');
+    }
+
+    if (clientEmail !== user.email) {
+      await assertClientEmailAvailable(pool, clientEmail, user.id);
+      emailUpdated = true;
+    }
+
     const passwordHash = await hashPassword(tempPassword);
-    await pool.query(`UPDATE users SET password_hash = ? WHERE id = ?`, [
-      passwordHash,
-      user.id,
-    ]);
+    await pool.query(
+      `UPDATE users SET email = ?, password_hash = ? WHERE id = ?`,
+      [clientEmail, passwordHash, user.id]
+    );
+    user = { id: user.id, email: clientEmail };
   }
 
   return {
@@ -254,5 +275,6 @@ export async function resetAdminTenantPassword(
     email: user.email,
     temporary_password: tempPassword,
     user_created: userCreated,
+    email_updated: emailUpdated,
   };
 }
