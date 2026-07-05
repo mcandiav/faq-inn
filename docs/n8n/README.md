@@ -72,25 +72,43 @@ Webhook Evolution -> n8n Webhook inicial -> extraer instance_name -> consultar A
 ```text
 tenant_id          (slug técnico, mismo valor que tenant_slug)
 tenant_slug
+tenant_db_id       (id numérico PostgreSQL; auditoría)
+tenant_display_name
+business_type      (vertical, ej. hotel)
 agent_id
-tenant_db_id       (id numérico PostgreSQL; solo auditoría, no usar en tools)
-vertical
 agent_name
 initial_greeting
 primary_language
-timezone
 booking_url_base
 booking_url_template
+booking_url_mode
+validation_status
+confidence_score
+booking_config            (objeto JSON)
+booking_config_json       (string para prompts n8n)
+placeholder_map           (objeto, derivado si falta en BD)
+required_fields
+date_format
+supports_rooms / supports_children / supports_child_ages
 evolution_instance_name
-evolution_api_url   (interna: n8n_evolution-api:8080)
-webhook_path
+evolution_api_url
+evolution_api_key
 faq_search_endpoint
 unanswered_endpoint
-pause_enabled
-pause_trigger
-pause_ttl_seconds
-pause_scope
+pause_enabled / pause_trigger / pause_ttl_seconds / pause_scope
 ```
+
+## Workflow FAQ prototipo — propagación al agente
+
+Cadena vigente:
+
+```text
+Resolver Tenant → Normalizar Tenant → Config Tenant → … → Datos → TextoFinal → FAQ inn
+```
+
+- **Normalizar Tenant**: parsea `booking_config`, deriva `placeholder_map` si falta.
+- **Config Tenant / Datos / TextoFinal**: nodos Code que propagan todas las variables de reservas al item del agente.
+- El system prompt del agente usa `{{booking_url_template}}`, `{{validation_status}}`, etc. desde `$json` de **TextoFinal**.
 
 ## Workflow de referencia actual
 
