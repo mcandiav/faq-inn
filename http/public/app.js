@@ -2,7 +2,7 @@ const APP_VERSION = '1.5.0';
 const APP_PRODUCT_NAME = 'FAQ Inn';
 const apiBase = window.FAQ_INN_API_URL || window.DFAQ_API_URL || '/api';
 const VIEW_STORAGE_KEY = 'faq-inn-current-view';
-const VALID_VIEWS = ['dashboard', 'unanswered', 'profile', 'admin'];
+const VALID_VIEWS = ['dashboard', 'unanswered', 'profile', 'booking-engine', 'admin'];
 
 const state = {
   user: null,
@@ -11,6 +11,14 @@ const state = {
   faqs: [],
   unanswered: [],
   currentView: 'dashboard',
+  bookingEngine: {
+    sessionId: null,
+    scenarios: [],
+    verification: null,
+    candidateTemplate: '',
+    confidenceScore: 0,
+    warnings: [],
+  },
 };
 const appMeta = {
   productName: APP_PRODUCT_NAME,
@@ -434,6 +442,9 @@ function resolveView(name) {
   if (view === 'unanswered' && user.role !== 'client') {
     return 'dashboard';
   }
+  if (view === 'booking-engine' && user.role !== 'client') {
+    return 'dashboard';
+  }
   return view;
 }
 
@@ -474,6 +485,7 @@ async function refreshViewData(view) {
   if (view === 'dashboard') await refreshFaqs();
   if (view === 'unanswered') await refreshUnanswered();
   if (view === 'profile') await refreshProfile();
+  if (view === 'booking-engine') await refreshBookingEngine();
   if (view === 'admin') await refreshAdmin();
 }
 
@@ -520,6 +532,7 @@ function renderHeader() {
   $('#user-email').textContent = user?.email || '';
   $('#nav-admin').classList.toggle('hidden', !isAdmin);
   $('#nav-unanswered').classList.toggle('hidden', isAdmin);
+  $('#nav-booking-engine')?.classList.toggle('hidden', isAdmin);
   $('#bottom-nav-admin')?.classList.toggle('hidden', !isAdmin);
   $('#bottom-nav-unanswered')?.classList.toggle('hidden', isAdmin);
 
@@ -548,8 +561,8 @@ function renderProfile() {
 
     const addressEl = $('#profile-address');
     const welcomeEl = $('#profile-welcome-message');
-    const bookingEl = $('#profile-booking-url');
     const langEl = $('#profile-primary-language');
+    const bookingStatusEl = $('#profile-booking-status');
 
     if (addressEl) {
       addressEl.value = account?.settings?.address || '';
@@ -557,11 +570,14 @@ function renderProfile() {
     if (welcomeEl) {
       welcomeEl.value = account?.settings?.welcome_message || '';
     }
-    if (bookingEl) {
-      bookingEl.value = account?.settings?.booking_url_base || '';
-    }
     if (langEl) {
       langEl.value = account?.settings?.primary_language || 'es';
+    }
+    if (bookingStatusEl) {
+      const approved = account?.settings?.validation_status === 'approved';
+      bookingStatusEl.textContent = approved
+        ? t('profile.bookingStatusApproved')
+        : t('profile.bookingStatusPending');
     }
 
     onboardHint?.classList.remove('hidden');
@@ -647,6 +663,177 @@ function renderProfileWhatsapp() {
     if (qrMsg && !qrMsg.classList.contains('error')) {
       qrMsg.textContent = '';
       qrMsg.className = 'form-msg';
+    }
+  }
+}
+
+function formatScenarioAges(scenario) {
+  if (!scenario.child_ages?.length) {
+    return getLang() === 'en' ? 'none' : getLang() === 'pt' ? 'nenhum' : 'ninguno';
+  }
+  return scenario.child_ages.join(', ');
+}
+
+function renderBookingScenarios(scenarios) {
+  const list = $('#booking-scenarios-list');
+  if (!list) {
+    return;
+  }
+  list.innerHTML = scenarios
+    .map((scenario, index) => {
+      const ages = formatScenarioAges(scenario);
+      return `
+        <div class="booking-scenario card-inner">
+          <h4>${escapeHtml(t('booking.scenarioLabel', { n: index + 1 }))}</h4>
+          <p>${escapeHtml(t('booking.scenarioRooms', { rooms: scenario.rooms }))}</p>
+          <p>${escapeHtml(
+            t('booking.scenarioDates', {
+              checkin: scenario.checkin,
+              checkout: scenario.checkout,
+            })
+          )}</p>
+          <p>${escapeHtml(
+            t('booking.scenarioGuests', {
+              adults: scenario.adults,
+              children: scenario.children,
+              ages,
+            })
+          )}</p>
+          <label>
+            <span>${escapeHtml(t('booking.scenarioUrl'))}</span>
+            <input type="url" class="booking-scenario-url" data-scenario-index="${index}" placeholder="https://…" />
+          </label>
+        </div>
+      `;
+    })
+    .join('');
+}
+
+function renderBookingEngineView() {
+  const approved =
+    state.account?.settings?.validation_status === 'approved' &&
+    state.account?.settings?.booking_url_template;
+  const approvedPanel = $('#booking-approved-panel');
+  const wizard = $('#booking-wizard');
+  const statusLabel = $('#booking-status-label');
+
+  if (statusLabel) {
+    statusLabel.textContent = approved
+      ? t('booking.statusApproved')
+      : t('booking.statusPending');
+  }
+
+  if (approved && !state.bookingEngine.forceWizard) {
+    approvedPanel?.classList.remove('hidden');
+    wizard?.classList.add('hidden');
+    const templateEl = $('#booking-approved-template');
+    if (templateEl) {
+      templateEl.textContent = state.account.settings.booking_url_template;
+    }
+    return;
+  }
+
+  approvedPanel?.classList.add('hidden');
+  wizard?.classList.remove('hidden');
+  renderBookingScenarios(state.bookingEngine.scenarios || []);
+
+  const verifyStep = $('#booking-step-verify');
+  const scenarioStep = $('#booking-step-scenarios');
+  const hasVerification = Boolean(state.bookingEngine.verification?.url);
+
+  verifyStep?.classList.toggle('hidden', !hasVerification);
+  scenarioStep?.classList.toggle('hidden', hasVerification);
+
+  if (hasVerification) {
+    const pct = Math.round((state.bookingEngine.confidenceScore || 0) * 100);
+    const confidenceEl = $('#booking-confidence');
+    if (confidenceEl) {
+      confidenceEl.textContent = t('booking.confidence', { pct });
+    }
+
+    const warningsEl = $('#booking-warnings');
+    if (warningsEl) {
+      const warnings = state.bookingEngine.warnings || [];
+      warningsEl.innerHTML = warnings
+        .map((warning) => `<li>${escapeHtml(warning)}</li>`)
+        .join('');
+      warningsEl.classList.toggle('hidden', warnings.length === 0);
+    }
+
+    const templateEl = $('#booking-candidate-template');
+    if (templateEl) {
+      templateEl.textContent = state.bookingEngine.candidateTemplate || '';
+    }
+
+    const verifyLink = $('#booking-verify-link');
+    if (verifyLink) {
+      verifyLink.href = state.bookingEngine.verification.url;
+    }
+  }
+}
+
+async function ensureBookingSession(forceNew = false) {
+  if (!forceNew && state.bookingEngine.sessionId && state.bookingEngine.scenarios?.length) {
+    return state.bookingEngine;
+  }
+
+  const data = await api('/booking-engine/start', { method: 'POST' });
+  state.bookingEngine.sessionId = data.session_id;
+  state.bookingEngine.scenarios = data.scenarios || [];
+  state.bookingEngine.verification = null;
+  state.bookingEngine.candidateTemplate = '';
+  state.bookingEngine.confidenceScore = 0;
+  state.bookingEngine.warnings = [];
+  state.bookingEngine.forceWizard = true;
+  return state.bookingEngine;
+}
+
+async function refreshBookingEngine() {
+  const user = state.user;
+  if (!user || user.role !== 'client') {
+    return;
+  }
+
+  const msg = $('#booking-msg');
+  if (msg) {
+    msg.textContent = '';
+    msg.className = 'form-msg';
+  }
+
+  try {
+    const data = await api('/booking-engine/state');
+    if (state.account) {
+      state.account.settings = {
+        ...state.account.settings,
+        ...data.booking,
+      };
+    }
+
+    if (data.session) {
+      state.bookingEngine.sessionId = data.session.id;
+      state.bookingEngine.scenarios = data.session.scenarios || [];
+      state.bookingEngine.candidateTemplate = data.session.candidate_template || '';
+      state.bookingEngine.confidenceScore = data.session.confidence_score || 0;
+      state.bookingEngine.warnings = data.session.warnings || [];
+      if (data.session.verification_url) {
+        state.bookingEngine.verification = {
+          url: data.session.verification_url,
+          scenario: data.session.verification_scenario,
+        };
+      }
+    } else if (data.booking?.validation_status !== 'approved') {
+      await ensureBookingSession(false);
+    }
+
+    state.bookingEngine.forceWizard =
+      data.booking?.validation_status !== 'approved' ||
+      Boolean(data.session?.status === 'pending_verification');
+
+    renderBookingEngineView();
+  } catch (error) {
+    if (msg) {
+      msg.textContent = error.message;
+      msg.classList.add('error');
     }
   }
 }
@@ -1720,6 +1907,98 @@ $$('[data-view]').forEach((btn) => {
   btn.addEventListener('click', () => openView(btn.dataset.view));
 });
 
+$('#btn-go-booking-engine')?.addEventListener('click', () => openView('booking-engine'));
+
+$('#btn-booking-reconfigure')?.addEventListener('click', async () => {
+  state.bookingEngine.forceWizard = true;
+  await ensureBookingSession(true);
+  renderBookingEngineView();
+});
+
+$('#btn-booking-discover')?.addEventListener('click', async () => {
+  const msg = $('#booking-msg');
+  msg.textContent = '';
+  msg.className = 'form-msg';
+
+  try {
+    await ensureBookingSession(false);
+    const urls = [...$$('.booking-scenario-url')].map((input) => input.value.trim());
+    if (urls.some((url) => !url)) {
+      throw new Error(t('booking.msgError'));
+    }
+
+    const data = await api('/booking-engine/discover', {
+      method: 'POST',
+      body: JSON.stringify({
+        session_id: state.bookingEngine.sessionId,
+        urls,
+      }),
+    });
+
+    state.bookingEngine.candidateTemplate = data.candidate_template || '';
+    state.bookingEngine.confidenceScore = data.confidence_score || 0;
+    state.bookingEngine.warnings = data.warnings || [];
+    state.bookingEngine.verification = data.verification || null;
+    renderBookingEngineView();
+    msg.textContent = t('booking.msgAnalyzeOk');
+    msg.classList.add('ok');
+  } catch (error) {
+    msg.textContent = error.message || t('booking.msgError');
+    msg.classList.add('error');
+  }
+});
+
+$('#btn-booking-retry')?.addEventListener('click', async () => {
+  const msg = $('#booking-msg');
+  msg.textContent = '';
+  msg.className = 'form-msg';
+
+  try {
+    const data = await api('/booking-engine/reject', {
+      method: 'POST',
+      body: JSON.stringify({ session_id: state.bookingEngine.sessionId }),
+    });
+    state.bookingEngine.sessionId = data.session_id;
+    state.bookingEngine.scenarios = data.scenarios || [];
+    state.bookingEngine.verification = null;
+    state.bookingEngine.candidateTemplate = '';
+    state.bookingEngine.confidenceScore = 0;
+    state.bookingEngine.warnings = [];
+    renderBookingEngineView();
+  } catch (error) {
+    msg.textContent = error.message || t('booking.msgError');
+    msg.classList.add('error');
+  }
+});
+
+$('#btn-booking-approve')?.addEventListener('click', async () => {
+  const msg = $('#booking-msg');
+  msg.textContent = '';
+  msg.className = 'form-msg';
+
+  try {
+    const data = await api('/booking-engine/approve', {
+      method: 'POST',
+      body: JSON.stringify({ session_id: state.bookingEngine.sessionId }),
+    });
+    if (state.account) {
+      state.account.settings = {
+        ...state.account.settings,
+        ...data.booking,
+      };
+    }
+    state.bookingEngine.forceWizard = false;
+    state.bookingEngine.verification = null;
+    renderBookingEngineView();
+    renderProfile();
+    msg.textContent = t('booking.msgApproved');
+    msg.classList.add('ok');
+  } catch (error) {
+    msg.textContent = error.message || t('booking.msgError');
+    msg.classList.add('error');
+  }
+});
+
 window.addEventListener('popstate', () => {
   if (!state.user) {
     return;
@@ -1847,7 +2126,6 @@ $('#profile-form').addEventListener('submit', async (event) => {
       const accountBody = {
         address: $('#profile-address')?.value.trim() || '',
         welcome_message: $('#profile-welcome-message')?.value.trim() || '',
-        booking_url_base: $('#profile-booking-url')?.value.trim() || '',
         primary_language: $('#profile-primary-language')?.value || 'es',
       };
       const businessName = $('#profile-business').value.trim();

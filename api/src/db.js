@@ -15,6 +15,7 @@ const TABLES_WITH_ID = [
   'faq_items',
   'unanswered_questions',
   'evolution_instances',
+  'booking_discovery_sessions',
 ].join('|');
 
 function withReturningId(sql) {
