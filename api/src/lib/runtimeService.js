@@ -35,6 +35,10 @@ function mapRuntimeRow(row, config) {
     initial_greeting: row.initial_greeting || '',
     booking_url_base: row.booking_url_base || '',
     booking_url_template: row.booking_url_template || '',
+    booking_url_mode: row.booking_url_mode || '',
+    validation_status: row.validation_status || 'pending',
+    confidence_score: Number(row.confidence_score || 0),
+    booking_config: row.booking_config || '{}',
     business_hours: row.business_hours || '',
     policies: row.policies || '',
     evolution_instance_name: row.evolution_instance_name || '',
@@ -58,7 +62,9 @@ const TENANT_RUNTIME_SQL = `
   SELECT t.id AS tenant_id, t.slug AS tenant_slug, t.name AS tenant_name,
          a.id AS agent_row_id, a.slug AS agent_slug, a.name AS agent_name,
          ts.vertical_slug, ts.primary_language, ts.welcome_message AS initial_greeting,
-         ts.booking_url_base, ts.booking_url_template, ts.business_hours, ts.policies,
+         ts.booking_url_base, ts.booking_url_template, ts.booking_url_mode,
+         ts.validation_status, ts.confidence_score, ts.booking_config,
+         ts.business_hours, ts.policies,
          ev.instance_name AS evolution_instance_name, ev.phone_number AS whatsapp_phone
   FROM tenants t
   LEFT JOIN agents a ON a.tenant_id = t.id AND a.status = 'active'

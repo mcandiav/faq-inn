@@ -35,7 +35,8 @@ export async function getAccountSettings(pool, config, userId, tenantId) {
 
   const [settingsRows] = await pool.query(
     `SELECT vertical_slug, primary_language, booking_url_base, booking_url_template,
-            lodging_type, business_hours, policies, welcome_message, address
+            booking_url_mode, validation_status, confidence_score, booking_config,
+            booking_approved_at, lodging_type, business_hours, policies, welcome_message, address
      FROM tenant_settings
      WHERE tenant_id = ?`,
     [tenantId]
@@ -75,6 +76,10 @@ export async function getAccountSettings(pool, config, userId, tenantId) {
       primary_language: settings.primary_language || 'es',
       booking_url_base: settings.booking_url_base || '',
       booking_url_template: settings.booking_url_template || '',
+      booking_url_mode: settings.booking_url_mode || '',
+      validation_status: settings.validation_status || 'pending',
+      confidence_score: Number(settings.confidence_score || 0),
+      booking_approved_at: settings.booking_approved_at || null,
       lodging_type: settings.lodging_type || 'hotel',
       business_hours: settings.business_hours || '',
       policies: settings.policies || '',
@@ -108,8 +113,6 @@ export async function updateAccountSettings(pool, config, userId, tenantId, inpu
   const address = input.address?.trim();
   const welcomeMessage = input.welcome_message?.trim();
   const agentName = input.agent_name?.trim();
-  const bookingUrlBase = input.booking_url_base?.trim();
-  const bookingUrlTemplate = input.booking_url_template?.trim();
   const primaryLanguage = input.primary_language?.trim();
   const businessHours = input.business_hours?.trim();
   const policies = input.policies?.trim();
@@ -134,14 +137,6 @@ export async function updateAccountSettings(pool, config, userId, tenantId, inpu
   if (welcomeMessage !== undefined) {
     settingsUpdates.push('welcome_message = ?');
     settingsParams.push(welcomeMessage);
-  }
-  if (bookingUrlBase !== undefined) {
-    settingsUpdates.push('booking_url_base = ?');
-    settingsParams.push(bookingUrlBase);
-  }
-  if (bookingUrlTemplate !== undefined) {
-    settingsUpdates.push('booking_url_template = ?');
-    settingsParams.push(bookingUrlTemplate);
   }
   if (primaryLanguage !== undefined) {
     settingsUpdates.push('primary_language = ?');
