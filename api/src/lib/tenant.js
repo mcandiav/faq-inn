@@ -1,5 +1,6 @@
-﻿// Fuente de verdad de versión de producto (no usar APP_VERSION en .env).
-export const APP_VERSION = '1.6.12';
+﻿import { readProductVersion } from './productVersion.js';
+
+export const APP_VERSION = readProductVersion();
 export const APP_PRODUCT_NAME = 'FAQ Inn';
 export const DEFAULT_TENANT = 'FAQ-INN';
 export const DEFAULT_TENANT_SLUG = 'faq-inn';
@@ -29,7 +30,7 @@ export function loadTenantConfig(env = process.env) {
     tenantDisplayName,
     appTitle,
     appProductName: APP_PRODUCT_NAME,
-    // Versión siempre desde código; ignora APP_VERSION del entorno (evita 1.0.0 obsoleto en EasyPanel).
+    // Versión desde archivo VERSION (raíz repo); commit-version.ps1 lo actualiza.
     appVersion: APP_VERSION,
     postgresDatabase,
   };
