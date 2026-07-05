@@ -27,7 +27,7 @@ Frontend estático (nginx) + proxy reverso hacia `faq-inn-api`.
 | `GET /api/*` | Proxy hacia `faq-inn-api` |
 
 ```env
-API_UPSTREAM=http://n8n_faq-inn-api:3000
+API_UPSTREAM=http://n8n_inn-api:3000
 ```
 
-`n8n_faq-inn-api` = nombre interno del App Service api en EasyPanel.
+`n8n_inn-api` = nombre interno del App Service API en EasyPanel (proyecto `n8n`).

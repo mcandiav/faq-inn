@@ -140,7 +140,7 @@ ADMIN_PASSWORD=<secreto>
 | Dominio | `inn.at-once.cl` |
 
 ```env
-API_UPSTREAM=http://n8n_faq-inn-api:3000
+API_UPSTREAM=http://n8n_inn-api:3000
 ```
 
 Validar:

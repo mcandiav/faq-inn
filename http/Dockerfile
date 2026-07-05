@@ -8,7 +8,7 @@ COPY public /usr/share/nginx/html
 
 RUN sed -i 's/\r$//' /entrypoint.sh && chmod +x /entrypoint.sh
 
-ENV API_UPSTREAM=http://faq-inn-api:3000
+ENV API_UPSTREAM=http://n8n_inn-api:3000
 
 EXPOSE 80
 
