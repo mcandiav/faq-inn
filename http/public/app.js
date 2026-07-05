@@ -1056,63 +1056,99 @@ function openAdminDeleteConfirm(id) {
   $('#admin-delete-confirm-slug')?.focus();
 }
 
-async function resetAdminTenantPassword(id) {
+async function openAdminResetDialog(id) {
   const tenantId = Number(id || $('#admin-tenant-id')?.value);
   const tenant = state.adminTenants.find((row) => Number(row.id) === tenantId);
   if (!tenant) {
     return;
   }
 
-  let loginEmail = tenant.client_email || '';
-  if (!loginEmail) {
-    const suggested = tenant.registration_email || '';
-    const input = window.prompt(
-      t('admin.createLoginPrompt', {
-        slug: tenant.slug,
-        email: suggested || '—',
-      }),
-      suggested
-    );
-    if (input === null) {
-      return;
-    }
-    loginEmail = input.trim();
-    if (!loginEmail) {
-      return;
-    }
-  }
+  const dialog = $('#admin-reset-dialog');
+  const form = $('#admin-reset-form');
+  const msg = $('#admin-reset-msg');
+  const result = $('#admin-reset-result');
+  const submitBtn = $('#admin-reset-submit');
 
-  const ok = window.confirm(
-    t('admin.resetPasswordConfirm', { email: loginEmail })
-  );
-  if (!ok) {
+  $('#admin-reset-dialog-title').textContent = `${t('admin.resetAccessTitle')}: ${tenant.slug}`;
+  $('#admin-reset-email').value =
+    tenant.client_email || tenant.registration_email || '';
+  $('#admin-reset-password').value = '';
+  if (msg) {
+    msg.textContent = '';
+    msg.className = 'form-msg';
+  }
+  result?.classList.add('hidden');
+  submitBtn?.classList.remove('hidden');
+  form?.reset();
+  $('#admin-reset-email').value =
+    tenant.client_email || tenant.registration_email || '';
+
+  dialog?.showModal();
+  $('#admin-reset-email')?.focus();
+}
+
+async function submitAdminResetAccess(event) {
+  event.preventDefault();
+
+  const tenantId = Number($('#admin-tenant-id')?.value);
+  const tenant = state.adminTenants.find((row) => Number(row.id) === tenantId);
+  if (!tenant) {
     return;
   }
 
-  const msg = $('#admin-detail-msg') || $('#admin-msg');
-  msg.textContent = t('admin.resettingPassword');
-  msg.className = 'form-msg';
+  const email = $('#admin-reset-email')?.value.trim() || '';
+  const password = $('#admin-reset-password')?.value || '';
+  const msg = $('#admin-reset-msg');
+  const result = $('#admin-reset-result');
+  const submitBtn = $('#admin-reset-submit');
+
+  if (!email) {
+    if (msg) {
+      msg.textContent = t('login.email');
+      msg.className = 'form-msg error';
+    }
+    return;
+  }
+
+  if (msg) {
+    msg.textContent = t('admin.resettingPassword');
+    msg.className = 'form-msg';
+  }
 
   try {
     const data = await api(`/admin/tenants/${tenantId}/reset-password`, {
       method: 'POST',
-      body: JSON.stringify({ email: loginEmail }),
+      body: JSON.stringify({
+        email,
+        password: password || undefined,
+      }),
     });
-    msg.textContent = data.user_created
-      ? t('admin.resetPasswordCreated', {
-          email: data.email,
-          password: data.temporary_password,
-        })
-      : t('admin.resetPasswordDone', {
-          email: data.email,
-          password: data.temporary_password,
-        });
-    msg.className = 'form-msg ok';
+
+    $('#admin-reset-result-email').textContent = data.email || email;
+    $('#admin-reset-result-password').textContent = data.temporary_password || '';
+    result?.classList.remove('hidden');
+    submitBtn?.classList.add('hidden');
+    if (msg) {
+      msg.textContent = '';
+      msg.className = 'form-msg';
+    }
+
     await refreshAdmin();
+    const detailMsg = $('#admin-detail-msg');
+    if (detailMsg) {
+      detailMsg.textContent = t('admin.resetAccessSaved');
+      detailMsg.className = 'form-msg ok';
+    }
   } catch (error) {
-    msg.textContent = error.message;
-    msg.className = 'form-msg error';
+    if (msg) {
+      msg.textContent = error.message;
+      msg.className = 'form-msg error';
+    }
   }
+}
+
+async function resetAdminTenantPassword(id) {
+  openAdminResetDialog(id);
 }
 
 async function deleteAdminTenant(id) {
@@ -1703,6 +1739,12 @@ $('#admin-detail-cancel')?.addEventListener('click', () => {
 
 $('#admin-reset-password')?.addEventListener('click', () => {
   resetAdminTenantPassword(Number($('#admin-tenant-id')?.value));
+});
+
+$('#admin-reset-form')?.addEventListener('submit', submitAdminResetAccess);
+
+$('#admin-reset-cancel')?.addEventListener('click', () => {
+  $('#admin-reset-dialog')?.close();
 });
 
 $('#admin-delete-tenant')?.addEventListener('click', () => {
