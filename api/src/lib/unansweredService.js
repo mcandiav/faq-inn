@@ -18,8 +18,8 @@ export async function resolveTenantAndAgent(pool, tenantRef, agentRef) {
   );
 
   const tenant = tenants[0];
-  if (!tenant || tenant.status !== 'active') {
-    const error = new Error('tenant no encontrado o inactivo');
+  if (!tenant) {
+    const error = new Error('tenant no encontrado');
     error.statusCode = 404;
     throw error;
   }
@@ -69,7 +69,7 @@ export async function registerUnanswered(pool, body) {
 
   const { tenant, agent } = await resolveTenantAndAgent(
     pool,
-    body.tenant_id || body.tenant_slug,
+    body.tenant_slug || body.tenant_id,
     body.agent_id
   );
 

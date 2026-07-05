@@ -38,10 +38,11 @@ Hostname documentado en EasyPanel: **`n8n_inn-api`** (servicio `inn-api`).
 
 ```text
 El runtime recibe un mensaje.
-Identifica tenant_id, agent_id y chat_id.
+Identifica tenant_id (slug), agent_id y chat_id.
 Carga initial_greeting, pause_trigger y pause_ttl_seconds.
-Consulta Respostas con tenant_id, tenant_slug y agent_id.
-Registra SemResposta con tenant_id, agent_id, chat_id y channel.
+Consulta Respostas con tenant_id (= slug), tenant_slug y agent_id.
+Registra SemResposta con tenant_id (= slug), agent_id, chat_id y channel.
+No hay nodos IF de conexión WhatsApp ni reconsulta a Evolution en el path del mensaje.
 ```
 
 ## Criterio de descarte
