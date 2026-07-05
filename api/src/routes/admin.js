@@ -1,4 +1,10 @@
 import { createAdminTenant } from '../lib/tenantService.js';
+import {
+  deleteAdminTenant,
+  getAdminTenantDetail,
+  listAdminTenants,
+  resetAdminTenantPassword,
+} from '../lib/adminService.js';
 
 export async function adminRoutes(app, config) {
   const pool = app.db.pool;
@@ -7,19 +13,72 @@ export async function adminRoutes(app, config) {
     '/api/admin/tenants',
     { preHandler: [app.requireAdmin] },
     async () => {
-      const [rows] = await pool.query(
-        `SELECT t.id, t.slug, t.name, t.status, t.created_at,
-                u.email AS client_email,
-                a.slug AS agent_slug, a.name AS agent_name,
-                tp.status AS provisioning_status
-         FROM tenants t
-         LEFT JOIN users u ON u.tenant_id = t.id AND u.role = 'client'
-         LEFT JOIN agents a ON a.tenant_id = t.id
-         LEFT JOIN tenant_provisioning tp ON tp.tenant_id = t.id
-         ORDER BY t.created_at DESC`
-      );
+      const tenants = await listAdminTenants(pool);
+      return { status: 'ok', tenants };
+    }
+  );
 
-      return { status: 'ok', tenants: rows };
+  app.get(
+    '/api/admin/tenants/:id',
+    { preHandler: [app.requireAdmin] },
+    async (request, reply) => {
+      try {
+        const tenantId = Number(request.params.id);
+        const tenant = await getAdminTenantDetail(pool, tenantId);
+        return { status: 'ok', tenant };
+      } catch (error) {
+        reply.code(error.statusCode || 500);
+        return {
+          status: 'error',
+          error: error.message || 'No se pudo cargar el tenant',
+        };
+      }
+    }
+  );
+
+  app.delete(
+    '/api/admin/tenants/:id',
+    { preHandler: [app.requireAdmin] },
+    async (request, reply) => {
+      try {
+        const tenantId = Number(request.params.id);
+        const result = await deleteAdminTenant(
+          pool,
+          config,
+          tenantId,
+          request.body?.confirm_slug,
+          app.log
+        );
+        return { status: 'ok', ...result };
+      } catch (error) {
+        reply.code(error.statusCode || 500);
+        return {
+          status: 'error',
+          error: error.message || 'No se pudo borrar el tenant',
+        };
+      }
+    }
+  );
+
+  app.post(
+    '/api/admin/tenants/:id/reset-password',
+    { preHandler: [app.requireAdmin] },
+    async (request, reply) => {
+      try {
+        const tenantId = Number(request.params.id);
+        const result = await resetAdminTenantPassword(
+          pool,
+          tenantId,
+          request.body?.password
+        );
+        return { status: 'ok', ...result };
+      } catch (error) {
+        reply.code(error.statusCode || 500);
+        return {
+          status: 'error',
+          error: error.message || 'No se pudo resetear la contraseña',
+        };
+      }
     }
   );
 
