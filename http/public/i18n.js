@@ -257,7 +257,7 @@ const MESSAGES = {
     'msg.qrTimeout':
       'Se agotó el tiempo de espera del QR. Pulsa «Actualizar QR» e inténtalo de nuevo.',
     'msg.qrWaiting': 'Escanea el QR una sola vez… ({seconds}s)',
-    'msg.creatingWhatsapp': 'Creando instancia en Evolution API…',
+    'msg.creatingWhatsapp': 'Creando instancia en WhatsApp Web…',
     'msg.tenantCreated': 'Posada creada. El cliente puede ingresar con su email.',
   },
   pt: {
@@ -504,7 +504,7 @@ const MESSAGES = {
     'msg.qrTimeout':
       'O tempo de espera do QR expirou. Clique em «Atualizar QR» e tente novamente.',
     'msg.qrWaiting': 'Escaneie o QR uma única vez… ({seconds}s)',
-    'msg.creatingWhatsapp': 'Criando instância na Evolution API…',
+    'msg.creatingWhatsapp': 'Criando instância no WhatsApp Web…',
     'msg.tenantCreated': 'Pousada criada. O cliente pode entrar com seu email.',
   },
   en: {
@@ -750,7 +750,7 @@ const MESSAGES = {
     'msg.qrTimeout':
       'QR wait time expired. Click «Refresh QR» and try again.',
     'msg.qrWaiting': 'Scan the QR code once… ({seconds}s)',
-    'msg.creatingWhatsapp': 'Creating instance in Evolution API…',
+    'msg.creatingWhatsapp': 'Creating WhatsApp Web instance…',
     'msg.tenantCreated': 'Lodging created. The client can sign in with their email.',
   },
 };

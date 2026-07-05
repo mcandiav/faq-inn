@@ -310,7 +310,7 @@ export async function startWhatsappProvision(pool, config, tenant) {
         'Escanea el QR una sola vez (válido ~40s). Si falla, pulsa Actualizar QR.',
     };
   } catch (error) {
-    const message = error.message || 'Error al crear instancia Evolution';
+    const message = error.message || 'Error al crear la conexión WhatsApp Web';
     await pool.query(
       `UPDATE tenants SET status = 'error', updated_at = NOW() WHERE id = ?`,
       [tenant.id]
@@ -404,7 +404,7 @@ export async function getProvisionStatus(pool, config, tenant, instanceName) {
       evolutionState: null,
       message:
         error.message ||
-        'No se pudo consultar Evolution. Pulsa Actualizar QR para reintentar.',
+        'No se pudo consultar WhatsApp Web. Pulsa Actualizar QR para reintentar.',
     };
   }
 
