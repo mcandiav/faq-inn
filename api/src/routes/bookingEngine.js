@@ -2,6 +2,7 @@ import {
   approveDiscovery,
   discoverFromUrls,
   getBookingEngineState,
+  previewBookingUrl,
   rejectDiscovery,
   startDiscoverySession,
 } from '../lib/bookingEngineService.js';
@@ -119,6 +120,31 @@ export async function bookingEngineRoutes(app) {
         return {
           status: 'error',
           error: error.message || 'No se pudo reiniciar descubrimiento',
+        };
+      }
+    }
+  );
+
+  app.post(
+    '/api/booking-engine/preview',
+    { preHandler: [app.authenticate] },
+    async (request, reply) => {
+      if (!requireClient(request, reply)) {
+        return { status: 'error', error: 'Solo clientes con negocio' };
+      }
+
+      try {
+        const data = await previewBookingUrl(
+          pool,
+          request.user.tenant_id,
+          request.body || {}
+        );
+        return { status: 'ok', ...data };
+      } catch (error) {
+        reply.code(error.statusCode || 500);
+        return {
+          status: 'error',
+          error: error.message || 'No se pudo generar el link',
         };
       }
     }

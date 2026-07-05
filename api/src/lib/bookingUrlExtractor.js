@@ -119,6 +119,9 @@ function matchPlaceholder(value, scenario, key = '') {
   if (normalized === scenario.child_ages.join(',')) {
     return '{{child_ages_csv}}';
   }
+  if (normalized === scenario.child_ages.join(';')) {
+    return '{{child_ages_semicolon}}';
+  }
   if (normalized === scenario.child_ages.join('-')) {
     return '{{child_ages_dash}}';
   }

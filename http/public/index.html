@@ -249,7 +249,7 @@
 
           <div id="booking-approved-panel" class="card card-inner hidden">
             <h3 data-i18n="booking.approvedTitle">Plantilla aprobada</h3>
-            <p id="booking-approved-template" class="booking-template-preview"></p>
+            <div id="booking-approved-preview" class="booking-preview-form"></div>
             <button type="button" class="btn ghost" id="btn-booking-reconfigure" data-i18n="booking.reconfigure">
               Configurar de nuevo
             </button>
@@ -268,16 +268,17 @@
             </div>
 
             <div id="booking-step-verify" class="hidden">
-              <h3 data-i18n="booking.stepVerify">Paso 2 — Verificar link de prueba</h3>
+              <h3 data-i18n="booking.stepVerify">Paso 2 — Probar link generado</h3>
               <p class="field-hint" data-i18n="booking.stepVerifyHint">
-                Abra este link en su motor. Debe mostrar 1 adulto, 1 menor, entrada hoy y salida mañana. Si coincide, apruebe. Si no, vuelva a pegar los 3 links.
+                Elija check-in, check-out y adultos. FAQ Inn arma el link de reserva y usted solo abre para verificar que el motor muestra lo correcto.
               </p>
               <p id="booking-confidence" class="booking-meta"></p>
               <ul id="booking-warnings" class="booking-warnings"></ul>
-              <p class="booking-template-preview" id="booking-candidate-template"></p>
-              <a id="booking-verify-link" class="btn primary" href="#" target="_blank" rel="noopener noreferrer" data-i18n="booking.openVerify">
-                Abrir link de verificación
-              </a>
+              <div id="booking-verify-preview" class="booking-preview-form"></div>
+              <details class="booking-template-details">
+                <summary data-i18n="booking.showTemplate">Ver plantilla técnica detectada</summary>
+                <p class="booking-template-preview" id="booking-candidate-template"></p>
+              </details>
               <div class="dialog-actions booking-actions">
                 <button type="button" class="btn ghost" id="btn-booking-retry" data-i18n="booking.retry">
                   No coincide — volver a pegar links
@@ -620,7 +621,7 @@
       </form>
     </dialog>
 
-    <script src="/i18n.js?v=1.7.0"></script>
-    <script src="/app.js?v=1.7.0"></script>
+    <script src="/i18n.js?v=1.7.1"></script>
+    <script src="/app.js?v=1.7.1"></script>
   </body>
 </html>
