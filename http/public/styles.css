@@ -1332,6 +1332,33 @@ code {
   margin-top: 0.5rem;
 }
 
+.profile-whatsapp-fieldset {
+  border-color: #334155;
+}
+
+.profile-whatsapp-block {
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+}
+
+.profile-whatsapp-status {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.profile-whatsapp-phone {
+  font-weight: 600;
+  font-size: 1.05rem;
+  color: #e2e8f0;
+}
+
+#profile-whatsapp-qr-panel {
+  margin-top: 0.5rem;
+}
+
 @media (min-width: 721px) {
   .profile-logout {
     display: none;
