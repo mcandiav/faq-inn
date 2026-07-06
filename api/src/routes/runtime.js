@@ -67,6 +67,16 @@ export async function runtimeRoutes(app, config) {
     }
   });
 
+  app.get('/api/r/:code', async (request, reply) => {
+    const { resolveBookingShortLink } = await import('../lib/bookingShortLink.js');
+    const target = await resolveBookingShortLink(pool, request.params.code);
+    if (!target) {
+      reply.code(404);
+      return { status: 'error', error: 'Link no encontrado o expirado' };
+    }
+    reply.redirect(target);
+  });
+
   app.post('/api/runtime/tenant-config', async (request, reply) => {
     if (!verifyN8nToken(request, config)) {
       reply.code(401);

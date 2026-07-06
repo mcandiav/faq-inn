@@ -312,6 +312,21 @@ async function applySchemaPatches(pool) {
     CREATE INDEX IF NOT EXISTS idx_booking_discovery_tenant
       ON booking_discovery_sessions (tenant_id, status)
   `);
+
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS booking_short_links (
+      code VARCHAR(16) PRIMARY KEY,
+      target_url TEXT NOT NULL,
+      tenant_id BIGINT REFERENCES tenants (id) ON DELETE SET NULL,
+      expires_at TIMESTAMPTZ NOT NULL,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    )
+  `);
+
+  await pool.query(`
+    CREATE INDEX IF NOT EXISTS idx_booking_short_links_expires
+      ON booking_short_links (expires_at)
+  `);
 }
 
 export async function runMigrations(pool, _config) {

@@ -20,6 +20,10 @@ function slugFromInstanceName(instanceName, prefix) {
 import { buildPlaceholderMap, buildRequiredFields } from './bookingApprovedFormat.js';
 import { normalizePreviewScenario } from './bookingScenarios.js';
 import { buildUrlFromTemplate } from './bookingTemplateBuilder.js';
+import {
+  buildPublicShortUrl,
+  createBookingShortLink,
+} from './bookingShortLink.js';
 
 function parseBookingConfig(raw) {
   if (!raw) return {};
@@ -195,7 +199,14 @@ export function buildRuntimeBookingUrl(tenant, input = {}) {
 
 export async function generateRuntimeBookingLink(pool, config, instanceName, input = {}) {
   const tenant = await getRuntimeTenantConfig(pool, config, instanceName);
-  return buildRuntimeBookingUrl(tenant, input);
+  const result = buildRuntimeBookingUrl(tenant, input);
+  const code = await createBookingShortLink(pool, result.url, tenant.tenant_db_id);
+  const short_url = buildPublicShortUrl(config, code);
+
+  return {
+    ...result,
+    short_url,
+  };
 }
 
 /** Item plano de tenant listo para n8n (sin mensaje WhatsApp; eso viene del webhook). */
