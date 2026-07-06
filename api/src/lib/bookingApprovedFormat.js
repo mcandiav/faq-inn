@@ -1,3 +1,5 @@
+import { normalizeTemplateToCanonical } from './bookingTemplateBuilder.js';
+
 const CANONICAL_FIELDS = [
   'checkin',
   'checkout',
@@ -38,9 +40,13 @@ export function buildPlaceholderMap(variableParams = {}) {
   const map = {};
   for (const token of Object.values(variableParams)) {
     const name = extractPlaceholderName(token);
-    const canonical = PLACEHOLDER_TO_CANONICAL[name];
-    if (canonical && !map[canonical]) {
-      map[canonical] = `{{${name}}}`;
+    const canonical = PLACEHOLDER_TO_CANONICAL[name] || name;
+    if (canonical === 'occupancy_path') {
+      map.occupancy_path = '{{occupancy_path}}';
+      continue;
+    }
+    if (CANONICAL_FIELDS.includes(canonical) && !map[canonical]) {
+      map[canonical] = `{{${canonical}}}`;
     }
   }
   return map;
@@ -82,6 +88,7 @@ export function buildApprovedBookingRecord(session, userId, bookingUrlBase) {
     },
     placeholder_map: placeholderMap,
     date_format: candidateConfig.date_format || '',
+    child_ages_format: candidateConfig.child_ages_format || 'csv',
     occupancy_format: candidateConfig.occupancy_format || '',
     supports_rooms: Boolean(candidateConfig.supports_rooms),
     supports_children: Boolean(candidateConfig.supports_children),
@@ -96,7 +103,7 @@ export function buildApprovedBookingRecord(session, userId, bookingUrlBase) {
   };
 
   return {
-    booking_url_template: session.candidate_template,
+    booking_url_template: normalizeTemplateToCanonical(session.candidate_template),
     booking_url_base: bookingUrlBase,
     booking_url_mode: 'discovered_template',
     validation_status: 'approved',

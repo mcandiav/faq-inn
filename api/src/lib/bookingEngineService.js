@@ -130,13 +130,19 @@ export async function discoverFromUrls(pool, tenantId, sessionId, urls) {
   }
 
   const verificationScenario = buildVerificationScenario(scenarios[0]?.checkin);
+  const buildOptions = {
+    date_format: result.date_format,
+    child_ages_format: result.child_ages_format,
+  };
   const verificationUrl = buildUrlFromTemplate(
     result.booking_url_template,
-    verificationScenario
+    verificationScenario,
+    buildOptions
   );
 
   const candidateConfig = {
     date_format: result.date_format,
+    child_ages_format: result.child_ages_format,
     occupancy_format: result.occupancy_format,
     required_fields: result.required_fields,
     defaults: {
@@ -302,16 +308,40 @@ async function resolveTemplateForPreview(pool, tenantId, sessionId) {
   throw validationError('No hay plantilla disponible para generar el link', 404);
 }
 
+async function resolveBuildOptions(pool, tenantId, sessionId) {
+  if (sessionId) {
+    const [rows] = await pool.query(
+      `SELECT candidate_config
+       FROM booking_discovery_sessions
+       WHERE id = ? AND tenant_id = ?`,
+      [sessionId, tenantId]
+    );
+    const config = parseJson(rows[0]?.candidate_config, {});
+    return {
+      date_format: config.date_format || '',
+      child_ages_format: config.child_ages_format || 'csv',
+    };
+  }
+
+  const booking = await loadTenantBooking(pool, tenantId);
+  const config = booking.booking_config || {};
+  return {
+    date_format: config.date_format || '',
+    child_ages_format: config.child_ages_format || 'csv',
+  };
+}
+
 export async function previewBookingUrl(pool, tenantId, input) {
   const sessionId = Number(input.session_id) || null;
   const template = await resolveTemplateForPreview(pool, tenantId, sessionId);
+  const buildOptions = await resolveBuildOptions(pool, tenantId, sessionId);
   let scenario;
   try {
     scenario = normalizePreviewScenario(input);
   } catch (error) {
     throw validationError(error.message || 'Datos de prueba inválidos');
   }
-  const url = buildUrlFromTemplate(template, scenario);
+  const url = buildUrlFromTemplate(template, scenario, buildOptions);
 
   try {
     new URL(url);

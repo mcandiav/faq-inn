@@ -5,8 +5,8 @@ import { buildRuntimeWorkflowItem, enrichBookingConfig } from './runtimeService.
 test('enrichBookingConfig derives placeholder_map from variable_params', () => {
   const config = enrichBookingConfig({
     variable_params: {
-      CheckIn: '{{checkin_ddmmyyyy}}',
-      CheckOut: '{{checkout_ddmmyyyy}}',
+      CheckIn: '{{checkin}}',
+      CheckOut: '{{checkout}}',
       ad: '{{adults}}',
       NRooms: '{{rooms}}',
     },
@@ -14,8 +14,8 @@ test('enrichBookingConfig derives placeholder_map from variable_params', () => {
     supports_rooms: true,
   });
 
-  assert.equal(config.placeholder_map.checkin, '{{checkin_ddmmyyyy}}');
-  assert.equal(config.placeholder_map.checkout, '{{checkout_ddmmyyyy}}');
+  assert.equal(config.placeholder_map.checkin, '{{checkin}}');
+  assert.equal(config.placeholder_map.checkout, '{{checkout}}');
   assert.equal(config.placeholder_map.adults, '{{adults}}');
   assert.equal(config.placeholder_map.rooms, '{{rooms}}');
   assert.ok(Array.isArray(config.required_fields));
@@ -51,7 +51,7 @@ test('buildRuntimeWorkflowItem flattens tenant only (no webhook message fields)'
     validation_status: 'ok',
     confidence_score: 0.9,
     booking_config_json: '{}',
-    placeholder_map: { checkin: '{{checkin_ddmmyyyy}}' },
+    placeholder_map: { checkin: '{{checkin}}' },
     required_fields: ['checkin'],
     date_format: 'DDMMYYYY',
     supports_rooms: true,
@@ -76,7 +76,7 @@ test('buildRuntimeWorkflowItem flattens tenant only (no webhook message fields)'
   assert.equal(item.status, 'ok');
   assert.equal(item.tenant_slug, 'miguel-telefono');
   assert.equal(item.evolution_api_url, 'https://evo.example');
-  assert.equal(item.placeholder_map_json, JSON.stringify({ checkin: '{{checkin_ddmmyyyy}}' }));
+  assert.equal(item.placeholder_map_json, JSON.stringify({ checkin: '{{checkin}}' }));
   assert.equal(item.required_fields_json, JSON.stringify(['checkin']));
   assert.equal('chatInput' in item, false);
   assert.equal('sessionId' in item, false);

@@ -1,5 +1,10 @@
-import { formatDateVariants, DISCOVERY_SCENARIO_COUNT } from './bookingScenarios.js';
-import { buildUrlFromTemplate, listRequiredFields } from './bookingTemplateBuilder.js';
+import { DISCOVERY_SCENARIO_COUNT } from './bookingScenarios.js';
+import {
+  buildUrlFromTemplate,
+  inferDateFormatFromLiteral,
+  listRequiredFields,
+  normalizeTemplateToCanonical,
+} from './bookingTemplateBuilder.js';
 
 function normalizeUrl(raw) {
   const trimmed = String(raw || '').trim();
@@ -32,10 +37,10 @@ function hintPlaceholderForKey(key, scenario) {
   const findHint = (names) => names.some((name) => normalizedKey.includes(name));
 
   if (findHint(PARAM_HINTS.checkin)) {
-    return pickDatePlaceholder(scenario.checkin, 'checkin');
+    return '{{checkin}}';
   }
   if (findHint(PARAM_HINTS.checkout)) {
-    return pickDatePlaceholder(scenario.checkout, 'checkout');
+    return '{{checkout}}';
   }
   if (findHint(PARAM_HINTS.rooms)) {
     return '{{rooms}}';
@@ -47,20 +52,13 @@ function hintPlaceholderForKey(key, scenario) {
     return '{{children}}';
   }
   if (findHint(PARAM_HINTS.child_ages)) {
-    return scenario.child_ages.length ? '{{child_ages_csv}}' : null;
+    return scenario.child_ages.length ? '{{child_ages}}' : null;
   }
   return null;
 }
 
-function pickDatePlaceholder(iso, prefix) {
-  const variants = formatDateVariants(iso);
-  return {
-    [variants.yyyy_mm_dd]: `{{${prefix}_yyyy_mm_dd}}`,
-    [variants.ddmmyyyy]: `{{${prefix}_ddmmyyyy}}`,
-    [variants.yyyymmdd]: `{{${prefix}_yyyymmdd}}`,
-    [variants.dd_mm_yyyy]: `{{${prefix}_dd_mm_yyyy}}`,
-    [variants.mm_dd_yyyy]: `{{${prefix}_mm_dd_yyyy}}`,
-  };
+function matchDateCanonical(normalized, iso) {
+  return inferDateFormatFromLiteral(iso, normalized) ? true : false;
 }
 
 function matchPlaceholder(value, scenario, key = '') {
@@ -71,40 +69,31 @@ function matchPlaceholder(value, scenario, key = '') {
 
   const hinted = hintPlaceholderForKey(key, scenario);
   if (hinted) {
-    const dateMap = pickDatePlaceholder(
-      key.toLowerCase().includes('out') ? scenario.checkout : scenario.checkin,
-      key.toLowerCase().includes('out') ? 'checkout' : 'checkin'
-    );
-    if (typeof hinted === 'string') {
-      if (
-        (hinted === '{{rooms}}' && normalized === String(scenario.rooms)) ||
-        (hinted === '{{adults}}' && normalized === String(scenario.adults)) ||
-        (hinted === '{{children}}' && normalized === String(scenario.children)) ||
-        (hinted === '{{child_ages_csv}}' &&
-          normalized === scenario.child_ages.join(','))
-      ) {
-        return hinted;
-      }
+    if (
+      (hinted === '{{rooms}}' && normalized === String(scenario.rooms)) ||
+      (hinted === '{{adults}}' && normalized === String(scenario.adults)) ||
+      (hinted === '{{children}}' && normalized === String(scenario.children)) ||
+      (hinted === '{{child_ages}}' &&
+        scenario.child_ages.length > 0 &&
+        (normalized === scenario.child_ages.join(',') ||
+          normalized === scenario.child_ages.join(';') ||
+          normalized === scenario.child_ages.join('-')))
+    ) {
+      return hinted;
     }
-    if (typeof dateMap === 'object') {
-      for (const [formatted, placeholder] of Object.entries(dateMap)) {
-        if (normalized === formatted) {
-          return placeholder;
-        }
-      }
+    if (hinted === '{{checkin}}' && matchDateCanonical(normalized, scenario.checkin)) {
+      return '{{checkin}}';
+    }
+    if (hinted === '{{checkout}}' && matchDateCanonical(normalized, scenario.checkout)) {
+      return '{{checkout}}';
     }
   }
 
-  for (const [prefix, iso] of [
-    ['checkin', scenario.checkin],
-    ['checkout', scenario.checkout],
-  ]) {
-    const dateMap = pickDatePlaceholder(iso, prefix);
-    for (const [formatted, placeholder] of Object.entries(dateMap)) {
-      if (normalized === formatted) {
-        return placeholder;
-      }
-    }
+  if (matchDateCanonical(normalized, scenario.checkin)) {
+    return '{{checkin}}';
+  }
+  if (matchDateCanonical(normalized, scenario.checkout)) {
+    return '{{checkout}}';
   }
 
   if (normalized === String(scenario.rooms)) {
@@ -116,14 +105,14 @@ function matchPlaceholder(value, scenario, key = '') {
   if (normalized === String(scenario.children)) {
     return '{{children}}';
   }
-  if (normalized === scenario.child_ages.join(',')) {
-    return '{{child_ages_csv}}';
+  if (scenario.child_ages.length && normalized === scenario.child_ages.join(',')) {
+    return '{{child_ages}}';
   }
-  if (normalized === scenario.child_ages.join(';')) {
-    return '{{child_ages_semicolon}}';
+  if (scenario.child_ages.length && normalized === scenario.child_ages.join(';')) {
+    return '{{child_ages}}';
   }
-  if (normalized === scenario.child_ages.join('-')) {
-    return '{{child_ages_dash}}';
+  if (scenario.child_ages.length && normalized === scenario.child_ages.join('-')) {
+    return '{{child_ages}}';
   }
   if (
     scenario.child_ages.length &&
@@ -261,21 +250,64 @@ function applyQueryTemplate(searchParams, variableParams, fixedParams) {
   return parts.length ? `?${parts.join('&')}` : '';
 }
 
-function detectDateFormat(variableParams, variableSegments) {
-  const values = [
-    ...Object.values(variableParams),
-    ...Object.values(variableSegments),
-  ];
-  if (values.some((v) => String(v).includes('ddmmyyyy'))) {
-    return 'DDMMYYYY';
+function detectDateFormatFromDiscovery(scenarios, parsedUrls, variableParams, variableSegments) {
+  for (const [key, placeholder] of Object.entries(variableParams)) {
+    if (placeholder !== '{{checkin}}' && placeholder !== '{{checkout}}') {
+      continue;
+    }
+    for (let index = 0; index < scenarios.length; index += 1) {
+      const literal = parsedUrls[index].searchParams.get(key);
+      const iso =
+        placeholder === '{{checkout}}' ? scenarios[index].checkout : scenarios[index].checkin;
+      const fmt = inferDateFormatFromLiteral(iso, literal);
+      if (fmt) {
+        return fmt;
+      }
+    }
   }
-  if (values.some((v) => String(v).includes('yyyymmdd'))) {
-    return 'YYYYMMDD';
+
+  for (const [segmentIndex, placeholder] of Object.entries(variableSegments)) {
+    if (placeholder !== '{{checkin}}' && placeholder !== '{{checkout}}') {
+      continue;
+    }
+    for (let index = 0; index < scenarios.length; index += 1) {
+      const segments = parsedUrls[index].pathname.split('/').filter(Boolean);
+      const literal = segments[Number(segmentIndex)];
+      const iso =
+        placeholder === '{{checkout}}' ? scenarios[index].checkout : scenarios[index].checkin;
+      const fmt = inferDateFormatFromLiteral(iso, literal);
+      if (fmt) {
+        return fmt;
+      }
+    }
   }
-  if (values.some((v) => String(v).includes('yyyy_mm_dd'))) {
-    return 'YYYY-MM-DD';
-  }
+
   return '';
+}
+
+function detectChildAgesFormat(scenarios, parsedUrls, variableParams) {
+  for (const [key, placeholder] of Object.entries(variableParams)) {
+    if (placeholder !== '{{child_ages}}') {
+      continue;
+    }
+    for (let index = 0; index < scenarios.length; index += 1) {
+      const ages = scenarios[index].child_ages || [];
+      if (!ages.length) {
+        continue;
+      }
+      const literal = parsedUrls[index].searchParams.get(key);
+      if (literal === ages.join(',')) {
+        return 'csv';
+      }
+      if (literal === ages.join(';')) {
+        return 'semicolon';
+      }
+      if (literal === ages.join('-')) {
+        return 'dash';
+      }
+    }
+  }
+  return 'csv';
 }
 
 function computeConfidence(scenarios, variableParams, variableSegments, warnings, dateFormat) {
@@ -305,9 +337,9 @@ function computeConfidence(scenarios, variableParams, variableSegments, warnings
   return Math.max(0, Math.min(1, Number(score.toFixed(2))));
 }
 
-function validateRoundTrip(template, scenarios) {
+function validateRoundTrip(template, scenarios, buildOptions) {
   for (const scenario of scenarios) {
-    const built = buildUrlFromTemplate(template, scenario);
+    const built = buildUrlFromTemplate(template, scenario, buildOptions);
     try {
       new URL(built);
     } catch {
@@ -364,7 +396,9 @@ export function extractBookingTemplate(scenarios, rawUrls) {
     queryResult.variableParams,
     queryResult.fixedParams
   );
-  const bookingUrlTemplate = `${baseUrl.origin}${templatedPath}${templatedQuery}`;
+  const bookingUrlTemplate = normalizeTemplateToCanonical(
+    `${baseUrl.origin}${templatedPath}${templatedQuery}`
+  );
 
   const variableParams = {
     ...queryResult.variableParams,
@@ -376,13 +410,24 @@ export function extractBookingTemplate(scenarios, rawUrls) {
     ),
   };
 
-  const dateFormat = detectDateFormat(
+  const dateFormat = detectDateFormatFromDiscovery(
+    scenarios,
+    parsedUrls,
     queryResult.variableParams,
     pathResult.variableSegments
+  );
+  const childAgesFormat = detectChildAgesFormat(
+    scenarios,
+    parsedUrls,
+    queryResult.variableParams
   );
   if (!dateFormat) {
     warnings.push('No se pudo detectar el formato de fecha del motor');
   }
+  const buildOptions = {
+    date_format: dateFormat,
+    child_ages_format: childAgesFormat,
+  };
   const confidenceScore = computeConfidence(
     scenarios,
     queryResult.variableParams,
@@ -401,7 +446,7 @@ export function extractBookingTemplate(scenarios, rawUrls) {
     String(v).includes('child_ages')
   );
 
-  const roundTripOk = validateRoundTrip(bookingUrlTemplate, scenarios);
+  const roundTripOk = validateRoundTrip(bookingUrlTemplate, scenarios, buildOptions);
   if (!roundTripOk) {
     warnings.push('La plantilla no pudo reconstruir las URLs de prueba');
   }
@@ -420,6 +465,7 @@ export function extractBookingTemplate(scenarios, rawUrls) {
     booking_url_base: baseUrl.origin,
     booking_engine_name: hosts[0],
     date_format: dateFormat,
+    child_ages_format: childAgesFormat,
     occupancy_format: Object.values(variableParams).some((v) =>
       String(v).includes('occupancy_path')
     )
