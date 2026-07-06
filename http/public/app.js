@@ -676,7 +676,9 @@ function renderProfileWhatsapp() {
 }
 
 function bookingTodayIso() {
-  return new Date().toISOString().slice(0, 10);
+  const date = new Date();
+  const pad = (n) => String(n).padStart(2, '0');
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
 }
 
 function bookingAddDays(iso, days) {
@@ -937,7 +939,17 @@ function renderBookingEngineView() {
 }
 
 async function ensureBookingSession(forceNew = false) {
-  if (!forceNew && state.bookingEngine.sessionId && state.bookingEngine.scenarios?.length) {
+  const today = bookingTodayIso();
+  const staleCheckin =
+    state.bookingEngine.scenarios?.[0]?.checkin &&
+    state.bookingEngine.scenarios[0].checkin < today;
+
+  if (
+    !forceNew &&
+    !staleCheckin &&
+    state.bookingEngine.sessionId &&
+    state.bookingEngine.scenarios?.length
+  ) {
     return state.bookingEngine;
   }
 
