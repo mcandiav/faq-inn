@@ -21,6 +21,7 @@ const state = {
     warnings: [],
     previewUrl: '',
     previewValues: null,
+    dateFormat: '',
   },
 };
 const appMeta = {
@@ -690,8 +691,8 @@ function defaultBookingPreviewValues() {
     checkin,
     checkout: bookingAddDays(checkin, 1),
     adults: 1,
-    children: 1,
-    child_ages: '8',
+    children: 0,
+    child_ages: '',
     rooms: 1,
   };
 }
@@ -802,7 +803,20 @@ function renderBookingScenarios(scenarios) {
   }
   list.innerHTML = scenarios
     .map((scenario, index) => {
-      const ages = formatScenarioAges(scenario);
+      const guests =
+        scenario.children > 0
+          ? escapeHtml(
+              t('booking.scenarioGuests', {
+                adults: scenario.adults,
+                children: scenario.children,
+                ages: formatScenarioAges(scenario),
+              })
+            )
+          : escapeHtml(
+              t('booking.scenarioAdults', {
+                adults: scenario.adults,
+              })
+            );
       return `
         <div class="booking-scenario card-inner">
           <h4>${escapeHtml(t('booking.scenarioLabel', { n: index + 1 }))}</h4>
@@ -813,13 +827,7 @@ function renderBookingScenarios(scenarios) {
               checkout: scenario.checkout,
             })
           )}</p>
-          <p>${escapeHtml(
-            t('booking.scenarioGuests', {
-              adults: scenario.adults,
-              children: scenario.children,
-              ages,
-            })
-          )}</p>
+          <p>${guests}</p>
           <label>
             <span>${escapeHtml(t('booking.scenarioUrl'))}</span>
             <input type="url" class="booking-scenario-url" data-scenario-index="${index}" placeholder="https://…" />
@@ -886,6 +894,18 @@ function renderBookingEngineView() {
       warningsEl.classList.toggle('hidden', warnings.length === 0);
     }
 
+    const dateFormatEl = $('#booking-date-format');
+    if (dateFormatEl) {
+      const fmt = state.bookingEngine.dateFormat;
+      if (fmt) {
+        dateFormatEl.textContent = t('booking.dateFormatDetected', { format: fmt });
+        dateFormatEl.classList.remove('hidden');
+      } else {
+        dateFormatEl.textContent = '';
+        dateFormatEl.classList.add('hidden');
+      }
+    }
+
     const templateEl = $('#booking-candidate-template');
     if (templateEl) {
       templateEl.textContent = state.bookingEngine.candidateTemplate || '';
@@ -930,6 +950,7 @@ async function ensureBookingSession(forceNew = false) {
   state.bookingEngine.candidateTemplate = '';
   state.bookingEngine.confidenceScore = 0;
   state.bookingEngine.warnings = [];
+  state.bookingEngine.dateFormat = '';
   state.bookingEngine.forceWizard = true;
   return state.bookingEngine;
 }
@@ -961,6 +982,7 @@ async function refreshBookingEngine() {
       state.bookingEngine.candidateTemplate = data.session.candidate_template || '';
       state.bookingEngine.confidenceScore = data.session.confidence_score || 0;
       state.bookingEngine.warnings = data.session.warnings || [];
+      state.bookingEngine.dateFormat = data.session.candidate_config?.date_format || '';
       if (data.session.verification_url) {
         state.bookingEngine.verification = {
           url: data.session.verification_url,
@@ -2120,6 +2142,7 @@ $('#btn-booking-discover')?.addEventListener('click', async () => {
     state.bookingEngine.candidateTemplate = data.candidate_template || '';
     state.bookingEngine.confidenceScore = data.confidence_score || 0;
     state.bookingEngine.warnings = data.warnings || [];
+    state.bookingEngine.dateFormat = data.date_format || '';
     state.bookingEngine.verification = data.verification || null;
     state.bookingEngine.previewUrl = data.verification?.url || '';
     renderBookingEngineView();
