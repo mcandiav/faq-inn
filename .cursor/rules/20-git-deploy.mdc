@@ -1,0 +1,66 @@
+---
+description: Commits y push solo en ramas de deploy (http/api), asunto limpio V@hash
+alwaysApply: true
+---
+
+# Git, versionado y deploy (EasyPanel)
+
+## Ramas de deploy — `main` no despliega nada
+
+| Cambio | Rama | Push |
+|--------|------|------|
+| Front (`http/`) | **`http`** | `git push origin http` |
+| API (`api/`) | **`api`** | `git push origin api` |
+| `main` | **No usar** | **Nunca** commit/push/merge salvo pedido explícito |
+
+Flujo correcto:
+
+1. `git checkout http` o `git checkout api` **antes** de editar.
+2. Cambios + `git add` solo archivos del cambio.
+3. `.\scripts\commit-version.ps1 -Version "X.Y.Z" -Message "fix: descripción breve"`.
+4. Push **solo** a la rama en la que estás (`origin http` o `origin api`).
+
+**Prohibido:** commit en `main` y merge a `http`/`api`. Trabajar directo en la rama que despliega EasyPanel.
+
+## Asunto del commit — una sola línea, sin basura
+
+EasyPanel copia el asunto **tal cual** en *Deployment History*.
+
+**Formato obligatorio** (lo genera `commit-version.ps1`):
+
+```text
+[V1.7.7@abc1234] fix: botones responder sin respuesta con id PostgreSQL
+```
+
+- Una línea.
+- Prefijo `[V{VERSION}@{hash}]` + mensaje claro del **por qué** del cambio.
+- Sin trailers ni líneas extra en el cuerpo del commit.
+
+**Prohibido en commits de deploy:**
+
+- `Co-authored-by:` (Cursor lo concatena en EasyPanel).
+- `merge main: ...` como mensaje de deploy.
+- Cuerpo multilínea, trailers, `Signed-off-by`, etc.
+- Asuntos genéricos (`update`, `partial update`, `merge`).
+
+Si `commit-version.ps1` falla o hay que enmendar, usar solo:
+
+```text
+git commit --amend -m "[V1.7.7@abc1234] fix: ..."
+```
+
+**Nunca** añadir `--trailer` ni dejar que el IDE inyecte co-autores.
+
+## Versión
+
+- Fuente única: archivo `VERSION` en raíz (actualizado por `commit-version.ps1`).
+- No hardcodear versión en código ni `APP_VERSION` en `.env`.
+
+## Al informar al operador
+
+Decir rama + asunto exacto que verá en EasyPanel, por ejemplo:
+
+- `http` → `[V1.7.7@55a04d6] fix: ...`
+- `api` → `[V1.7.6@064f6c7] feat: ...`
+
+No confundir hash del asunto (`@55a04d6`) con el hash del merge intermedio ni con commits de otra rama.

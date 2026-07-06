@@ -19,12 +19,10 @@ alwaysApply: true
 - User instructions override these rules.
 
 Antes de `docker compose up`, cambios en `.env`, o comandos que expongan puertos en el host: informar impacto y esperar confirmación explícita del operador.
-Cuando hagas commit local tambien haz push a github porque Miguel solo puede probar desde github
+Cuando hagas commit local tambien haz push a github porque Miguel solo puede probar desde github — **solo en la rama de deploy** (`http` o `api`; ver `20-git-deploy.mdc`). **Nunca push a `main`** salvo pedido explícito.
 
-Los commits deben llevar prefijo **`[V@hash]`** al inicio del asunto para que EasyPanel lo muestre en *Deployment History* (`Deploy service: [V2.1@abc1234] feat: ...`).
+Commits de deploy: asunto **una sola línea** `[V@hash] mensaje` vía `.\scripts\commit-version.ps1`. EasyPanel copia el asunto tal cual.
 
-- EasyPanel **no añade** el hash de GitHub solo: copia el **asunto del commit** tal cual.
-- `[V1.9] mensaje` → en EasyPanel verás solo `[V1.9]` (sin hash).
-- Usar script: `.\scripts\commit-version.ps1 -Version "2.1" -Message "feat: ..."` (hace commit + amend con hash).
-- **No** usar trailer `Co-authored-by:` — EasyPanel lo concatena y ensucia el historial.
+- **Prohibido:** `Co-authored-by:`, `merge main:`, cuerpo multilínea, trailers — ensucian Deployment History.
+- Trabajar en `http`/`api` directamente; no commit en `main` + merge.
 Tienes autorización expresa de Miguel para manejar secretos, llaves, keys, claves.

@@ -1,0 +1,8 @@
+---
+description: Versión de producto (VERSION) y hash de deploy (GIT_SHA) — fuente única y UI
+alwaysApply: true
+---
+
+# Versionado de producto y deploy
+
+Versión de producto: una sola fuente en el archivo `VERSION` (raíz del repo), actualizada solo con `commit-version.ps1` al hacer release; el hash de deploy se inyecta en build (`GIT_SHA` → `/app/.git-commit`) y la UI los muestra vía `/api/health` — nunca hardcodear versión en código ni `APP_VERSION` en `.env`.
