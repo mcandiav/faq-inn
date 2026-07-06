@@ -1,4 +1,7 @@
-import { getRuntimeTenantConfig } from '../lib/runtimeService.js';
+import {
+  buildRuntimeWorkflowItem,
+  getRuntimeTenantConfig,
+} from '../lib/runtimeService.js';
 
 function verifyN8nToken(request, config) {
   const expected = config.n8nAllowedToken;
@@ -30,7 +33,7 @@ export async function runtimeRoutes(app, config) {
 
     try {
       const tenant = await getRuntimeTenantConfig(pool, config, instanceName);
-      return { status: 'ok', tenant };
+      return buildRuntimeWorkflowItem(tenant);
     } catch (error) {
       reply.code(error.statusCode || 500);
       return {
@@ -54,7 +57,7 @@ export async function runtimeRoutes(app, config) {
 
     try {
       const tenant = await getRuntimeTenantConfig(pool, config, instanceName);
-      return { status: 'ok', tenant };
+      return buildRuntimeWorkflowItem(tenant);
     } catch (error) {
       reply.code(error.statusCode || 500);
       return {
