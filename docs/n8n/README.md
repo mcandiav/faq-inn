@@ -64,8 +64,21 @@ apikey
 ## Flujo runtime esperado
 
 ```text
-Webhook Evolution -> n8n Webhook inicial -> extraer instance_name -> consultar API/PostgreSQL FAQ Inn -> cargar Config Tenant -> normalizar Datos -> ejecutar agente.
+Webhook Evolution -> Parse Evolution -> Es mensaje entrante? -> Resolver Tenant (GET API plana) -> Detecta ** -> … -> Datos -> TextoFinal -> FAQ inn
 ```
+
+## Separación de dominios (contrato vigente)
+
+**Llave entre dominios:** `Parse Evolution.evolution_instance` → `GET /api/runtime/tenant-config?instance_name=…`
+
+| Dominio Evolution (webhook → Parse Evolution) | Dominio inn-api (Resolver Tenant) |
+|---|---|
+| `chatInput`, `sessionId`, `remoteJid`, `pushName` | `tenant_id`, `tenant_slug`, `agent_id`, `initial_greeting` |
+| `fromMe`, `event`, `message_type`, `source_channel` | motor reservas, `business_hours`, `policies` |
+| `evolution_instance` (solo lookup) | `pause_trigger`, `pause_ttl_seconds`, `search_limit`, `unanswered_limit` |
+| | `evolution_instance_name`, `evolution_api_url`, `evolution_api_key` |
+
+**Derivados en n8n (Datos):** `Texto`, `question`, `chat_id`, `pause_key`, etc. — merge de ambos dominios, no viven en ninguna API.
 
 ## Variables mínimas cargadas por runtime
 
@@ -103,12 +116,41 @@ pause_enabled / pause_trigger / pause_ttl_seconds / pause_scope
 Cadena vigente:
 
 ```text
-Resolver Tenant → Normalizar Tenant → Config Tenant → … → Datos → TextoFinal → FAQ inn
+Parse Evolution → Es mensaje entrante? → Resolver Tenant → Detecta ** → … → Datos → TextoFinal → FAQ inn
 ```
 
-- **Normalizar Tenant**: parsea `booking_config`, deriva `placeholder_map` si falta.
-- **Config Tenant / Datos / TextoFinal**: nodos Code que propagan todas las variables de reservas al item del agente.
+- **Parse Evolution**: extrae `chatInput`, `sessionId`, `evolution_instance`, `source_channel` del webhook Evolution.
+- **Resolver Tenant**: `GET /api/runtime/tenant-config?instance_name=…` devuelve solo **config del tenant** (item plano). El mensaje (`chatInput`, `sessionId`) viene de **Parse Evolution**, no de la API.
+- **Datos / TextoFinal**: merge **Parse Evolution** + **Resolver Tenant**; propaga variables al agente.
 - El system prompt del agente usa `{{booking_url_template}}`, `{{validation_status}}`, etc. desde `$json` de **TextoFinal**.
+
+## Memoria conversacional PostgreSQL (dominio n8n)
+
+**No** forma parte del esquema ni migraciones de FAQ Inn API. Es infraestructura del runtime n8n.
+
+Tabla: **`n8n_faq_inn`** — la crea el nodo **Postgres Chat Memory** la primera vez que escribe (si no existe). Esquema mínimo LangChain:
+
+| Campo | Tipo | Uso |
+|---|---|---|
+| `id` | SERIAL | PK autoincremental |
+| `session_id` | VARCHAR(255) | Clave de sesión |
+| `message` | JSONB | Mensaje LangChain (rol + contenido) |
+
+n8n y FAQ Inn comparten el mismo servidor PostgreSQL (`n8n_pgvector`, base **`n8n`** para memoria LangChain en workflows de referencia), pero **solo n8n** gestiona la tabla de chat memory.
+
+**Session ID recomendado** (scope por tenant + agente + chat WhatsApp):
+
+```text
+faqinn:memory:{tenant_slug}:{agent_id}:{chat_id}
+```
+
+Expresión en Postgres Chat Memory:
+
+```text
+={{ 'faqinn:memory:' + $('Datos').item.json.tenant_slug + ':' + $('Datos').item.json.agent_id + ':' + $('Datos').item.json.chat_id }}
+```
+
+Configuración del nodo: `tableName = n8n_faq_inn`, `contextWindowLength = 8`.
 
 ## Workflow de referencia actual
 
@@ -121,10 +163,10 @@ Estado: prototipo de runtime multitenant.
 Características incorporadas:
 
 ```text
-Config Tenant como nodo Set temporal.
+Resolver Tenant (GET inn-api) devuelve solo config tenant.
 Redis TTL para pausa humana por chat.
-Clave Redis: faqinn:pause:{tenant_id}:{agent_id}:{chat_id}.
-Datos normaliza tenant, agent, chat y question.
+Clave Redis: faqinn:pause:{tenant_slug}:{agent_id}:{chat_id}.
+Datos merge Evolution + inn-api.
 initial_greeting vive como variable, no como texto fijo del prompt.
 Respostas y SemResposta reciben tenant_id, tenant_slug y agent_id.
 ```
@@ -148,7 +190,7 @@ Rechazar mensaje si tenant_status != active
 Rechazar mensaje si whatsapp_status != connected
 ```
 
-La API `/api/runtime/tenant-config` resuelve solo por `instance_name` registrado en PostgreSQL. No devuelve campos de estado de conexión para evitar gates redundantes.
+La API `/api/runtime/tenant-config` resuelve por `instance_name` registrado en PostgreSQL y devuelve el tenant aplanado. `chatInput` y `sessionId` los extrae n8n del webhook (Parse Evolution). No devuelve campos de estado de conexión para evitar gates redundantes.
 
 `evolution_api_url` en runtime apunta a la **URL interna** (`http://n8n_evolution-api:8080`) para el nodo Enviar WhatsApp desde n8n.
 
@@ -170,4 +212,4 @@ Mientras exista la clave Redis de pausa, el runtime n8n no debe responder al cli
 
 ## Regla de evolución del prototipo
 
-Config Tenant es temporal. En producción debe reemplazarse por una consulta a PostgreSQL/API de FAQ Inn basada en `evolution_instance_name`, manteniendo los mismos nombres de variables para no romper el runtime.
+El aplanado del tenant vive en la API (`buildRuntimeWorkflowItem` en `runtimeService.js`). El mensaje WhatsApp y la clave Redis de pausa se arman en n8n referenciando **Parse Evolution** + **Resolver Tenant** (`Datos`, Redis, Enviar WhatsApp).
