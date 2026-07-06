@@ -4,6 +4,7 @@
 
 | Fecha | Versión | Cambio realizado | Motivo | Impacto | Sección afectada |
 |---|---|---|---|---|---|
+| 2026-07-05 | V1.12 | Se consolida inventario único de variables del proyecto por módulo. | El módulo `motor-reservas` incorporó variables nuevas y el runtime n8n ya consume variables adicionales de tenant, agente, pausa, Evolution API, FAQ y reservas. | El README principal pasa a gobernar las variables canónicas de FAQ Inn y separa responsabilidad por módulo para evitar hardcodeos y duplicación documental. | Variables obligatorias por tenant, motor-reservas, n8n como motor de conversaciones |
 | 2026-07-05 | V1.11 | Se crea módulo documental `motor-reservas`. | Separar la lógica de descubrimiento y validación de URLs de reserva del prompt y del runtime conversacional n8n. | FAQ Inn tendrá una página/servicio para construir `booking_url_template` por tenant usando links de prueba; n8n consumirá solo plantillas aprobadas. | docs/motor-reservas, n8n como motor de conversaciones, Estado actual |
 | 2026-07-04 | V1.10 | Cierre documental del módulo Evolution API (onboarding MVP). | Validación operativa en inn.at-once.cl y alineación con arquitectura V1.9. | Subproyecto `01-evolution-onboarding-mvp` aprobado; pendientes explícitos (token instancia, desconexión teléfono, payload n8n) fuera de alcance. | docs/evolution-api, docs/pruebas, Estado actual |
 | 2026-07-04 | V1.9 | Se define la resolución runtime del tenant desde webhook Evolution API. | El onboarding debe guardar todos los datos del cliente y n8n debe operar sin datos hardcodeados. | El runtime n8n identificará la instancia Evolution recibida en el webhook, consultará PostgreSQL/API y cargará configuración completa del tenant/agente antes de conversar. | Arquitectura objetivo, Evolution API, n8n, Datos por tenant, Estado actual |
@@ -552,104 +553,251 @@ El Programador debe trabajar sobre `faq-inn` como repositorio oficial del produc
 
 ---
 
-## 14. Variables obligatorias por tenant
+## 14. Variables obligatorias por tenant y por módulo
 
-FAQ Inn debe reconstruirse como aplicación parametrizada por tenant desde el inicio del desarrollo.
-
-El primer cambio que debe realizar el Programador es iniciar una nueva versión de código **1.0** para FAQ Inn, reemplazando valores heredados o fijos de DFAQ/MorroReservas por variables de tenant.
-
-### 14.1 Tenant de desarrollo
-
-Para desarrollo, pruebas iniciales y validación local, el tenant oficial será:
-
-```text
-FAQ-INN
-```
-
-Este valor debe tratarse como variable, no como texto fijo definitivo del producto.
-
-### 14.2 Variables base
-
-| Variable | Valor en desarrollo | Uso obligatorio |
-|---|---|---|
-| `$tenant` | `FAQ-INN` | Identificador principal del tenant en desarrollo. |
-| `$app_title` | `FAQ Inn $Tenant` | Título visible en el HTTP/frontend. |
-| `$postgres_database` | `$tenant` | Nombre lógico de la base de datos PostgreSQL asociada al tenant. |
-| `$tenant_slug` | Derivado de `$tenant` | Identificador seguro para URLs, rutas, workflows y nombres técnicos cuando el sistema no acepte caracteres especiales. |
-| `$tenant_display_name` | `FAQ-INN` en desarrollo | Nombre visible o etiqueta administrativa del tenant. |
+FAQ Inn debe operar como aplicación parametrizada por tenant desde el inicio. Esta sección consolida el inventario canónico de variables del proyecto y define a qué módulo pertenece cada una.
 
 Regla arquitectónica:
 
 ```text
-Ningún valor heredado de DFAQ/MorroReservas debe quedar hardcodeado como identidad del nuevo producto.
-FAQ Inn debe tomar nombre visible, título HTTP, base MariaDB, workflows, endpoints y configuración desde variables de tenant.
+Ningún valor heredado de DFAQ/MorroReservas debe quedar hardcodeado como identidad, endpoint, motor de reservas, workflow, prompt, instancia WhatsApp o configuración runtime de FAQ Inn.
 ```
 
-### 14.3 Título HTTP/frontend
-
-El título visible de la aplicación debe construirse con esta plantilla:
-
-```text
-FAQ Inn $Tenant
-```
-
-Para el tenant de desarrollo, el resultado esperado será:
-
-```text
-FAQ Inn FAQ-INN
-```
-
-Este título debe aplicarse al HTML/HTTP servido por la app, especialmente en el frontend o página principal que entrega `http/`.
-
-### 14.4 Base de datos PostgreSQL
-
-FAQ Inn usará una instancia PostgreSQL propia, independiente de bases compartidas existentes.
-
-El servicio base esperado será:
-
-```text
-faq-inn_postgres
-```
-
-La conexión será siempre interna por red de EasyPanel/Docker:
-
-```text
-faq-inn_postgres:5432
-```
-
-Regla vigente:
-
-```text
-No publicar puerto externo para PostgreSQL de FAQ Inn.
-La aplicación FAQ Inn debe conectarse por hostname interno.
-```
-
-La base de datos PostgreSQL debe estar asociada al tenant mediante la variable:
-
-```text
-$postgres_database = $tenant
-```
-
-Para desarrollo, la base lógica esperada es:
+El tenant oficial de desarrollo seguirá siendo:
 
 ```text
 FAQ-INN
 ```
 
-Si PostgreSQL, Docker, scripts o librerías no aceptan directamente el carácter `-` sin escape o normalización, el Programador debe implementar una derivación técnica segura desde `$tenant_slug`, pero manteniendo documentado que la fuente funcional es `$tenant`.
+Este valor es solo una instancia de prueba y debe tratarse como variable.
 
-### 14.5 Alcance de reconstrucción inicial
+### 14.1 Módulo identidad de tenant / aplicación
+
+| Variable | Valor ejemplo / desarrollo | Uso obligatorio | Fuente esperada |
+|---|---|---|---|
+| `$tenant` | `FAQ-INN` | Identificador funcional principal del tenant en desarrollo. | Configuración inicial / tabla tenants |
+| `tenant_id` | UUID o id interno | Identificador interno estable para relaciones, runtime, FAQ y auditoría. | PostgreSQL |
+| `tenant_slug` | `faq-inn` o slug del cliente | Identificador seguro para URLs, rutas, nombres técnicos, Redis y Evolution. | Derivado al crear tenant |
+| `tenant_display_name` | `FAQ-INN` | Nombre visible o etiqueta administrativa del tenant. | PostgreSQL |
+| `name` / `nombre_comercial` | Nombre del hotel o negocio | Nombre comercial visible del cliente. | Onboarding |
+| `vertical_slug` | `hotel` | Vertical funcional asociada al tenant. | Onboarding / vertical_templates |
+| `status` | `draft`, `connected`, `active`, etc. | Estado operativo del tenant. | PostgreSQL |
+| `plan` | Plan contratado | Control comercial y límites funcionales. | PostgreSQL / facturación futura |
+| `app_title` | `FAQ Inn $Tenant` | Título visible en frontend/HTTP. | Derivado desde tenant |
+| `primary_language` | `pt-BR`, `es`, etc. | Idioma base del agente cuando no pueda inferirse idioma del cliente. | Onboarding |
+| `timezone` | Zona horaria del tenant | Fechas, escenarios de reserva, horarios y auditoría. | Onboarding |
+| `business_type` | hotel, hostel, posada, cabaña, etc. | Contexto vertical específico para el prompt y onboarding. | Onboarding |
+
+### 14.2 Módulo base de datos / infraestructura
+
+| Variable | Valor ejemplo / desarrollo | Uso obligatorio | Fuente esperada |
+|---|---|---|---|
+| `postgres_service_name` | `faq-inn_postgres` | Nombre lógico del servicio PostgreSQL. | EasyPanel / documentación |
+| `postgres_internal_host` | `n8n_faq-inn_postgres` | Host interno real en red EasyPanel. | EasyPanel |
+| `postgres_port` | `5432` | Puerto interno PostgreSQL. | EasyPanel |
+| `postgres_database` | `faq-inn` | Base técnica inicial del proyecto. | EasyPanel / env |
+| `postgres_user` | `postgres` | Usuario técnico de PostgreSQL. | EasyPanel / env |
+| `postgres_password` | No documentar | Credencial de conexión; debe vivir solo en variables de entorno o secreto. | EasyPanel / env secreto |
+
+Regla vigente:
+
+```text
+PostgreSQL de FAQ Inn no debe exponer puerto público. La aplicación debe conectarse por hostname interno.
+```
+
+### 14.3 Módulo Evolution API / WhatsApp
+
+| Variable | Valor ejemplo / desarrollo | Uso obligatorio | Fuente esperada |
+|---|---|---|---|
+| `evolution_instance_name` / `instance_name` | `faqinn_<tenant_slug>` | Identificar la instancia WhatsApp y resolver tenant en runtime. | Provisioner / Evolution API |
+| `evolution_api_url` | URL interna/externa Evolution | Base para crear instancia, obtener QR y enviar mensajes. | Config servidor / tenant_settings seguro |
+| `evolution_api_key` | No documentar | API key global o de servicio; no debe exponerse al cliente. | Variable de entorno / secreto |
+| `evolution_instance_token_encrypted` | Token cifrado | Token específico de instancia, pendiente de consolidación definitiva. | PostgreSQL cifrado |
+| `phone_number` | Número vinculado | Número WhatsApp conectado al tenant. | Evolution API |
+| `connection_status` | `waiting_qr_scan`, `connected`, etc. | Estado de conexión WhatsApp. | Evolution API / PostgreSQL |
+| `last_qr` | QR vigente o referencia temporal | Mostrar QR durante onboarding. | Backend / Evolution API |
+| `connected_at` | Timestamp | Auditoría de conexión. | PostgreSQL |
+| `webhook_url` | URL webhook n8n | URL configurada en Evolution para eventos entrantes. | Provisioner |
+| `source_channel` | `whatsapp_evolution` | Canal de origen usado por n8n y SemResposta. | Runtime n8n |
+| `remoteJid` | JID recibido | Identificador original del chat recibido desde Evolution. | Payload Evolution |
+| `sessionId` | Teléfono normalizado o `manual` | Clave de sesión/memoria/conversación. | Parse Evolution n8n |
+| `fromMe` | boolean | Permite ignorar mensajes salientes propios. | Payload Evolution |
+| `event` | `messages.upsert` | Permite filtrar eventos válidos entrantes. | Payload Evolution |
+| `message_type` | `text` / `other` | Permite procesar solo texto en MVP. | Parse Evolution n8n |
+
+### 14.4 Módulo agente / prompt / conversación
+
+| Variable | Valor ejemplo / desarrollo | Uso obligatorio | Fuente esperada |
+|---|---|---|---|
+| `agent_id` | id interno del agente | Identificar configuración, memoria, FAQ y herramientas del agente. | PostgreSQL |
+| `agent_name` | Nombre del agente | Identidad visible usada por el system prompt. | PostgreSQL |
+| `initial_greeting` | Mensaje de bienvenida | Saludo inicial configurable por tenant/agente. | Onboarding / tenant_settings |
+| `welcome_message` | Mensaje de bienvenida ampliado | Variante funcional para UI o primer contacto. | Onboarding |
+| `chatInput` | Texto recibido | Entrada normalizada que procesa el agente. | Parse Evolution / Chat Trigger |
+| `Texto` | Texto recibido | Alias heredado/operativo usado en nodos n8n. | Nodo Datos |
+| `question` | Pregunta del cliente | Texto usado por Respostas y SemResposta. | Nodo Datos |
+| `data` | Texto final al agente | Entrada final enviada al nodo agente. | Nodo TextoFinal |
+| `chat_id` | sessionId normalizado | Identificador de conversación para memoria, pausa y SemResposta. | Runtime n8n |
+| `phone` | sessionId normalizado | Teléfono usado para trazabilidad de preguntas sin respuesta. | Runtime n8n |
+| `Remote_Id` | sessionId o `manual` | Compatibilidad operativa con estructura heredada. | Runtime n8n |
+| `Message_type` | `text` | Filtro operativo previo al agente. | Runtime n8n |
+| `contextWindowLength` | `8` en prototipo | Cantidad de mensajes mantenidos en memoria simple. | n8n / configuración agente |
+| `model_temperature` | `0.1` en prototipo | Control de creatividad del modelo. | n8n / configuración agente |
+
+### 14.5 Módulo FAQ / conocimiento / preguntas sin respuesta
+
+| Variable | Valor ejemplo / desarrollo | Uso obligatorio | Fuente esperada |
+|---|---|---|---|
+| `faq_search_endpoint` | `/api/search` | Endpoint interno para búsqueda de respuestas aprobadas. | Config runtime |
+| `unanswered_endpoint` | `/api/unanswered` | Endpoint interno para registrar preguntas sin respuesta. | Config runtime |
+| `search_limit` | `2` en prototipo | Cantidad máxima de respuestas candidatas. | tenant_settings / runtime |
+| `unanswered_limit` | `1` en prototipo | Límite operativo para registro/deduplicación de no respondidas. | tenant_settings / runtime |
+| `query` | Pregunta del cliente | Parámetro enviado a búsqueda FAQ. | Runtime n8n |
+| `limit` | número | Límite enviado a Respostas o SemResposta. | Runtime n8n |
+| `channel` | `whatsapp_evolution` | Canal registrado en preguntas sin respuesta. | Runtime n8n |
+
+Regla del agente:
+
+```text
+Si no existe respuesta útil desde FAQ aprobada, el agente debe ejecutar obligatoriamente SemResposta antes de responder al cliente y no debe inventar información.
+```
+
+### 14.6 Módulo pausa humana
+
+| Variable | Valor ejemplo / desarrollo | Uso obligatorio | Fuente esperada |
+|---|---|---|---|
+| `pause_enabled` | `true` | Habilita o deshabilita pausa humana por tenant/agente. | tenant_settings |
+| `pause_trigger` | `**` | Prefijo que activa pausa humana cuando aparece al inicio del mensaje. | tenant_settings |
+| `pause_ttl_seconds` | `300` | Duración de la pausa Redis en segundos. | tenant_settings |
+| `pause_scope` | `chat` | Alcance de la pausa: conversación específica. | tenant_settings |
+| `pause_mode` | `redis_ttl` | Mecanismo técnico de pausa. | Arquitectura / tenant_settings |
+| `pause_key` | `faqinn:pause:<tenant_slug>:<agent_id>:<chat_id>` | Clave Redis usada para bloquear respuesta automática. | Runtime n8n |
+| `pause_lock` | valor Redis | Indica si la pausa está vigente. | Redis / runtime n8n |
+
+Regla vigente:
+
+```text
+Mientras exista `pause_lock`, n8n no debe responder al cliente.
+```
+
+Nota: la documentación anterior usaba como clave estándar `faqinn:pause:<tenant_id>:<agent_id>:<chat_id>`. El prototipo n8n vigente usa `tenant_slug`. Esta diferencia debe resolverse antes de producción; por ahora ambas deben considerarse equivalentes conceptuales y la implementación final debe elegir una sola convención.
+
+### 14.7 Módulo motor-reservas
+
+El documento técnico específico del módulo es `docs/motor-reservas/README.md`. El inventario canónico que debe conocer el README principal es el siguiente:
+
+| Variable | Valor ejemplo / desarrollo | Uso obligatorio | Fuente esperada |
+|---|---|---|---|
+| `booking_url_template` | URL con placeholders | Plantilla aprobada para construir links de reserva. | `tenant_settings`, solo al aprobar |
+| `booking_url_base` | `https://book.omnibees.com` | Origen/base del motor de reservas. | `tenant_settings`, solo al aprobar |
+| `booking_url_mode` | `discovered_template`, `fixed_link`, `manual_template` | Modo de construcción del link. | `tenant_settings` |
+| `validation_status` | `approved`, `pending`, `detected` | Estado de validación de la plantilla. | `tenant_settings` / sesión |
+| `confidence_score` | `0.85` | Confianza del extractor. | Extractor / `tenant_settings` al aprobar |
+| `booking_config` | JSON | Contrato runtime para n8n/agente. | `tenant_settings` |
+| `booking_approved_at` | Timestamp | Auditoría de aprobación del link. | `tenant_settings` |
+| `required_fields` | `checkin`, `checkout`, `adults`, etc. | Campos que el agente debe recolectar antes de generar link. | `booking_config` |
+| `placeholder_map` | mapa canónica → placeholder | Traducción entre variables lógicas y tokens del motor. | `booking_config` |
+| `date_format` | `DDMMYYYY` | Formato requerido por el motor externo. | `booking_config` |
+| `occupancy_format` | `query_params` | Formato de ocupación del motor. | `booking_config` |
+| `supports_rooms` | boolean | Indica si el motor acepta habitaciones. | `booking_config` |
+| `supports_children` | boolean | Indica si el motor acepta menores. | `booking_config` |
+| `supports_child_ages` | boolean | Indica si el motor requiere edades de menores. | `booking_config` |
+| `fixed_params` | JSON | Parámetros constantes del motor. | `booking_config` |
+| `variable_params` | JSON | Parámetros variables del motor. | `booking_config` |
+| `booking_engine_name` | host o nombre motor | Identificación del motor detectado. | `booking_config` |
+| `approved_by_user_id` | id usuario | Usuario que aprobó el link. | `booking_config` / auditoría |
+
+Variables canónicas que el agente debe recolectar para reservas:
+
+| Variable | Uso |
+|---|---|
+| `checkin` | Fecha de entrada lógica. |
+| `checkout` | Fecha de salida lógica. |
+| `nights` | Noches cuando el motor o conversación lo requiera. |
+| `adults` | Cantidad de adultos. |
+| `children` | Cantidad de menores. |
+| `child_ages` | Edades de menores. |
+| `rooms` | Cantidad de habitaciones. |
+
+Tokens soportados dentro de `booking_url_template`:
+
+```text
+{{checkin}}
+{{checkin_yyyy_mm_dd}}
+{{checkin_ddmmyyyy}}
+{{checkin_yyyymmdd}}
+{{checkout}}
+{{checkout_yyyy_mm_dd}}
+{{checkout_ddmmyyyy}}
+{{checkout_yyyymmdd}}
+{{nights}}
+{{adults}}
+{{children}}
+{{rooms}}
+{{child_ages_csv}}
+{{child_ages_semicolon}}
+{{child_ages_dash}}
+{{occupancy_path}}
+```
+
+Regla runtime:
+
+```text
+n8n solo puede construir link dinámico si `validation_status = approved` y existe `booking_url_template` con `booking_config` válido.
+```
+
+### 14.8 Módulo discovery de motor-reservas
+
+Estas variables pertenecen al wizard de descubrimiento y no son fuente final de verdad del tenant.
+
+| Variable | Uso | Persistencia |
+|---|---|---|
+| `session_id` | Identifica sesión temporal del wizard. | `booking_discovery_sessions` |
+| `status` | `draft`, `pending_verification`, `approved`, `rejected`, `cancelled`. | `booking_discovery_sessions` |
+| `scenarios` | Escenarios S1-S3 usados para analizar links. | `booking_discovery_sessions` |
+| `sample_urls` | Tres URLs pegadas por el tenant. | `booking_discovery_sessions` |
+| `candidate_template` | Plantilla candidata aún no aprobada. | `booking_discovery_sessions` |
+| `candidate_config` | Metadatos detectados por extractor. | `booking_discovery_sessions` |
+| `verification_scenario` | Escenario usado para preview. | `booking_discovery_sessions` |
+| `verification_url` | URL generada para prueba del tenant. | `booking_discovery_sessions` |
+| `warnings` | Diagnóstico del extractor. | `booking_discovery_sessions` |
+| `confidence_score` | Confianza preliminar del extractor. | `booking_discovery_sessions` |
+
+Regla crítica:
+
+```text
+`discover` y `preview` no escriben en `tenant_settings`. Solo `approve` persiste la plantilla aprobada.
+```
+
+### 14.9 Módulo vertical_templates
+
+| Variable | Uso |
+|---|---|
+| `id` | Identificador interno de plantilla vertical. |
+| `vertical_slug` | Identificador de vertical (`hotel`, futura `ferreteria`, `clinica`, etc.). |
+| `name` | Nombre visible de la vertical. |
+| `status` | Estado de la plantilla vertical. |
+| `required_onboarding_fields` | Campos obligatorios de onboarding para esa vertical. |
+| `prompt_template` | Plantilla base de prompt por vertical. |
+| `conversation_rules` | Reglas conversacionales por vertical. |
+| `booking_rules` | Reglas de reserva/cotización/derivación por vertical. |
+| `created_at` | Auditoría de creación. |
+| `updated_at` | Auditoría de modificación. |
+
+### 14.10 Alcance mínimo que el Programador debe parametrizar
 
 El Programador debe revisar y reconstruir con variables de tenant, como mínimo:
 
 1. Nombre visible de la aplicación.
 2. Título HTML/HTTP.
-3. Nombre lógico de base PostgreSQL.
-4. Configuración de conexión interna a PostgreSQL.
-5. Prefijos o nombres de workflows n8n.
-6. Endpoints internos que identifiquen tenant.
-7. Configuración de búsqueda FAQ/Qdrant asociada al tenant.
-8. Registro de preguntas sin respuesta asociado al tenant.
+3. Conexión interna PostgreSQL.
+4. Identidad de tenant y agente.
+5. Resolución de tenant por `evolution_instance_name`.
+6. Endpoints internos para FAQ, Qdrant y preguntas sin respuesta.
+7. Configuración de pausa humana por Redis TTL.
+8. Configuración de motor-reservas solo cuando esté aprobada.
+9. Construcción del system prompt desde variables de tenant/agente/vertical.
+10. Registro de preguntas sin respuesta asociado a tenant, agente, canal, teléfono y chat.
 
 ---
 

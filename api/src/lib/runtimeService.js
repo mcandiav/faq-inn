@@ -158,3 +158,45 @@ export async function getRuntimeTenantConfig(pool, config, instanceName) {
 
   return mapRuntimeRow(row, config);
 }
+
+/** Item plano de tenant listo para n8n (sin mensaje WhatsApp; eso viene del webhook). */
+export function buildRuntimeWorkflowItem(tenant) {
+  return {
+    status: 'ok',
+    tenant_id: tenant.tenant_id,
+    tenant_slug: tenant.tenant_slug,
+    tenant_db_id: tenant.tenant_db_id,
+    tenant_name: tenant.tenant_name,
+    tenant_display_name: tenant.tenant_display_name || tenant.tenant_name || '',
+    business_type: tenant.business_type || tenant.vertical || 'hotel',
+    vertical: tenant.vertical,
+    primary_language: tenant.primary_language,
+    agent_id: tenant.agent_id,
+    agent_name: tenant.agent_name,
+    initial_greeting: tenant.initial_greeting,
+    booking_url_base: tenant.booking_url_base,
+    booking_url_template: tenant.booking_url_template,
+    booking_url_mode: tenant.booking_url_mode,
+    validation_status: tenant.validation_status,
+    confidence_score: tenant.confidence_score,
+    booking_config_json: tenant.booking_config_json,
+    placeholder_map_json: JSON.stringify(tenant.placeholder_map || {}),
+    required_fields_json: JSON.stringify(tenant.required_fields || []),
+    date_format: tenant.date_format,
+    supports_rooms: tenant.supports_rooms,
+    supports_children: tenant.supports_children,
+    supports_child_ages: tenant.supports_child_ages,
+    business_hours: tenant.business_hours,
+    policies: tenant.policies,
+    whatsapp_phone: tenant.whatsapp_phone,
+    pause_trigger: tenant.pause_trigger,
+    pause_ttl_seconds: tenant.pause_ttl_seconds,
+    search_limit: tenant.search_limit,
+    unanswered_limit: tenant.unanswered_limit,
+    faq_search_endpoint: tenant.faq_search_endpoint || '/api/search',
+    unanswered_endpoint: tenant.unanswered_endpoint || '/api/unanswered',
+    evolution_instance_name: tenant.evolution_instance_name,
+    evolution_api_url: tenant.evolution_api_url,
+    evolution_api_key: tenant.evolution_api_key,
+  };
+}

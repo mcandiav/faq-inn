@@ -1253,8 +1253,13 @@ function renderUnanswered() {
   });
 }
 
+function unansweredById(id) {
+  const numericId = Number(id);
+  return state.unanswered.find((row) => Number(row.id) === numericId);
+}
+
 async function respondUnanswered(id) {
-  const item = state.unanswered.find((row) => row.id === id);
+  const item = unansweredById(id);
   if (!item) {
     return;
   }
@@ -1319,7 +1324,10 @@ async function refreshUnanswered() {
   const status = $('#unanswered-filter')?.value || '';
   const query = status ? `?status=${encodeURIComponent(status)}` : '';
   const data = await api(`/unanswered${query}`);
-  state.unanswered = data.items || [];
+  state.unanswered = (data.items || []).map((item) => ({
+    ...item,
+    id: Number(item.id),
+  }));
   renderUnanswered();
 }
 
@@ -1352,7 +1360,7 @@ async function saveUnansweredQuestion(id) {
       body: JSON.stringify({ question }),
     });
 
-    const item = state.unanswered.find((row) => row.id === id);
+    const item = unansweredById(id);
     if (item) {
       item.question = question;
     }
@@ -1374,7 +1382,7 @@ async function saveUnansweredQuestion(id) {
 }
 
 async function deleteUnanswered(id) {
-  const item = state.unanswered.find((row) => row.id === id);
+  const item = unansweredById(id);
   if (!item) {
     return;
   }
