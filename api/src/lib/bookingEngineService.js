@@ -2,6 +2,8 @@ import {
   buildDiscoveryScenarios,
   buildVerificationScenario,
   normalizePreviewScenario,
+  refreshDiscoveryScenarios,
+  refreshVerificationScenario,
 } from './bookingScenarios.js';
 import { extractBookingTemplate } from './bookingUrlExtractor.js';
 import { buildUrlFromTemplate } from './bookingTemplateBuilder.js';
@@ -62,15 +64,52 @@ async function loadActiveSession(pool, tenantId) {
     return null;
   }
   const row = rows[0];
+  const storedScenarios = parseJson(row.scenarios, []);
+  const scenarios = refreshDiscoveryScenarios(storedScenarios);
+  const verificationScenario = refreshVerificationScenario(
+    parseJson(row.verification_scenario, {}),
+    scenarios[0]?.checkin
+  );
+
+  const storedCheckin = storedScenarios[0]?.checkin || '';
+  const datesChanged = storedCheckin !== scenarios[0]?.checkin;
+  let verificationUrl = row.verification_url || '';
+
+  if (datesChanged) {
+    const candidateConfig = parseJson(row.candidate_config, {});
+    if (row.candidate_template && candidateConfig.date_format) {
+      verificationUrl = buildUrlFromTemplate(
+        row.candidate_template,
+        verificationScenario,
+        {
+          date_format: candidateConfig.date_format,
+          child_ages_format: candidateConfig.child_ages_format || 'csv',
+        }
+      );
+    }
+
+    await pool.query(
+      `UPDATE booking_discovery_sessions
+       SET scenarios = ?, verification_scenario = ?, verification_url = ?, updated_at = NOW()
+       WHERE id = ?`,
+      [
+        serializeJson(scenarios),
+        serializeJson(verificationScenario),
+        verificationUrl,
+        row.id,
+      ]
+    );
+  }
+
   return {
     id: row.id,
     status: row.status,
-    scenarios: parseJson(row.scenarios, []),
+    scenarios,
     sample_urls: parseJson(row.sample_urls, []),
     candidate_template: row.candidate_template || '',
     candidate_config: parseJson(row.candidate_config, {}),
-    verification_scenario: parseJson(row.verification_scenario, {}),
-    verification_url: row.verification_url || '',
+    verification_scenario: verificationScenario,
+    verification_url: verificationUrl,
     warnings: parseJson(row.warnings, []),
     confidence_score: Number(row.confidence_score || 0),
     created_at: row.created_at,
@@ -122,7 +161,7 @@ export async function discoverFromUrls(pool, tenantId, sessionId, urls) {
     throw validationError('Sesión de descubrimiento no encontrada', 404);
   }
 
-  const scenarios = parseJson(session.scenarios, []);
+  const scenarios = buildDiscoveryScenarios();
   const result = extractBookingTemplate(scenarios, urls);
 
   if (!result.ok) {
@@ -161,6 +200,7 @@ export async function discoverFromUrls(pool, tenantId, sessionId, urls) {
   await pool.query(
     `UPDATE booking_discovery_sessions
      SET status = 'pending_verification',
+         scenarios = ?,
          sample_urls = ?,
          candidate_template = ?,
          candidate_config = ?,
@@ -171,6 +211,7 @@ export async function discoverFromUrls(pool, tenantId, sessionId, urls) {
          updated_at = NOW()
      WHERE id = ?`,
     [
+      serializeJson(scenarios),
       serializeJson(urls),
       result.booking_url_template,
       serializeJson(candidateConfig),

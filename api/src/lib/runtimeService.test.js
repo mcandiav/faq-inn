@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { buildRuntimeWorkflowItem, enrichBookingConfig } from './runtimeService.js';
+import { buildRuntimeWorkflowItem, buildRuntimeBookingUrl, enrichBookingConfig } from './runtimeService.js';
 
 test('enrichBookingConfig derives placeholder_map from variable_params', () => {
   const config = enrichBookingConfig({
@@ -83,4 +83,26 @@ test('buildRuntimeWorkflowItem flattens tenant only (no webhook message fields)'
   assert.equal('pause_key' in item, false);
   assert.equal(item.search_limit, 5);
   assert.equal(item.faq_search_endpoint, '/api/search');
+});
+
+test('buildRuntimeBookingUrl applies tenant date_format to canonical template', () => {
+  const tenant = {
+    validation_status: 'approved',
+    booking_url_template:
+      'https://book.example.com?CheckIn={{checkin}}&CheckOut={{checkout}}&ad={{adults}}',
+    booking_config: { date_format: 'DDMMYYYY', child_ages_format: 'csv' },
+    date_format: 'DDMMYYYY',
+  };
+
+  const result = buildRuntimeBookingUrl(tenant, {
+    checkin: '2026-07-10',
+    checkout: '2026-07-13',
+    adults: 2,
+  });
+
+  assert.equal(result.status, 'ok');
+  assert.equal(result.date_format, 'DDMMYYYY');
+  assert.match(result.url, /CheckIn=10072026/);
+  assert.match(result.url, /CheckOut=13072026/);
+  assert.match(result.url, /ad=2/);
 });

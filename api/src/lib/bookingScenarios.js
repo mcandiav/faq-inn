@@ -27,7 +27,8 @@ function addDays(iso, days) {
 }
 
 function todayIso() {
-  return new Date().toISOString().slice(0, 10);
+  const date = new Date();
+  return `${date.getFullYear()}-${pad2(date.getMonth() + 1)}-${pad2(date.getDate())}`;
 }
 
 export const DISCOVERY_SCENARIO_COUNT = 2;
@@ -56,6 +57,23 @@ export function buildDiscoveryScenarios(baseDate) {
       child_ages: [11],
     },
   ];
+}
+
+/** Reemplaza fechas almacenadas por hoy + mismas noches/huéspedes (S1/S2). */
+export function refreshDiscoveryScenarios(storedScenarios = []) {
+  const fresh = buildDiscoveryScenarios();
+  return fresh.map((scenario, index) => ({
+    ...scenario,
+    id: storedScenarios[index]?.id || scenario.id,
+  }));
+}
+
+export function refreshVerificationScenario(storedScenario = {}, checkin) {
+  const fresh = buildVerificationScenario(checkin);
+  return {
+    ...fresh,
+    id: storedScenario.id || fresh.id,
+  };
 }
 
 export function buildVerificationScenario(baseDate) {

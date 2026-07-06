@@ -18,6 +18,8 @@ function slugFromInstanceName(instanceName, prefix) {
 }
 
 import { buildPlaceholderMap, buildRequiredFields } from './bookingApprovedFormat.js';
+import { normalizePreviewScenario } from './bookingScenarios.js';
+import { buildUrlFromTemplate } from './bookingTemplateBuilder.js';
 
 function parseBookingConfig(raw) {
   if (!raw) return {};
@@ -157,6 +159,43 @@ export async function getRuntimeTenantConfig(pool, config, instanceName) {
   }
 
   return mapRuntimeRow(row, config);
+}
+
+export function buildRuntimeBookingUrl(tenant, input = {}) {
+  if (tenant.validation_status !== 'approved' || !tenant.booking_url_template) {
+    throw validationError('Motor de reservas no aprobado para este tenant', 400);
+  }
+
+  let scenario;
+  try {
+    scenario = normalizePreviewScenario(input);
+  } catch (error) {
+    throw validationError(error.message || 'Datos de reserva inválidos');
+  }
+
+  const bookingConfig = enrichBookingConfig(tenant.booking_config);
+  const url = buildUrlFromTemplate(tenant.booking_url_template, scenario, {
+    date_format: bookingConfig.date_format || tenant.date_format,
+    child_ages_format: bookingConfig.child_ages_format || 'csv',
+  });
+
+  try {
+    new URL(url);
+  } catch {
+    throw validationError('No se pudo construir una URL válida con esos datos');
+  }
+
+  return {
+    status: 'ok',
+    url,
+    scenario,
+    date_format: bookingConfig.date_format || tenant.date_format || '',
+  };
+}
+
+export async function generateRuntimeBookingLink(pool, config, instanceName, input = {}) {
+  const tenant = await getRuntimeTenantConfig(pool, config, instanceName);
+  return buildRuntimeBookingUrl(tenant, input);
 }
 
 /** Item plano de tenant listo para n8n (sin mensaje WhatsApp; eso viene del webhook). */
