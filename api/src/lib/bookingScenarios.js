@@ -30,6 +30,8 @@ function todayIso() {
   return new Date().toISOString().slice(0, 10);
 }
 
+export const DISCOVERY_SCENARIO_COUNT = 2;
+
 export function buildDiscoveryScenarios(baseDate) {
   const checkin = baseDate || todayIso();
   return [
@@ -40,28 +42,18 @@ export function buildDiscoveryScenarios(baseDate) {
       nights: 3,
       rooms: 1,
       adults: 2,
-      children: 1,
-      child_ages: [10],
+      children: 0,
+      child_ages: [],
     },
     {
       id: 'S2',
       checkin,
       checkout: addDays(checkin, 7),
       nights: 7,
-      rooms: 1,
-      adults: 3,
-      children: 2,
-      child_ages: [10, 11],
-    },
-    {
-      id: 'S3',
-      checkin,
-      checkout: addDays(checkin, 3),
-      nights: 3,
       rooms: 2,
-      adults: 2,
-      children: 0,
-      child_ages: [],
+      adults: 3,
+      children: 1,
+      child_ages: [11],
     },
   ];
 }
@@ -75,8 +67,8 @@ export function buildVerificationScenario(baseDate) {
     nights: 1,
     rooms: 1,
     adults: 1,
-    children: 1,
-    child_ages: [8],
+    children: 0,
+    child_ages: [],
   };
 }
 
@@ -118,7 +110,9 @@ export function normalizePreviewScenario(input = {}) {
   const children =
     input.children !== undefined && input.children !== ''
       ? Math.max(0, Number(input.children) || 0)
-      : childAges.length;
+      : childAges.length > 0
+        ? childAges.length
+        : 0;
 
   return {
     checkin,

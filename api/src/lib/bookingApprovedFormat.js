@@ -75,6 +75,11 @@ export function buildApprovedBookingRecord(session, userId, bookingUrlBase) {
 
   const bookingConfig = {
     required_fields: requiredFields,
+    defaults: candidateConfig.defaults || {
+      rooms: 1,
+      children: 0,
+      child_ages: [],
+    },
     placeholder_map: placeholderMap,
     date_format: candidateConfig.date_format || '',
     occupancy_format: candidateConfig.occupancy_format || '',

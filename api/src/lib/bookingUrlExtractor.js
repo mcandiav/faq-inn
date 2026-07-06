@@ -1,4 +1,4 @@
-import { formatDateVariants } from './bookingScenarios.js';
+import { formatDateVariants, DISCOVERY_SCENARIO_COUNT } from './bookingScenarios.js';
 import { buildUrlFromTemplate, listRequiredFields } from './bookingTemplateBuilder.js';
 
 function normalizeUrl(raw) {
@@ -143,6 +143,7 @@ function extractQueryVariables(parsedUrls, scenarios) {
   const fixedParams = {};
   const warnings = [];
   const allKeys = new Set();
+  const expectedCount = scenarios.length;
 
   for (const parsed of parsedUrls) {
     for (const key of parsed.searchParams.keys()) {
@@ -159,7 +160,7 @@ function extractQueryVariables(parsedUrls, scenarios) {
     );
 
     const defined = placeholders.filter(Boolean);
-    if (defined.length === 3 && new Set(defined).size === 1) {
+    if (defined.length === expectedCount && new Set(defined).size === 1) {
       variableParams[key] = defined[0];
       continue;
     }
@@ -189,6 +190,7 @@ function extractPathVariables(parsedUrls, scenarios) {
   const maxLen = Math.max(...paths.map((p) => p.length));
   const variableSegments = {};
   const warnings = [];
+  const expectedCount = scenarios.length;
 
   for (let i = 0; i < maxLen; i += 1) {
     const segments = paths.map((path) => path[i] ?? null);
@@ -197,7 +199,7 @@ function extractPathVariables(parsedUrls, scenarios) {
     );
     const defined = placeholders.filter(Boolean);
 
-    if (defined.length === 3 && new Set(defined).size === 1) {
+    if (defined.length === expectedCount && new Set(defined).size === 1) {
       variableSegments[i] = defined[0];
       continue;
     }
@@ -276,7 +278,7 @@ function detectDateFormat(variableParams, variableSegments) {
   return '';
 }
 
-function computeConfidence(scenarios, variableParams, variableSegments, warnings) {
+function computeConfidence(scenarios, variableParams, variableSegments, warnings, dateFormat) {
   let score = 0;
   const allValues = [
     ...Object.values(variableParams),
@@ -287,13 +289,13 @@ function computeConfidence(scenarios, variableParams, variableSegments, warnings
   const hasCheckin = blob.includes('checkin');
   const hasCheckout = blob.includes('checkout');
   const hasAdults = blob.includes('adults') || blob.includes('occupancy_path');
-  const hasRooms = blob.includes('rooms');
   const hasChildren = blob.includes('children') || blob.includes('child_ages');
 
   if (hasCheckin && hasCheckout) score += 0.35;
   if (hasAdults) score += 0.2;
-  if (hasRooms) score += 0.15;
-  if (hasChildren) score += 0.15;
+  if (hasChildren) score += 0.1;
+  if (blob.includes('rooms')) score += 0.05;
+  if (dateFormat) score += 0.2;
   if (warnings.length === 0) score += 0.15;
 
   if (!hasCheckin || !hasCheckout) {
@@ -318,17 +320,17 @@ function validateRoundTrip(template, scenarios) {
 export function extractBookingTemplate(scenarios, rawUrls) {
   const warnings = [];
 
-  if (!Array.isArray(scenarios) || scenarios.length < 3) {
+  if (!Array.isArray(scenarios) || scenarios.length < DISCOVERY_SCENARIO_COUNT) {
     return {
       ok: false,
-      error: 'Se requieren 3 escenarios de prueba',
+      error: `Se requieren ${DISCOVERY_SCENARIO_COUNT} escenarios de prueba`,
     };
   }
 
-  if (!Array.isArray(rawUrls) || rawUrls.length !== 3) {
+  if (!Array.isArray(rawUrls) || rawUrls.length !== scenarios.length) {
     return {
       ok: false,
-      error: 'Debe pegar exactamente 3 links de prueba',
+      error: `Debe pegar exactamente ${scenarios.length} links de prueba`,
     };
   }
 
@@ -344,7 +346,7 @@ export function extractBookingTemplate(scenarios, rawUrls) {
   if (new Set(hosts).size !== 1) {
     return {
       ok: false,
-      error: 'Los 3 links deben pertenecer al mismo dominio/motor',
+      error: `Los ${scenarios.length} links deben pertenecer al mismo dominio/motor`,
     };
   }
 
@@ -378,11 +380,15 @@ export function extractBookingTemplate(scenarios, rawUrls) {
     queryResult.variableParams,
     pathResult.variableSegments
   );
+  if (!dateFormat) {
+    warnings.push('No se pudo detectar el formato de fecha del motor');
+  }
   const confidenceScore = computeConfidence(
     scenarios,
     queryResult.variableParams,
     pathResult.variableSegments,
-    warnings
+    warnings,
+    dateFormat
   );
 
   const supportsRooms = Object.values(variableParams).some((v) =>
