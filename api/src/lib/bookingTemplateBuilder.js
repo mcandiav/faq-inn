@@ -1,4 +1,5 @@
 import { formatDateVariants } from './bookingScenarios.js';
+import { stripBookingComTracking } from './bookingTemplateCompact.js';
 
 export function formatDateForTenant(iso, dateFormat) {
   const variants = formatDateVariants(iso);
@@ -93,7 +94,7 @@ export function buildUrlFromTemplate(template, scenario, options = {}) {
       url = url.split(token).join(resolver(scenario));
     }
   }
-  return url;
+  return stripBookingComTracking(url);
 }
 
 export function listRequiredFields(variableParams) {

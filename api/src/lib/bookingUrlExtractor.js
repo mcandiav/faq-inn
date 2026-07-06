@@ -5,6 +5,7 @@ import {
   listRequiredFields,
   normalizeTemplateToCanonical,
 } from './bookingTemplateBuilder.js';
+import { compactBookingComDiscoveryParams } from './bookingTemplateCompact.js';
 
 function normalizeUrl(raw) {
   const trimmed = String(raw || '').trim();
@@ -221,12 +222,14 @@ function applyPathTemplate(pathname, variableSegments) {
   return `/${templated.join('/')}`;
 }
 
-function applyQueryTemplate(searchParams, variableParams, fixedParams) {
-  const keys = new Set([
-    ...searchParams.keys(),
-    ...Object.keys(fixedParams),
-    ...Object.keys(variableParams),
-  ]);
+function applyQueryTemplate(searchParams, variableParams, fixedParams, explicitOnly = false) {
+  const keys = explicitOnly
+    ? new Set([...Object.keys(fixedParams), ...Object.keys(variableParams)])
+    : new Set([
+        ...searchParams.keys(),
+        ...Object.keys(fixedParams),
+        ...Object.keys(variableParams),
+      ]);
   const parts = [];
 
   for (const key of keys) {
@@ -386,6 +389,12 @@ export function extractBookingTemplate(scenarios, rawUrls) {
   const pathResult = extractPathVariables(parsedUrls, scenarios);
   warnings.push(...queryResult.warnings, ...pathResult.warnings);
 
+  const compacted = compactBookingComDiscoveryParams(
+    hosts[0],
+    queryResult.variableParams,
+    queryResult.fixedParams
+  );
+
   const baseUrl = parsedUrls[0];
   const templatedPath = applyPathTemplate(
     baseUrl.pathname,
@@ -393,15 +402,16 @@ export function extractBookingTemplate(scenarios, rawUrls) {
   );
   const templatedQuery = applyQueryTemplate(
     baseUrl.searchParams,
-    queryResult.variableParams,
-    queryResult.fixedParams
+    compacted.variableParams,
+    compacted.fixedParams,
+    hosts[0].includes('booking.com')
   );
   const bookingUrlTemplate = normalizeTemplateToCanonical(
     `${baseUrl.origin}${templatedPath}${templatedQuery}`
   );
 
   const variableParams = {
-    ...queryResult.variableParams,
+    ...compacted.variableParams,
     ...Object.fromEntries(
       Object.entries(pathResult.variableSegments).map(([index, value]) => [
         `path_${index}`,
@@ -475,7 +485,7 @@ export function extractBookingTemplate(scenarios, rawUrls) {
     supports_rooms: supportsRooms,
     supports_children: supportsChildren,
     supports_child_ages: supportsChildAges,
-    fixed_params: queryResult.fixedParams,
+    fixed_params: compacted.fixedParams,
     variable_params: variableParams,
     confidence_score: confidenceScore,
     validation_status: validationStatus,
