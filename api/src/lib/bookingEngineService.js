@@ -95,7 +95,7 @@ export async function startDiscoverySession(pool, tenantId) {
     [tenantId]
   );
 
-  const [result] = await pool.query(
+  const [, meta] = await pool.query(
     `INSERT INTO booking_discovery_sessions
        (tenant_id, status, scenarios, verification_scenario, sample_urls, warnings, candidate_config)
      VALUES (?, 'draft', ?, ?, '[]', '[]', '{}')
@@ -104,7 +104,7 @@ export async function startDiscoverySession(pool, tenantId) {
   );
 
   return {
-    session_id: result.insertId,
+    session_id: meta.insertId,
     scenarios,
     verification_scenario: verificationScenario,
   };
