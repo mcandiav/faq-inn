@@ -19,10 +19,10 @@ export const TRANSVERSAL_STARTER_FAQS = [
   {
     starter_key: 'human',
     faq_uid: 'starter:transversal:human',
-    question: '¿Puedo hablar con una persona?',
+    question: '¿Puedo hablar con un humano?',
     answer:
-      'Si necesitas atención humana acá puedes contactar a Alexa: https://wa.me/56927294379',
+      'Si necesitas atención humana puedes hablar con Pedro al whatsapp 12345678.',
     category: 'atención',
-    keywords: 'humano, persona, operador, atención, alexa, whatsapp',
+    keywords: 'humano, persona, operador, atención, pedro, whatsapp',
   },
 ];
