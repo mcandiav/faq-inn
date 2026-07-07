@@ -182,11 +182,6 @@
                 <input type="text" id="profile-business" data-i18n-placeholder="profile.businessPlaceholder" placeholder="Ej. Hotel Savoy" />
                 <span class="field-hint" data-i18n="profile.businessHint">Nombre que verán tus huéspedes.</span>
               </label>
-              <label>
-                <span data-i18n="profile.address">Dirección</span>
-                <input type="text" id="profile-address" placeholder="Calle, ciudad, país" />
-                <span class="field-hint" data-i18n="profile.addressHint">Ubicación del alojamiento (opcional pero recomendado).</span>
-              </label>
             </fieldset>
             <fieldset>
               <legend data-i18n="profile.sectionAgent">Agente WhatsApp</legend>
@@ -212,6 +207,9 @@
                   <option value="en">English</option>
                 </select>
               </label>
+              <p class="profile-operator-tip" data-i18n="profile.pauseHint">
+                Para pausar el agente en un chat, escribile al cliente un mensaje que empiece con ** (dos asteriscos). El asistente queda pausado 5 minutos en esa conversación y podés responder vos.
+              </p>
             </fieldset>
             <fieldset>
               <legend data-i18n="profile.changePassword">Cambiar contraseña</legend>
@@ -628,7 +626,7 @@
       </form>
     </dialog>
 
-    <script src="/i18n.js?v=1.7.12"></script>
-    <script src="/app.js?v=1.7.12"></script>
+    <script src="/i18n.js?v=1.7.13"></script>
+    <script src="/app.js?v=1.7.13"></script>
   </body>
 </html>

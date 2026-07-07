@@ -524,6 +524,13 @@ function statusPillIndexed(indexed) {
     : `<span class="pill warn">${escapeHtml(t('status.pendingIndex'))}</span>`;
 }
 
+function statusPillTemplate(isStarterTemplate) {
+  if (!isStarterTemplate) {
+    return '';
+  }
+  return `<span class="pill template">${escapeHtml(t('faq.template'))}</span>`;
+}
+
 function truncate(text, max = 80) {
   if (!text) return '';
   return text.length > max ? `${text.slice(0, max)}…` : text;
@@ -567,14 +574,10 @@ function renderProfile() {
       account?.tenant?.name || user.tenant?.name || '';
     businessInput.placeholder = t('profile.businessPlaceholder');
 
-    const addressEl = $('#profile-address');
     const welcomeEl = $('#profile-welcome-message');
     const langEl = $('#profile-primary-language');
     const bookingStatusEl = $('#profile-booking-status');
 
-    if (addressEl) {
-      addressEl.value = account?.settings?.address || '';
-    }
     if (welcomeEl) {
       welcomeEl.value = account?.settings?.welcome_message || '';
     }
@@ -1057,6 +1060,7 @@ function faqCardHtml(faq, index) {
       <div class="faq-card-head">
         <span class="faq-card-num">#${index + 1}</span>
         <div class="faq-card-badges">
+          ${statusPillTemplate(faq.is_starter_template)}
           ${statusPillActive(faq.active)}
           ${statusPillIndexed(faq.indexed_at)}
         </div>
@@ -1122,7 +1126,7 @@ function renderFaqs() {
       <td class="num">${index + 1}</td>
       <td class="cell-text" title="${escapeAttr(faq.question)}">${escapeHtml(faq.question)}</td>
       <td class="cell-text" title="${escapeAttr(faq.answer)}">${escapeHtml(faq.answer)}</td>
-      <td>${statusPillActive(faq.active)}</td>
+      <td>${statusPillTemplate(faq.is_starter_template)} ${statusPillActive(faq.active)}</td>
       <td>${statusPillIndexed(faq.indexed_at)}</td>
       <td class="row-actions">
         <button type="button" class="btn small" data-edit="${faq.id}">${escapeHtml(t('btn.edit'))}</button>
@@ -2331,7 +2335,6 @@ $('#profile-form').addEventListener('submit', async (event) => {
 
     if (state.user?.role === 'client') {
       const accountBody = {
-        address: $('#profile-address')?.value.trim() || '',
         welcome_message: $('#profile-welcome-message')?.value.trim() || '',
         primary_language: $('#profile-primary-language')?.value || 'es',
       };

@@ -674,6 +674,11 @@ th {
   color: #fde68a;
 }
 
+.pill.template {
+  background: #1e3a5f;
+  color: #93c5fd;
+}
+
 dialog {
   width: min(560px, 96vw);
   border: 1px solid #334155;
@@ -1403,6 +1408,17 @@ code {
 
 .booking-approved-badge {
   align-self: center;
+}
+
+.profile-operator-tip {
+  margin: 1rem 0 0;
+  padding: 0.75rem 1rem;
+  border-radius: 8px;
+  border: 1px solid #334155;
+  background: #1e293b;
+  font-size: 0.9rem;
+  color: #cbd5e1;
+  line-height: 1.45;
 }
 
 .profile-booking-setup {
