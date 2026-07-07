@@ -158,6 +158,35 @@ export async function seedObjectiveTemplates(pool) {
         seed.status,
       ]
     );
+
+    // Auto-migración: filas base sembradas con la versión previa (expresiones
+    // n8n `$('Resolver Tenant')...`) se refrescan a los tokens neutros. Solo
+    // aplica a filas nunca editadas por el admin (version = 1) que aún tengan
+    // una expresión n8n legada. Idempotente: tras sanar deja de coincidir.
+    const hasSeedContent = Object.values(seed.columns).some(
+      (value) => value && value.trim()
+    );
+    if (hasSeedContent) {
+      await pool.query(
+        `UPDATE system_prompt_objective_templates
+         SET role_template = ?, limits_template = ?, tools_template = ?,
+             date_interpretation_template = ?, data_collection_template = ?,
+             links_template = ?, status = ?, updated_at = NOW()
+         WHERE objective_slug = ?
+           AND version = 1
+           AND role_template LIKE '%$(%'`,
+        [
+          seed.columns.role_template,
+          seed.columns.limits_template,
+          seed.columns.tools_template,
+          seed.columns.date_interpretation_template,
+          seed.columns.data_collection_template,
+          seed.columns.links_template,
+          seed.status,
+          slug,
+        ]
+      );
+    }
   }
 }
 

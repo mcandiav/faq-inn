@@ -1,5 +1,6 @@
 import {
   buildRuntimeWorkflowItem,
+  generateRuntimeAgendaLink,
   generateRuntimeBookingLink,
   getRuntimeTenantConfig,
 } from '../lib/runtimeService.js';
@@ -63,6 +64,29 @@ export async function runtimeRoutes(app, config) {
       return {
         status: 'error',
         error: error.message || 'No se pudo generar el link de reserva',
+      };
+    }
+  });
+
+  app.post('/api/runtime/agenda-link', async (request, reply) => {
+    if (!verifyN8nToken(request, config)) {
+      reply.code(401);
+      return { status: 'error', error: 'Token n8n inválido' };
+    }
+
+    const instanceName =
+      request.body?.instance_name ||
+      request.body?.instance ||
+      request.body?.evolution_instance_name ||
+      '';
+
+    try {
+      return await generateRuntimeAgendaLink(pool, config, instanceName, request.body || {});
+    } catch (error) {
+      reply.code(error.statusCode || 500);
+      return {
+        status: 'error',
+        error: error.message || 'No se pudo generar el link de agenda',
       };
     }
   });

@@ -249,6 +249,50 @@ export async function generateRuntimeBookingLink(pool, config, instanceName, inp
   };
 }
 
+export function buildRuntimeAgendaUrl(tenant, input = {}) {
+  if (tenant.agenda_validation_status !== 'approved' || !tenant.agenda_url_template) {
+    throw validationError('Motor de agenda no aprobado para este tenant', 400);
+  }
+
+  let scenario;
+  try {
+    scenario = normalizePreviewScenario(input);
+  } catch (error) {
+    throw validationError(error.message || 'Datos de agenda inválidos');
+  }
+
+  const agendaConfig = enrichBookingConfig(tenant.agenda_config);
+  const url = buildUrlFromTemplate(tenant.agenda_url_template, scenario, {
+    date_format: agendaConfig.date_format || tenant.date_format,
+    child_ages_format: agendaConfig.child_ages_format || 'csv',
+  });
+
+  try {
+    new URL(url);
+  } catch {
+    throw validationError('No se pudo construir una URL válida con esos datos');
+  }
+
+  return {
+    status: 'ok',
+    url,
+    scenario,
+    date_format: agendaConfig.date_format || tenant.date_format || '',
+  };
+}
+
+export async function generateRuntimeAgendaLink(pool, config, instanceName, input = {}) {
+  const tenant = await getRuntimeTenantConfig(pool, config, instanceName);
+  const result = buildRuntimeAgendaUrl(tenant, input);
+  const code = await createBookingShortLink(pool, result.url, tenant.tenant_db_id);
+  const short_url = buildPublicShortUrl(config, code);
+
+  return {
+    ...result,
+    short_url,
+  };
+}
+
 /** Item plano de tenant listo para n8n (sin mensaje WhatsApp; eso viene del webhook). */
 export function buildRuntimeWorkflowItem(tenant) {
   return {
