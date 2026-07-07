@@ -121,6 +121,22 @@ const MESSAGES = {
     'profile.sectionAccount': 'Tu acceso',
     'profile.sectionWhatsapp': 'Conexión WhatsApp',
     'profile.sectionBusiness': 'Negocio',
+    'profile.sectionObjective': 'Objetivo del negocio',
+    'profile.objectiveFaqHint':
+      'Las preguntas frecuentes siempre están activas. El objetivo define la acción principal del asistente.',
+    'profile.objectiveChange': 'Cambiar objetivo',
+    'profile.objectiveChangeHint':
+      'Elegí un solo objetivo. La configuración anterior queda guardada pero inactiva.',
+    'profile.objectiveSave': 'Guardar objetivo',
+    'profile.objectiveConfirm':
+      '¿Seguro que querés cambiar el objetivo? El asistente usará la nueva configuración en las próximas conversaciones.',
+    'profile.objectiveSaved': 'Objetivo actualizado.',
+    'profile.objectivePick': 'Elegí un objetivo.',
+    'profile.objectiveMissing': 'Sin objetivo definido',
+    'profile.destinationUrl': 'URL de tu sitio web',
+    'profile.destinationHint':
+      'El asistente derivará a esta dirección cuando corresponda.',
+    'profile.destinationRequired': 'Ingresá la URL de tu sitio web.',
     'profile.sectionAgent': 'Agente WhatsApp',
     'profile.email': 'Email (login)',
     'profile.emailHint': 'Para cambiar el email debes ingresar tu contraseña actual abajo.',
@@ -546,6 +562,22 @@ const MESSAGES = {
     'profile.sectionAccount': 'Seu acesso',
     'profile.sectionWhatsapp': 'Conexão WhatsApp',
     'profile.sectionBusiness': 'Negócio',
+    'profile.sectionObjective': 'Objetivo do negócio',
+    'profile.objectiveFaqHint':
+      'As perguntas frequentes estão sempre ativas. O objetivo define a ação principal do assistente.',
+    'profile.objectiveChange': 'Alterar objetivo',
+    'profile.objectiveChangeHint':
+      'Escolha um único objetivo. A configuração anterior fica salva, mas inativa.',
+    'profile.objectiveSave': 'Salvar objetivo',
+    'profile.objectiveConfirm':
+      'Tem certeza de que deseja alterar o objetivo? O assistente usará a nova configuração nas próximas conversas.',
+    'profile.objectiveSaved': 'Objetivo atualizado.',
+    'profile.objectivePick': 'Escolha um objetivo.',
+    'profile.objectiveMissing': 'Sem objetivo definido',
+    'profile.destinationUrl': 'URL do seu site',
+    'profile.destinationHint':
+      'O assistente direcionará para este endereço quando corresponder.',
+    'profile.destinationRequired': 'Informe a URL do seu site.',
     'profile.sectionAgent': 'Agente WhatsApp',
     'profile.email': 'Email (login)',
     'profile.emailHint': 'Para alterar o email, informe sua senha atual abaixo.',
@@ -970,6 +1002,22 @@ const MESSAGES = {
     'profile.sectionAccount': 'Your access',
     'profile.sectionWhatsapp': 'WhatsApp connection',
     'profile.sectionBusiness': 'Business',
+    'profile.sectionObjective': 'Business objective',
+    'profile.objectiveFaqHint':
+      'FAQs are always active. The objective defines the assistant’s main action.',
+    'profile.objectiveChange': 'Change objective',
+    'profile.objectiveChangeHint':
+      'Choose one objective only. Previous configuration stays saved but inactive.',
+    'profile.objectiveSave': 'Save objective',
+    'profile.objectiveConfirm':
+      'Are you sure you want to change the objective? The assistant will use the new configuration in future conversations.',
+    'profile.objectiveSaved': 'Objective updated.',
+    'profile.objectivePick': 'Choose an objective.',
+    'profile.objectiveMissing': 'No objective set',
+    'profile.destinationUrl': 'Your website URL',
+    'profile.destinationHint':
+      'The assistant will direct users to this address when appropriate.',
+    'profile.destinationRequired': 'Enter your website URL.',
     'profile.sectionAgent': 'WhatsApp agent',
     'profile.email': 'Email (login)',
     'profile.emailHint': 'To change your email, enter your current password below.',

@@ -4,6 +4,12 @@ const apiBase = window.FAQ_INN_API_URL || window.DFAQ_API_URL || '/api';
 const VIEW_STORAGE_KEY = 'faq-inn-current-view';
 const VALID_VIEWS = ['dashboard', 'unanswered', 'profile', 'onboarding', 'booking-engine', 'agenda-engine', 'admin'];
 
+const PRIMARY_OBJECTIVE_SLUGS = new Set([
+  'reservar_noches',
+  'reservar_horarios',
+  'enviar_a_sitio_web',
+]);
+
 const MOTOR_DEFS = {
   booking: {
     prefix: 'booking',
@@ -70,6 +76,9 @@ const state = {
   onboardingStep: 1,
   onboardingData: null,
   onboardingSelectedObjective: '',
+  objectivesCatalog: [],
+  profileObjectiveDraft: '',
+  profileObjectivePickerOpen: false,
 };
 const appMeta = {
   productName: APP_PRODUCT_NAME,
@@ -830,7 +839,221 @@ function renderProfile() {
     profileMsg.className = 'form-msg';
   }
 
+  if (user.role === 'client') {
+    void ensureObjectivesCatalog().then(() => renderProfileObjective());
+  } else {
+    $('#profile-objective-fieldset')?.classList.add('hidden');
+  }
+
   renderProfileWhatsapp();
+}
+
+async function ensureObjectivesCatalog() {
+  if (state.objectivesCatalog.length) {
+    return;
+  }
+  try {
+    const data = await api('/onboarding/objectives');
+    state.objectivesCatalog = data.objectives || [];
+  } catch {
+    state.objectivesCatalog = [];
+  }
+}
+
+function getObjectiveMeta(slug) {
+  return state.objectivesCatalog.find((item) => item.slug === slug) || null;
+}
+
+function currentProfileObjective() {
+  return (
+    state.account?.settings?.objetivo_slug ||
+    state.onboardingData?.objetivo_slug ||
+    ''
+  );
+}
+
+function renderProfileObjectiveCards() {
+  const grid = $('#profile-objectives');
+  if (!grid) {
+    return;
+  }
+
+  const selected =
+    state.profileObjectiveDraft || currentProfileObjective() || '';
+  const objectives = state.objectivesCatalog.filter((item) =>
+    PRIMARY_OBJECTIVE_SLUGS.has(item.slug)
+  );
+
+  grid.innerHTML = objectives
+    .map(
+      (objective) => `
+      <button
+        type="button"
+        class="objective-card${selected === objective.slug ? ' is-selected' : ''}"
+        data-objective="${escapeAttr(objective.slug)}"
+        role="option"
+        aria-selected="${selected === objective.slug}"
+      >
+        <h4>${escapeHtml(objective.name)}</h4>
+        <p>${escapeHtml(objective.description)}</p>
+        <p class="objective-examples">${escapeHtml(objective.examples)}</p>
+      </button>`
+    )
+    .join('');
+
+  grid.querySelectorAll('[data-objective]').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      state.profileObjectiveDraft = btn.dataset.objective || '';
+      renderProfileObjectiveCards();
+      renderProfileObjectivePanels();
+    });
+  });
+}
+
+function renderProfileObjectivePanels() {
+  const objetivo = currentProfileObjective();
+  const draft = state.profileObjectivePickerOpen
+    ? state.profileObjectiveDraft || objetivo
+    : objetivo;
+  const landingSetup = $('#profile-landing-setup');
+  landingSetup?.classList.toggle(
+    'hidden',
+    draft !== 'enviar_a_sitio_web'
+  );
+}
+
+function renderProfileObjective() {
+  const fieldset = $('#profile-objective-fieldset');
+  const user = state.user;
+  if (!fieldset || user?.role !== 'client') {
+    fieldset?.classList.add('hidden');
+    return;
+  }
+
+  fieldset.classList.remove('hidden');
+  const objetivo = currentProfileObjective();
+  const meta = getObjectiveMeta(objetivo);
+  const badge = $('#profile-objective-badge');
+  const description = $('#profile-objective-description');
+  const destinationInput = $('#profile-destination-url');
+  const changeBtn = $('#btn-profile-objective-change');
+  const picker = $('#profile-objective-picker');
+
+  if (badge) {
+    badge.textContent = meta?.name || t('profile.objectiveMissing');
+    badge.className = 'pill';
+  }
+  if (description) {
+    description.textContent = meta?.description || '';
+  }
+  if (destinationInput) {
+    destinationInput.value =
+      state.account?.settings?.destination_url ||
+      state.onboardingData?.destination_url ||
+      '';
+  }
+
+  changeBtn?.classList.toggle('hidden', state.profileObjectivePickerOpen);
+  picker?.classList.toggle('hidden', !state.profileObjectivePickerOpen);
+
+  if (state.profileObjectivePickerOpen) {
+    renderProfileObjectiveCards();
+  }
+
+  renderProfileObjectivePanels();
+}
+
+function openProfileObjectivePicker() {
+  const current = currentProfileObjective();
+  state.profileObjectivePickerOpen = true;
+  state.profileObjectiveDraft = PRIMARY_OBJECTIVE_SLUGS.has(current)
+    ? current
+    : '';
+  const msg = $('#profile-objective-msg');
+  if (msg) {
+    msg.textContent = '';
+    msg.className = 'form-msg';
+  }
+  renderProfileObjective();
+}
+
+function closeProfileObjectivePicker() {
+  state.profileObjectivePickerOpen = false;
+  state.profileObjectiveDraft = '';
+  const msg = $('#profile-objective-msg');
+  if (msg) {
+    msg.textContent = '';
+    msg.className = 'form-msg';
+  }
+  renderProfileObjective();
+}
+
+async function saveProfileObjective() {
+  const msg = $('#profile-objective-msg');
+  const slug = state.profileObjectiveDraft || '';
+  if (!PRIMARY_OBJECTIVE_SLUGS.has(slug)) {
+    if (msg) {
+      msg.textContent = t('profile.objectivePick');
+      msg.className = 'form-msg error';
+    }
+    return;
+  }
+
+  const body = { objetivo_slug: slug };
+  if (slug === 'enviar_a_sitio_web') {
+    const destinationUrl = $('#profile-destination-url')?.value.trim() || '';
+    if (!destinationUrl) {
+      if (msg) {
+        msg.textContent = t('profile.destinationRequired');
+        msg.className = 'form-msg error';
+      }
+      return;
+    }
+    body.destination_url = destinationUrl;
+  }
+
+  if (!window.confirm(t('profile.objectiveConfirm'))) {
+    return;
+  }
+
+  const saveBtn = $('#btn-profile-objective-save');
+  if (saveBtn) {
+    saveBtn.disabled = true;
+  }
+  if (msg) {
+    msg.textContent = '';
+    msg.className = 'form-msg';
+  }
+
+  try {
+    const accountData = await api('/account/settings', {
+      method: 'PATCH',
+      body: JSON.stringify(body),
+    });
+    state.account = accountData;
+    if (state.onboardingData) {
+      state.onboardingData.objetivo_slug = accountData.settings?.objetivo_slug || '';
+      state.onboardingData.destination_url =
+        accountData.settings?.destination_url || '';
+    }
+    state.profileObjectivePickerOpen = false;
+    state.profileObjectiveDraft = '';
+    renderHeader();
+    renderProfileObjective();
+    if (msg) {
+      msg.textContent = t('profile.objectiveSaved');
+      msg.className = 'form-msg ok';
+    }
+  } catch (error) {
+    if (msg) {
+      msg.textContent = error.message;
+      msg.className = 'form-msg error';
+    }
+  } finally {
+    if (saveBtn) {
+      saveBtn.disabled = false;
+    }
+  }
 }
 
 function renderProfileWhatsapp() {
@@ -2712,6 +2935,18 @@ $('#btn-profile-whatsapp-refresh-qr')?.addEventListener('click', () => {
   startProfileWhatsappReconnect();
 });
 
+$('#btn-profile-objective-change')?.addEventListener('click', () => {
+  openProfileObjectivePicker();
+});
+
+$('#btn-profile-objective-cancel')?.addEventListener('click', () => {
+  closeProfileObjectivePicker();
+});
+
+$('#btn-profile-objective-save')?.addEventListener('click', () => {
+  void saveProfileObjective();
+});
+
 async function logout() {
   try {
     await api('/auth/logout', { method: 'POST' });
@@ -3115,6 +3350,15 @@ $('#profile-form').addEventListener('submit', async (event) => {
       const businessName = $('#profile-business').value.trim();
       if (businessName.length >= 2) {
         accountBody.business_name = businessName;
+      }
+
+      const objetivo =
+        state.account?.settings?.objetivo_slug ||
+        state.onboardingData?.objetivo_slug ||
+        '';
+      if (objetivo === 'enviar_a_sitio_web') {
+        accountBody.destination_url =
+          $('#profile-destination-url')?.value.trim() || '';
       }
 
       const accountData = await api('/account/settings', {

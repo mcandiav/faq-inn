@@ -295,6 +295,43 @@
                 <span class="field-hint" data-i18n="profile.businessHint">Nombre que verán tus huéspedes.</span>
               </label>
             </fieldset>
+            <fieldset id="profile-objective-fieldset" class="profile-objective-fieldset hidden">
+              <legend data-i18n="profile.sectionObjective">Objetivo del negocio</legend>
+              <p class="hint" data-i18n="profile.objectiveFaqHint">
+                Las preguntas frecuentes siempre están activas. El objetivo define la acción principal del asistente.
+              </p>
+              <div class="profile-objective-current">
+                <span class="pill" id="profile-objective-badge"></span>
+                <p class="hint" id="profile-objective-description"></p>
+              </div>
+              <div id="profile-landing-setup" class="hidden">
+                <label>
+                  <span data-i18n="profile.destinationUrl">URL de tu sitio web</span>
+                  <input type="url" id="profile-destination-url" placeholder="https://..." />
+                  <span class="field-hint" data-i18n="profile.destinationHint">
+                    El asistente derivará a esta dirección cuando corresponda.
+                  </span>
+                </label>
+              </div>
+              <button type="button" class="btn ghost" id="btn-profile-objective-change" data-i18n="profile.objectiveChange">
+                Cambiar objetivo
+              </button>
+              <div id="profile-objective-picker" class="hidden">
+                <p class="field-hint" data-i18n="profile.objectiveChangeHint">
+                  Elegí un solo objetivo. La configuración anterior queda guardada pero inactiva.
+                </p>
+                <div id="profile-objectives" class="objective-grid" role="listbox" aria-label="Objetivo"></div>
+                <div class="profile-objective-picker-actions">
+                  <button type="button" class="btn primary" id="btn-profile-objective-save" data-i18n="profile.objectiveSave">
+                    Guardar objetivo
+                  </button>
+                  <button type="button" class="btn ghost" id="btn-profile-objective-cancel" data-i18n="btn.cancel">
+                    Cancelar
+                  </button>
+                </div>
+              </div>
+              <p class="form-msg" id="profile-objective-msg"></p>
+            </fieldset>
             <fieldset>
               <legend data-i18n="profile.sectionAgent">Agente WhatsApp</legend>
               <label>
@@ -826,7 +863,7 @@
       </form>
     </dialog>
 
-    <script src="/i18n.js?v=1.7.33"></script>
-    <script src="/app.js?v=1.7.33"></script>
+    <script src="/i18n.js?v=1.7.35"></script>
+    <script src="/app.js?v=1.7.35"></script>
   </body>
 </html>

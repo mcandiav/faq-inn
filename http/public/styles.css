@@ -1546,6 +1546,19 @@ code {
   flex-wrap: wrap;
 }
 
+.profile-objective-current {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.profile-objective-picker-actions {
+  display: flex;
+  gap: 0.65rem;
+  flex-wrap: wrap;
+  margin-top: 0.5rem;
+}
+
 .btn.ghost.danger {
   background: transparent;
   color: #fca5a5;
