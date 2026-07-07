@@ -26,7 +26,7 @@ const MOTOR_DEFS = {
     store: 'bookingEngine',
     settingsApproved(settings) {
       return (
-        settings?.validation_status === 'approved' && settings?.booking_url_template
+        settings?.validation_status === 'approved' && settings?.tenant_url
       );
     },
     payloadKey: 'booking',
@@ -41,7 +41,7 @@ const MOTOR_DEFS = {
     settingsApproved(settings) {
       return (
         settings?.agenda_validation_status === 'approved' &&
-        settings?.agenda_url_template
+        settings?.tenant_url
       );
     },
     payloadKey: 'agenda',
@@ -545,7 +545,7 @@ async function loadOnboardingState() {
       state.account.settings.onboarding_completed =
         data.onboarding.onboarding_completed;
       state.account.settings.objetivo_slug = data.onboarding.objetivo_slug;
-      state.account.settings.destination_url = data.onboarding.destination_url;
+      state.account.settings.tenant_url = data.onboarding.tenant_url;
     }
   } catch {
     /* onboarding API no disponible aún */
@@ -980,10 +980,15 @@ function renderProfileObjectivePanels() {
     ? state.profileObjectiveDraft || objetivo
     : objetivo;
   const landingSetup = $('#profile-landing-setup');
-  landingSetup?.classList.toggle(
-    'hidden',
-    draft !== 'enviar_a_sitio_web'
-  );
+  const showUrl = draft === 'enviar_a_sitio_web' || draft === 'reservar_horarios';
+  landingSetup?.classList.toggle('hidden', !showUrl);
+  const label = $('#profile-destination-label');
+  if (label) {
+    label.textContent =
+      draft === 'reservar_horarios'
+        ? t('profile.agendaUrl')
+        : t('profile.destinationUrl');
+  }
 }
 
 function renderProfileObjective() {
@@ -1012,8 +1017,8 @@ function renderProfileObjective() {
   }
   if (destinationInput) {
     destinationInput.value =
-      state.account?.settings?.destination_url ||
-      state.onboardingData?.destination_url ||
+      state.account?.settings?.tenant_url ||
+      state.onboardingData?.tenant_url ||
       '';
   }
 
@@ -1064,16 +1069,16 @@ async function saveProfileObjective() {
   }
 
   const body = { objetivo_slug: slug };
-  if (slug === 'enviar_a_sitio_web') {
-    const destinationUrl = $('#profile-destination-url')?.value.trim() || '';
-    if (!destinationUrl) {
+  if (slug === 'enviar_a_sitio_web' || slug === 'reservar_horarios') {
+    const tenantUrl = $('#profile-destination-url')?.value.trim() || '';
+    if (!tenantUrl && slug === 'enviar_a_sitio_web') {
       if (msg) {
         msg.textContent = t('profile.destinationRequired');
         msg.className = 'form-msg error';
       }
       return;
     }
-    body.destination_url = destinationUrl;
+    body.tenant_url = tenantUrl;
   }
 
   if (!window.confirm(t('profile.objectiveConfirm'))) {
@@ -1097,8 +1102,8 @@ async function saveProfileObjective() {
     state.account = accountData;
     if (state.onboardingData) {
       state.onboardingData.objetivo_slug = accountData.settings?.objetivo_slug || '';
-      state.onboardingData.destination_url =
-        accountData.settings?.destination_url || '';
+      state.onboardingData.tenant_url =
+        accountData.settings?.tenant_url || '';
     }
     state.profileObjectivePickerOpen = false;
     state.profileObjectiveDraft = '';
@@ -2503,7 +2508,7 @@ function renderOnboardingConfig() {
       : t('onboarding.agendaOptional');
   }
 
-  const destination = state.onboardingData?.destination_url || '';
+  const destination = state.onboardingData?.tenant_url || '';
   const webUrl = $('#onboarding-web-url');
   if (webUrl && !webUrl.matches(':focus')) {
     webUrl.value = slug === 'enviar_a_sitio_web' ? destination : webUrl.value;
@@ -2662,7 +2667,7 @@ async function saveOnboardingStep(step) {
       state.onboardingData?.objetivo_slug ||
       '';
     if (slug === 'enviar_a_sitio_web') {
-      payload.destination_url = $('#onboarding-web-url')?.value?.trim() || '';
+      payload.tenant_url = $('#onboarding-web-url')?.value?.trim() || '';
     }
   }
 
@@ -2682,7 +2687,7 @@ async function saveOnboardingStep(step) {
     state.onboardingSelectedObjective = data.onboarding.objetivo_slug || '';
     if (state.account?.settings) {
       state.account.settings.objetivo_slug = data.onboarding.objetivo_slug;
-      state.account.settings.destination_url = data.onboarding.destination_url;
+      state.account.settings.tenant_url = data.onboarding.tenant_url;
     }
     renderHeader();
     return true;
@@ -3537,8 +3542,8 @@ $('#profile-form').addEventListener('submit', async (event) => {
         state.account?.settings?.objetivo_slug ||
         state.onboardingData?.objetivo_slug ||
         '';
-      if (objetivo === 'enviar_a_sitio_web') {
-        accountBody.destination_url =
+      if (objetivo === 'enviar_a_sitio_web' || objetivo === 'reservar_horarios') {
+        accountBody.tenant_url =
           $('#profile-destination-url')?.value.trim() || '';
       }
 

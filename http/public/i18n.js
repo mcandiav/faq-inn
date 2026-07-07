@@ -134,6 +134,7 @@ const MESSAGES = {
     'profile.objectivePick': 'Elegí un objetivo.',
     'profile.objectiveMissing': 'Sin objetivo definido',
     'profile.destinationUrl': 'URL de tu sitio web',
+    'profile.agendaUrl': 'URL de agenda (link para agendar)',
     'profile.destinationHint':
       'El asistente derivará a esta dirección cuando corresponda.',
     'profile.destinationRequired': 'Ingresá la URL de tu sitio web.',
@@ -595,6 +596,7 @@ const MESSAGES = {
     'profile.objectivePick': 'Escolha um objetivo.',
     'profile.objectiveMissing': 'Sem objetivo definido',
     'profile.destinationUrl': 'URL do seu site',
+    'profile.agendaUrl': 'URL de agenda (link para agendar)',
     'profile.destinationHint':
       'O assistente direcionará para este endereço quando corresponder.',
     'profile.destinationRequired': 'Informe a URL do seu site.',
@@ -1055,6 +1057,7 @@ const MESSAGES = {
     'profile.objectivePick': 'Choose an objective.',
     'profile.objectiveMissing': 'No objective set',
     'profile.destinationUrl': 'Your website URL',
+    'profile.agendaUrl': 'Scheduling URL (booking link)',
     'profile.destinationHint':
       'The assistant will direct users to this address when appropriate.',
     'profile.destinationRequired': 'Enter your website URL.',
