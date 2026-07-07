@@ -2128,6 +2128,35 @@ function renderOnboardingConfig() {
   }
 }
 
+async function reloadOnboardingStatus() {
+  const data = await api('/onboarding/status');
+  state.onboardingData = data.onboarding;
+  state.onboardingSelectedObjective =
+    data.onboarding.objetivo_slug || state.onboardingSelectedObjective || '';
+  return data.onboarding;
+}
+
+async function ensureOnboardingFaqsReady() {
+  if ((state.onboardingData?.starter_faqs || []).length >= 3) {
+    renderOnboardingFaqs();
+    return true;
+  }
+
+  try {
+    await reloadOnboardingStatus();
+  } catch (error) {
+    setOnboardingMsg(error.message, 'error');
+    return false;
+  }
+
+  renderOnboardingFaqs();
+  if ((state.onboardingData?.starter_faqs || []).length < 3) {
+    setOnboardingMsg(t('onboarding.faqsMissing'), 'error');
+    return false;
+  }
+  return true;
+}
+
 function renderOnboardingFaqs() {
   const list = $('#onboarding-faqs-list');
   const faqs = state.onboardingData?.starter_faqs || [];
@@ -2225,7 +2254,10 @@ async function saveOnboardingStep(step) {
   }
 
   if (step === 4) {
-    payload.starter_faqs = collectOnboardingStarterFaqs();
+    const collected = collectOnboardingStarterFaqs();
+    if (collected.length > 0) {
+      payload.starter_faqs = collected;
+    }
   }
 
   try {
@@ -2253,8 +2285,24 @@ async function finishOnboarding() {
     return;
   }
 
-  const saved = await saveOnboardingStep(4);
-  if (!saved) return;
+  const collected = collectOnboardingStarterFaqs();
+  if (collected.length > 0) {
+    const saved = await saveOnboardingStep(4);
+    if (!saved) return;
+  } else {
+    try {
+      await reloadOnboardingStatus();
+    } catch (error) {
+      setOnboardingMsg(error.message, 'error');
+      return;
+    }
+    if ((state.onboardingData?.starter_faqs || []).length < 3) {
+      setOnboardingMsg(t('onboarding.faqsMissing'), 'error');
+      showOnboardingPanel(4);
+      renderOnboardingFaqs();
+      return;
+    }
+  }
 
   try {
     const data = await api('/onboarding/complete', {
@@ -2567,13 +2615,22 @@ $('#btn-onboarding-next')?.addEventListener('click', async () => {
   if (step >= ONBOARDING_STEP_COUNT) return;
   const next = step + 1;
   if (next === 3) renderOnboardingConfig();
-  if (next === 4) renderOnboardingFaqs();
+  if (next === 4) {
+    const ok = await ensureOnboardingFaqsReady();
+    if (!ok) return;
+  }
   showOnboardingPanel(next);
   setOnboardingMsg('');
 });
 
 $('#btn-onboarding-back')?.addEventListener('click', () => {
   const step = Math.max(1, (state.onboardingStep || 1) - 1);
+  if (step === 4) {
+    renderOnboardingFaqs();
+  }
+  if (step === 3) {
+    renderOnboardingConfig();
+  }
   showOnboardingPanel(step);
   setOnboardingMsg('');
 });

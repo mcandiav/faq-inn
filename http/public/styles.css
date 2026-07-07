@@ -787,7 +787,11 @@ body.onboarding-wizard .bottomnav {
 
 .onboarding-actions {
   margin-top: 1.25rem;
-  justify-content: flex-end;
+  justify-content: space-between;
+}
+
+.onboarding-actions-right {
+  margin-left: auto;
 }
 
 .onboarding-pause-tip {
