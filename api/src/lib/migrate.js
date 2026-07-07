@@ -354,6 +354,9 @@ async function applySchemaPatches(pool) {
     ['destination_url', "TEXT NOT NULL DEFAULT ''"],
     ['business_type', "VARCHAR(64) NOT NULL DEFAULT ''"],
     ['timezone', "VARCHAR(64) NOT NULL DEFAULT 'America/Santiago'"],
+    // URL única del tenant (lo que el agente entrega en la respuesta). El modo
+    // (plantilla vs link fijo) lo decide el system prompt según el objetivo.
+    ['tenant_url', "TEXT NOT NULL DEFAULT ''"],
   ];
 
   for (const [columnName, columnDef] of onboardingSettingsColumns) {
@@ -450,6 +453,44 @@ async function applySchemaPatches(pool) {
   `);
 
   await seedObjectiveTemplates(pool);
+
+  // Consolidación a una sola URL por tenant (tenant_url). El modo (plantilla vs
+  // link fijo) lo decide el system prompt según el objetivo. Backfill único
+  // desde las columnas antiguas y luego se eliminan.
+  const legacyUrlColumns = [
+    'booking_url_base',
+    'booking_url_template',
+    'booking_url_mode',
+    'agenda_url_base',
+    'agenda_url_template',
+    'agenda_url_mode',
+    'destination_url',
+  ];
+  const [tenantUrlExists] = await pool.query(
+    `SELECT column_name FROM information_schema.columns
+     WHERE table_schema = current_schema()
+       AND table_name = 'tenant_settings'
+       AND column_name = 'tenant_url'`
+  );
+  if (tenantUrlExists.length > 0) {
+    try {
+      await pool.query(`
+        UPDATE tenant_settings
+        SET tenant_url = COALESCE(
+          NULLIF(booking_url_template, ''),
+          NULLIF(agenda_url_template, ''),
+          NULLIF(destination_url, ''),
+          ''
+        )
+        WHERE tenant_url = ''
+      `);
+    } catch {
+      /* columnas antiguas ya eliminadas: no hay nada que respaldar */
+    }
+  }
+  for (const col of legacyUrlColumns) {
+    await pool.query(`ALTER TABLE tenant_settings DROP COLUMN IF EXISTS ${col}`);
+  }
 }
 
 export async function runMigrations(pool, _config) {

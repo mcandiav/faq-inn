@@ -31,7 +31,7 @@ function serializeJson(value) {
 
 async function loadTenantAgenda(pool, tenantId) {
   const [rows] = await pool.query(
-    `SELECT agenda_url_base, agenda_url_template, agenda_url_mode,
+    `SELECT tenant_url,
             agenda_validation_status, agenda_confidence_score, agenda_config, agenda_approved_at
      FROM tenant_settings
      WHERE tenant_id = ?`,
@@ -39,9 +39,9 @@ async function loadTenantAgenda(pool, tenantId) {
   );
   const row = rows[0] || {};
   return {
-    agenda_url_base: row.agenda_url_base || '',
-    agenda_url_template: row.agenda_url_template || '',
-    agenda_url_mode: row.agenda_url_mode || '',
+    tenant_url: row.tenant_url || '',
+    // alias interno: la URL única del tenant hace de plantilla/link de agenda.
+    agenda_url_template: row.tenant_url || '',
     agenda_validation_status: row.agenda_validation_status || 'pending',
     agenda_confidence_score: Number(row.agenda_confidence_score || 0),
     agenda_config: parseJson(row.agenda_config, {}),
@@ -297,9 +297,7 @@ export async function approveDiscovery(pool, tenantId, userId, sessionId) {
 
   await pool.query(
     `UPDATE tenant_settings
-     SET agenda_url_template = ?,
-         agenda_url_base = ?,
-         agenda_url_mode = ?,
+     SET tenant_url = ?,
          agenda_validation_status = ?,
          agenda_confidence_score = ?,
          agenda_config = ?,
@@ -308,8 +306,6 @@ export async function approveDiscovery(pool, tenantId, userId, sessionId) {
      WHERE tenant_id = ?`,
     [
       approved.booking_url_template,
-      approved.booking_url_base,
-      approved.booking_url_mode,
       approved.validation_status,
       approved.confidence_score,
       serializeJson(approved.booking_config),
@@ -409,9 +405,7 @@ export async function saveAgendaFixedLink(pool, tenantId, userId, url) {
 
   await pool.query(
     `UPDATE tenant_settings
-     SET agenda_url_template = ?,
-         agenda_url_base = ?,
-         agenda_url_mode = 'fixed_link',
+     SET tenant_url = ?,
          agenda_validation_status = 'approved',
          agenda_confidence_score = 1,
          agenda_config = ?,
@@ -419,7 +413,6 @@ export async function saveAgendaFixedLink(pool, tenantId, userId, url) {
          updated_at = NOW()
      WHERE tenant_id = ?`,
     [
-      trimmed,
       trimmed,
       serializeJson({ approved_by_user_id: userId, mode: 'fixed_link' }),
       tenantId,

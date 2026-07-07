@@ -142,8 +142,12 @@ export async function createHotelTenant(pool, config, input, { logger } = {}) {
   const email = input.email?.trim().toLowerCase();
   const password = input.password || '';
   const primaryLanguage = input.primary_language?.trim() || 'es';
-  const bookingUrlBase = input.booking_url_base?.trim() || '';
-  const bookingUrlTemplate = input.booking_url_template?.trim() || '';
+  // URL única del tenant: acepta tenant_url o las claves legadas booking_url_*.
+  const tenantUrl =
+    input.tenant_url?.trim() ||
+    input.booking_url_template?.trim() ||
+    input.booking_url_base?.trim() ||
+    '';
   const lodgingType = input.lodging_type?.trim() || 'hotel';
   const businessHours = input.business_hours?.trim() || '';
   const policies = input.policies?.trim() || '';
@@ -169,7 +173,7 @@ export async function createHotelTenant(pool, config, input, { logger } = {}) {
     throw validationError('password debe tener al menos 8 caracteres');
   }
 
-  if (!bookingUrlBase) {
+  if (!tenantUrl) {
     throw validationError('URL de reservas es obligatoria');
   }
 
@@ -202,15 +206,14 @@ export async function createHotelTenant(pool, config, input, { logger } = {}) {
 
     await connection.query(
       `INSERT INTO tenant_settings
-       (tenant_id, vertical_slug, primary_language, booking_url_base,
-        booking_url_template, lodging_type, business_hours, policies,
+       (tenant_id, vertical_slug, primary_language, tenant_url,
+        lodging_type, business_hours, policies,
         welcome_message, postgres_database)
-       VALUES (?, 'hotel', ?, ?, ?, ?, ?, ?, ?, ?)`,
+       VALUES (?, 'hotel', ?, ?, ?, ?, ?, ?, ?)`,
       [
         tenantId,
         primaryLanguage,
-        bookingUrlBase,
-        bookingUrlTemplate,
+        tenantUrl,
         lodgingType,
         businessHours,
         policies,

@@ -52,11 +52,10 @@ export async function getAccountSettings(pool, config, userId, tenantId) {
   }
 
   const [settingsRows] = await pool.query(
-    `SELECT vertical_slug, primary_language, booking_url_base, booking_url_template,
-            booking_url_mode, validation_status, confidence_score, booking_config,
+    `SELECT vertical_slug, primary_language, tenant_url,
+            validation_status, confidence_score, booking_config,
             booking_approved_at, lodging_type, business_hours, policies, welcome_message, address,
-            objetivo_slug, onboarding_completed, destination_url, business_type, timezone,
-            agenda_url_base, agenda_url_template, agenda_url_mode,
+            objetivo_slug, onboarding_completed, business_type, timezone,
             agenda_validation_status, agenda_confidence_score, agenda_config, agenda_approved_at
      FROM tenant_settings
      WHERE tenant_id = ?`,
@@ -96,25 +95,14 @@ export async function getAccountSettings(pool, config, userId, tenantId) {
       vertical_slug: settings.vertical_slug || 'hotel',
       objetivo_slug: settings.objetivo_slug || '',
       onboarding_completed: Boolean(settings.onboarding_completed),
-      destination_url: settings.destination_url || '',
+      // URL única del tenant (lo que el agente entrega en la respuesta).
+      tenant_url: settings.tenant_url || '',
       business_type: settings.business_type || settings.vertical_slug || '',
       timezone: settings.timezone || 'America/Santiago',
       primary_language: settings.primary_language || 'es',
-      booking_url_base: settings.booking_url_base || '',
-      booking_url_template:
-        settings.validation_status === 'approved'
-          ? settings.booking_url_template || ''
-          : '',
-      booking_url_mode: settings.booking_url_mode || '',
       validation_status: settings.validation_status || 'pending',
       confidence_score: Number(settings.confidence_score || 0),
       booking_approved_at: settings.booking_approved_at || null,
-      agenda_url_base: settings.agenda_url_base || '',
-      agenda_url_template:
-        settings.agenda_validation_status === 'approved'
-          ? settings.agenda_url_template || ''
-          : '',
-      agenda_url_mode: settings.agenda_url_mode || '',
       agenda_validation_status: settings.agenda_validation_status || 'pending',
       agenda_confidence_score: Number(settings.agenda_confidence_score || 0),
       agenda_approved_at: settings.agenda_approved_at || null,
@@ -154,10 +142,12 @@ export async function updateAccountSettings(pool, config, userId, tenantId, inpu
   const primaryLanguage = input.primary_language?.trim();
   const businessHours = input.business_hours?.trim();
   const policies = input.policies?.trim();
-  const destinationUrl =
-    input.destination_url !== undefined
-      ? String(input.destination_url || '').trim()
-      : undefined;
+  const tenantUrl =
+    input.tenant_url !== undefined
+      ? String(input.tenant_url || '').trim()
+      : input.destination_url !== undefined
+        ? String(input.destination_url || '').trim()
+        : undefined;
   const timezone =
     input.timezone !== undefined
       ? String(input.timezone || '').trim()
@@ -178,15 +168,13 @@ export async function updateAccountSettings(pool, config, userId, tenantId, inpu
 
   const nextObjetivoSlug =
     objetivoSlug !== undefined ? objetivoSlug : account.settings.objetivo_slug;
-  const nextDestinationUrl =
-    destinationUrl !== undefined
-      ? destinationUrl
-      : account.settings.destination_url || '';
+  const nextTenantUrl =
+    tenantUrl !== undefined ? tenantUrl : account.settings.tenant_url || '';
   const nextObjective = getObjective(nextObjetivoSlug);
   if (
     nextObjective?.needs_destination_url &&
-    !nextDestinationUrl &&
-    (objetivoSlug !== undefined || destinationUrl !== undefined)
+    !nextTenantUrl &&
+    (objetivoSlug !== undefined || tenantUrl !== undefined)
   ) {
     throw validationError('URL destino es obligatoria para este objetivo');
   }
@@ -228,9 +216,9 @@ export async function updateAccountSettings(pool, config, userId, tenantId, inpu
     settingsUpdates.push('objetivo_slug = ?');
     settingsParams.push(objetivoSlug);
   }
-  if (destinationUrl !== undefined) {
-    settingsUpdates.push('destination_url = ?');
-    settingsParams.push(destinationUrl);
+  if (tenantUrl !== undefined) {
+    settingsUpdates.push('tenant_url = ?');
+    settingsParams.push(tenantUrl);
   }
   if (timezone !== undefined) {
     settingsUpdates.push('timezone = ?');

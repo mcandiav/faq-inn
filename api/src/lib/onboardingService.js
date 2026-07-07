@@ -154,7 +154,7 @@ export async function getOnboardingStatus(pool, config, userId, tenantId) {
   }
 
   const [settingsRows] = await pool.query(
-    `SELECT objetivo_slug, onboarding_completed, destination_url, welcome_message,
+    `SELECT objetivo_slug, onboarding_completed, tenant_url, welcome_message,
             primary_language, validation_status, agenda_validation_status, business_type
      FROM tenant_settings
      WHERE tenant_id = ?`,
@@ -186,7 +186,7 @@ export async function getOnboardingStatus(pool, config, userId, tenantId) {
     business_name: user.name || '',
     welcome_message: settings.welcome_message || '',
     primary_language: settings.primary_language || 'es',
-    destination_url: settings.destination_url || '',
+    tenant_url: settings.tenant_url || '',
     booking_approved: settings.validation_status === 'approved',
     agenda_approved: settings.agenda_validation_status === 'approved',
     whatsapp: {
@@ -254,9 +254,13 @@ export async function updateOnboardingSetup(
     settingsUpdates.push('primary_language = ?');
     settingsParams.push(String(input.primary_language || 'es').trim() || 'es');
   }
-  if (input.destination_url !== undefined) {
-    settingsUpdates.push('destination_url = ?');
-    settingsParams.push(String(input.destination_url || '').trim());
+  const onboardingUrl =
+    input.tenant_url !== undefined
+      ? input.tenant_url
+      : input.destination_url;
+  if (onboardingUrl !== undefined) {
+    settingsUpdates.push('tenant_url = ?');
+    settingsParams.push(String(onboardingUrl || '').trim());
   }
   if (input.business_type !== undefined) {
     settingsUpdates.push('business_type = ?');
@@ -382,7 +386,7 @@ export async function completeOnboarding(pool, config, userId, tenantId, input) 
   }
 
   const objective = getObjective(status.objetivo_slug);
-  if (objective?.needs_destination_url && !status.destination_url?.trim()) {
+  if (objective?.needs_destination_url && !status.tenant_url?.trim()) {
     throw validationError('Indica la URL destino de tu sitio web');
   }
 

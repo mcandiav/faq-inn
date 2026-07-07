@@ -61,14 +61,9 @@ function mapRuntimeRow(row, config) {
   const agendaConfig = agendaApproved ? enrichBookingConfig(row.agenda_config) : {};
   // Objetivo canónico: vacío / inválido / "faq" => responder_preguntas (FAQ transversal).
   const objetivoSlug = normalizeObjectiveSlug(row.objetivo_slug);
-  let objetivoUrl = '';
-  if (objetivoSlug === 'reservar_noches') {
-    objetivoUrl = bookingApproved ? row.booking_url_template || '' : '';
-  } else if (objetivoSlug === 'reservar_horarios') {
-    objetivoUrl = agendaApproved ? row.agenda_url_template || '' : '';
-  } else if (objetivoSlug === 'enviar_a_sitio_web') {
-    objetivoUrl = row.destination_url || '';
-  }
+  // URL única del tenant: lo que el agente entrega en la respuesta. El modo
+  // (plantilla vs link fijo) lo decide el system prompt según el objetivo.
+  const objetivoUrl = row.tenant_url || '';
   // Frase natural para el prompt "Tu objetivo es {{objetivo}}".
   const objetivo = buildObjetivoDirective(objetivoSlug, objetivoUrl);
   return {
@@ -83,7 +78,7 @@ function mapRuntimeRow(row, config) {
     objetivo_slug: objetivoSlug,
     objetivo,
     url: objetivoUrl,
-    destination_url: row.destination_url || '',
+    tenant_url: objetivoUrl,
     timezone: row.timezone || 'America/Santiago',
     onboarding_completed: Boolean(row.onboarding_completed),
     agent_id: agentSlug,
@@ -91,9 +86,6 @@ function mapRuntimeRow(row, config) {
     agent_name: row.agent_name || 'Agente',
     primary_language: row.primary_language || 'es',
     initial_greeting: row.initial_greeting || '',
-    booking_url_base: bookingApproved ? row.booking_url_base || '' : '',
-    booking_url_template: bookingApproved ? row.booking_url_template || '' : '',
-    booking_url_mode: bookingApproved ? row.booking_url_mode || '' : '',
     validation_status: row.validation_status || 'pending',
     confidence_score: bookingApproved ? Number(row.confidence_score || 0) : 0,
     booking_config: bookingApproved ? bookingConfig : {},
@@ -104,9 +96,6 @@ function mapRuntimeRow(row, config) {
     supports_rooms: bookingApproved ? Boolean(bookingConfig.supports_rooms) : false,
     supports_children: bookingApproved ? Boolean(bookingConfig.supports_children) : false,
     supports_child_ages: bookingApproved ? Boolean(bookingConfig.supports_child_ages) : false,
-    agenda_url_base: agendaApproved ? row.agenda_url_base || '' : '',
-    agenda_url_template: agendaApproved ? row.agenda_url_template || '' : '',
-    agenda_url_mode: agendaApproved ? row.agenda_url_mode || '' : '',
     agenda_validation_status: row.agenda_validation_status || 'pending',
     agenda_confidence_score: agendaApproved ? Number(row.agenda_confidence_score || 0) : 0,
     agenda_config: agendaApproved ? agendaConfig : {},
@@ -134,11 +123,9 @@ const TENANT_RUNTIME_SQL = `
   SELECT t.id AS tenant_id, t.slug AS tenant_slug, t.name AS tenant_name,
          a.id AS agent_row_id, a.slug AS agent_slug, a.name AS agent_name,
          ts.vertical_slug, ts.primary_language, ts.welcome_message AS initial_greeting,
-         ts.objetivo_slug, ts.destination_url, ts.onboarding_completed, ts.business_type,
-         ts.timezone,
-         ts.booking_url_base, ts.booking_url_template, ts.booking_url_mode,
+         ts.objetivo_slug, ts.onboarding_completed, ts.business_type,
+         ts.timezone, ts.tenant_url,
          ts.validation_status, ts.confidence_score, ts.booking_config,
-         ts.agenda_url_base, ts.agenda_url_template, ts.agenda_url_mode,
          ts.agenda_validation_status, ts.agenda_confidence_score, ts.agenda_config,
          ts.business_hours, ts.policies,
          ev.instance_name AS evolution_instance_name, ev.phone_number AS whatsapp_phone
@@ -206,7 +193,8 @@ export async function getRuntimeTenantConfig(pool, config, instanceName) {
 }
 
 export function buildRuntimeBookingUrl(tenant, input = {}) {
-  if (tenant.validation_status !== 'approved' || !tenant.booking_url_template) {
+  const template = tenant.url || tenant.tenant_url || '';
+  if (tenant.validation_status !== 'approved' || !template) {
     throw validationError('Motor de reservas no aprobado para este tenant', 400);
   }
 
@@ -218,7 +206,7 @@ export function buildRuntimeBookingUrl(tenant, input = {}) {
   }
 
   const bookingConfig = enrichBookingConfig(tenant.booking_config);
-  const url = buildUrlFromTemplate(tenant.booking_url_template, scenario, {
+  const url = buildUrlFromTemplate(template, scenario, {
     date_format: bookingConfig.date_format || tenant.date_format,
     child_ages_format: bookingConfig.child_ages_format || 'csv',
   });
@@ -250,7 +238,8 @@ export async function generateRuntimeBookingLink(pool, config, instanceName, inp
 }
 
 export function buildRuntimeAgendaUrl(tenant, input = {}) {
-  if (tenant.agenda_validation_status !== 'approved' || !tenant.agenda_url_template) {
+  const template = tenant.url || tenant.tenant_url || '';
+  if (tenant.agenda_validation_status !== 'approved' || !template) {
     throw validationError('Motor de agenda no aprobado para este tenant', 400);
   }
 
@@ -262,7 +251,7 @@ export function buildRuntimeAgendaUrl(tenant, input = {}) {
   }
 
   const agendaConfig = enrichBookingConfig(tenant.agenda_config);
-  const url = buildUrlFromTemplate(tenant.agenda_url_template, scenario, {
+  const url = buildUrlFromTemplate(template, scenario, {
     date_format: agendaConfig.date_format || tenant.date_format,
     child_ages_format: agendaConfig.child_ages_format || 'csv',
   });
@@ -307,19 +296,13 @@ export function buildRuntimeWorkflowItem(tenant) {
     objetivo_slug: tenant.objetivo_slug || '',
     objetivo: tenant.objetivo || 'responder preguntas',
     url: tenant.url || '',
-    destination_url: tenant.destination_url || '',
+    tenant_url: tenant.tenant_url || tenant.url || '',
     timezone: tenant.timezone || 'America/Santiago',
     onboarding_completed: Boolean(tenant.onboarding_completed),
     primary_language: tenant.primary_language,
     agent_id: tenant.agent_id,
     agent_name: tenant.agent_name,
     initial_greeting: tenant.initial_greeting,
-    booking_url_base: tenant.booking_url_base,
-    booking_url_template: tenant.booking_url_template,
-    booking_url_mode: tenant.booking_url_mode,
-    agenda_url_base: tenant.agenda_url_base,
-    agenda_url_template: tenant.agenda_url_template,
-    agenda_url_mode: tenant.agenda_url_mode,
     agenda_validation_status: tenant.agenda_validation_status,
     agenda_confidence_score: tenant.agenda_confidence_score,
     agenda_config_json: tenant.agenda_config_json,

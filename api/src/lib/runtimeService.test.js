@@ -45,9 +45,8 @@ test('buildRuntimeWorkflowItem flattens tenant only (no webhook message fields)'
     agent_id: 'a1',
     agent_name: 'FAQ',
     initial_greeting: 'Hola',
-    booking_url_base: 'https://example.com',
-    booking_url_template: 'https://example.com?in={{checkin}}',
-    booking_url_mode: 'template',
+    url: 'https://example.com?in={{checkin}}',
+    tenant_url: 'https://example.com?in={{checkin}}',
     validation_status: 'ok',
     confidence_score: 0.9,
     booking_config_json: '{}',
@@ -88,7 +87,8 @@ test('buildRuntimeWorkflowItem flattens tenant only (no webhook message fields)'
 test('buildRuntimeBookingUrl applies tenant date_format to canonical template', () => {
   const tenant = {
     validation_status: 'approved',
-    booking_url_template:
+    url: 'https://book.example.com?CheckIn={{checkin}}&CheckOut={{checkout}}&ad={{adults}}',
+    tenant_url:
       'https://book.example.com?CheckIn={{checkin}}&CheckOut={{checkout}}&ad={{adults}}',
     booking_config: { date_format: 'DDMMYYYY', child_ages_format: 'csv' },
     date_format: 'DDMMYYYY',

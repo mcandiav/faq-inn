@@ -31,7 +31,7 @@ function serializeJson(value) {
 
 async function loadTenantBooking(pool, tenantId) {
   const [rows] = await pool.query(
-    `SELECT booking_url_base, booking_url_template, booking_url_mode,
+    `SELECT tenant_url,
             validation_status, confidence_score, booking_config, booking_approved_at
      FROM tenant_settings
      WHERE tenant_id = ?`,
@@ -39,9 +39,9 @@ async function loadTenantBooking(pool, tenantId) {
   );
   const row = rows[0] || {};
   return {
-    booking_url_base: row.booking_url_base || '',
-    booking_url_template: row.booking_url_template || '',
-    booking_url_mode: row.booking_url_mode || '',
+    tenant_url: row.tenant_url || '',
+    // alias interno: la URL única del tenant hace de plantilla para reservas.
+    booking_url_template: row.tenant_url || '',
     validation_status: row.validation_status || 'pending',
     confidence_score: Number(row.confidence_score || 0),
     booking_config: parseJson(row.booking_config, {}),
@@ -297,9 +297,7 @@ export async function approveDiscovery(pool, tenantId, userId, sessionId) {
 
   await pool.query(
     `UPDATE tenant_settings
-     SET booking_url_template = ?,
-         booking_url_base = ?,
-         booking_url_mode = ?,
+     SET tenant_url = ?,
          validation_status = ?,
          confidence_score = ?,
          booking_config = ?,
@@ -308,8 +306,6 @@ export async function approveDiscovery(pool, tenantId, userId, sessionId) {
      WHERE tenant_id = ?`,
     [
       approved.booking_url_template,
-      approved.booking_url_base,
-      approved.booking_url_mode,
       approved.validation_status,
       approved.confidence_score,
       serializeJson(approved.booking_config),
@@ -409,9 +405,7 @@ export async function saveFixedLink(pool, tenantId, userId, url) {
 
   await pool.query(
     `UPDATE tenant_settings
-     SET booking_url_template = ?,
-         booking_url_base = ?,
-         booking_url_mode = 'fixed_link',
+     SET tenant_url = ?,
          validation_status = 'approved',
          confidence_score = 1,
          booking_config = ?,
@@ -419,7 +413,6 @@ export async function saveFixedLink(pool, tenantId, userId, url) {
          updated_at = NOW()
      WHERE tenant_id = ?`,
     [
-      trimmed,
       trimmed,
       serializeJson({ approved_by_user_id: userId, mode: 'fixed_link' }),
       tenantId,
