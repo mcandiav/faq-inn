@@ -353,6 +353,7 @@ async function applySchemaPatches(pool) {
     ['onboarding_completed', 'BOOLEAN NOT NULL DEFAULT FALSE'],
     ['destination_url', "TEXT NOT NULL DEFAULT ''"],
     ['business_type', "VARCHAR(64) NOT NULL DEFAULT ''"],
+    ['timezone', "VARCHAR(64) NOT NULL DEFAULT 'America/Santiago'"],
   ];
 
   for (const [columnName, columnDef] of onboardingSettingsColumns) {

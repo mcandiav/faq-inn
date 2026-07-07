@@ -12,6 +12,18 @@ function validationError(message, statusCode = 400) {
   return error;
 }
 
+function isValidTimezone(tz) {
+  if (!tz || typeof tz !== 'string') {
+    return false;
+  }
+  try {
+    new Intl.DateTimeFormat('en-US', { timeZone: tz });
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 async function loadEvolutionRow(pool, tenantId) {
   const [evoRows] = await pool.query(
     `SELECT instance_name, status, phone_number, last_qr_base64, last_qr_at, connected_at
@@ -43,7 +55,7 @@ export async function getAccountSettings(pool, config, userId, tenantId) {
     `SELECT vertical_slug, primary_language, booking_url_base, booking_url_template,
             booking_url_mode, validation_status, confidence_score, booking_config,
             booking_approved_at, lodging_type, business_hours, policies, welcome_message, address,
-            objetivo_slug, onboarding_completed, destination_url, business_type,
+            objetivo_slug, onboarding_completed, destination_url, business_type, timezone,
             agenda_url_base, agenda_url_template, agenda_url_mode,
             agenda_validation_status, agenda_confidence_score, agenda_config, agenda_approved_at
      FROM tenant_settings
@@ -86,6 +98,7 @@ export async function getAccountSettings(pool, config, userId, tenantId) {
       onboarding_completed: Boolean(settings.onboarding_completed),
       destination_url: settings.destination_url || '',
       business_type: settings.business_type || settings.vertical_slug || '',
+      timezone: settings.timezone || 'America/Santiago',
       primary_language: settings.primary_language || 'es',
       booking_url_base: settings.booking_url_base || '',
       booking_url_template:
@@ -145,6 +158,14 @@ export async function updateAccountSettings(pool, config, userId, tenantId, inpu
     input.destination_url !== undefined
       ? String(input.destination_url || '').trim()
       : undefined;
+  const timezone =
+    input.timezone !== undefined
+      ? String(input.timezone || '').trim()
+      : undefined;
+
+  if (timezone !== undefined && !isValidTimezone(timezone)) {
+    throw validationError('timezone inválido');
+  }
   // Objetivo opcional y excluyente. Deshabilitar (vacío / "faq") => responder_preguntas.
   const objetivoSlug =
     input.objetivo_slug !== undefined
@@ -210,6 +231,10 @@ export async function updateAccountSettings(pool, config, userId, tenantId, inpu
   if (destinationUrl !== undefined) {
     settingsUpdates.push('destination_url = ?');
     settingsParams.push(destinationUrl);
+  }
+  if (timezone !== undefined) {
+    settingsUpdates.push('timezone = ?');
+    settingsParams.push(timezone);
   }
 
   if (settingsUpdates.length > 0) {

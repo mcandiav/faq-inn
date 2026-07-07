@@ -22,6 +22,7 @@ import {
   buildObjetivoDirective,
   normalizeObjectiveSlug,
 } from './objectives/index.js';
+import { getRuntimeTemplateColumns } from './promptTemplateService.js';
 import { normalizePreviewScenario } from './bookingScenarios.js';
 import { buildUrlFromTemplate } from './bookingTemplateBuilder.js';
 import {
@@ -83,6 +84,7 @@ function mapRuntimeRow(row, config) {
     objetivo,
     url: objetivoUrl,
     destination_url: row.destination_url || '',
+    timezone: row.timezone || 'America/Santiago',
     onboarding_completed: Boolean(row.onboarding_completed),
     agent_id: agentSlug,
     agent_slug: agentSlug,
@@ -133,6 +135,7 @@ const TENANT_RUNTIME_SQL = `
          a.id AS agent_row_id, a.slug AS agent_slug, a.name AS agent_name,
          ts.vertical_slug, ts.primary_language, ts.welcome_message AS initial_greeting,
          ts.objetivo_slug, ts.destination_url, ts.onboarding_completed, ts.business_type,
+         ts.timezone,
          ts.booking_url_base, ts.booking_url_template, ts.booking_url_mode,
          ts.validation_status, ts.confidence_score, ts.booking_config,
          ts.agenda_url_base, ts.agenda_url_template, ts.agenda_url_mode,
@@ -195,7 +198,11 @@ export async function getRuntimeTenantConfig(pool, config, instanceName) {
     throw validationError(`Instancia no registrada: ${name}`, 404);
   }
 
-  return mapRuntimeRow(row, config);
+  const tenant = mapRuntimeRow(row, config);
+  // Columnas crudas del system prompt (con tokens neutros sin resolver).
+  // n8n las arma en el nodo Code "Armar SPrompt".
+  tenant.sprompt = await getRuntimeTemplateColumns(pool, tenant.objetivo_slug);
+  return tenant;
 }
 
 export function buildRuntimeBookingUrl(tenant, input = {}) {
@@ -257,6 +264,7 @@ export function buildRuntimeWorkflowItem(tenant) {
     objetivo: tenant.objetivo || 'responder preguntas',
     url: tenant.url || '',
     destination_url: tenant.destination_url || '',
+    timezone: tenant.timezone || 'America/Santiago',
     onboarding_completed: Boolean(tenant.onboarding_completed),
     primary_language: tenant.primary_language,
     agent_id: tenant.agent_id,
@@ -292,5 +300,15 @@ export function buildRuntimeWorkflowItem(tenant) {
     evolution_instance_name: tenant.evolution_instance_name,
     evolution_api_url: tenant.evolution_api_url,
     evolution_api_key: tenant.evolution_api_key,
+    // Columnas crudas del system prompt del objetivo activo (tokens neutros
+    // sin resolver). n8n las compone en el nodo Code "Armar SPrompt".
+    sprompt: tenant.sprompt || {
+      role_template: '',
+      limits_template: '',
+      tools_template: '',
+      date_interpretation_template: '',
+      data_collection_template: '',
+      links_template: '',
+    },
   };
 }

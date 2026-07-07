@@ -27,18 +27,26 @@ export const OBJECTIVE_TEMPLATE_SLUGS = [
   'responder_preguntas',
 ];
 
+/**
+ * Tokens neutros que el nodo Code "Armar SPrompt" reemplaza en n8n con
+ * los valores del tenant/runtime. NO usar sintaxis n8n dentro de las columnas.
+ * Tokens soportados: {{tenant_display_name}}, {{business_type}},
+ * {{initial_greeting}}, {{validation_status}}, {{date_format}},
+ * {{supports_rooms}}, {{supports_children}}, {{today}}, {{today_plus_1}},
+ * {{today_plus_2}}.
+ */
 const RESERVAR_NOCHES = {
   role_template: `<rol>
-Agente de IA para "{{ $('Resolver Tenant').item.json.tenant_display_name }}" - {{ $('Resolver Tenant').item.json.business_type }}.
+Agente de IA para "{{tenant_display_name}}" - {{business_type}}.
 Responda sempre no idioma que o cliente falar com você.
-APRESENTE-SE SEMPRE e SOMENTE UMA VEZ no início do chat usando: "{{ $('Resolver Tenant').item.json.initial_greeting }}" traduzido para o idioma do cliente.
+APRESENTE-SE SEMPRE e SOMENTE UMA VEZ no início do chat usando: "{{initial_greeting}}" traduzido para o idioma do cliente.
 Suas funções são ajudar a reservar enviando links quando exista motor de reservas aprovado e responder dúvidas buscando sempre todas as respostas na tools "Respostas".
 Despeça-se NO IDIOMA DO CLIENTE apenas uma vez com: "Obrigado por nos contactar."
 Sua comunicação deve ser sempre no idioma que o cliente falar com você. NÃO MISTURE IDIOMAS.
 </rol>`,
   limits_template: `<limites>
 NÃO dê alternativas.
-APENAS informações de {{ $('Resolver Tenant').item.json.tenant_display_name }}.
+APENAS informações de {{tenant_display_name}}.
 APENAS RESPONDA o que achar na ferramenta "Respostas", de forma breve, cordial e sem opções.
 NÃO invente respostas.
 </limites>`,
@@ -50,21 +58,21 @@ Nunca use uma resposta aproximada para inventar uma resposta.
   date_interpretation_template: `<interpretacao_datas>
 SEMPRE calcule datas usando hoje como referência.
 
-Hoje é {{ $today.toFormat('yyyy-MM-dd') }}
+Hoje é {{today}}
 
-Para "amanhã" ou "mañana": {{ $today.plus({days: 1}).toFormat('yyyy-MM-dd') }}
+Para "amanhã" ou "mañana": {{today_plus_1}}
 
-Para "depois de amanha": {{ $today.plus({days: 2}).toFormat('yyyy-MM-dd') }}
+Para "depois de amanha": {{today_plus_2}}
 
 Para dias da semana (domingo, segunda, etc):
 
 * Calcule o próximo dia dessa semana a partir de hoje.
-* Use $today.plus() para avançar dias até encontrar o dia correto.
+* Avance dias a partir de hoje até encontrar o dia correto.
 * Exemplo: se hoje é sexta e cliente diz "domingo", calcule 2 dias à frente.
 
 JAMAIS use datas passadas.
 
-SEMPRE valide que checkin e checkout sejam > $today.
+SEMPRE valide que checkin e checkout sejam maiores que hoje.
 </interpretacao_datas>`,
   data_collection_template: `<recolecao>
 Interesse em reservar:
@@ -75,21 +83,21 @@ Variáveis conversacionais (datas sempre em ISO YYYY-MM-DD):
 1. check-in, entrada, chegada → checkin (sempre futuras)
 2. check-out, saída → checkout (sempre > checkin)
 3. hóspedes, pessoas, adultos → adults
-4. quartos → rooms (somente se supports_rooms = {{ $('Resolver Tenant').item.json.supports_rooms }})
-5. menores → children e child_ages (somente se supports_children = {{ $('Resolver Tenant').item.json.supports_children }})
+4. quartos → rooms (somente se supports_rooms = {{supports_rooms}})
+5. menores → children e child_ages (somente se supports_children = {{supports_children}})
 
 Pergunte, espere a resposta e prossiga:
 "Data de entrada?" → "Data de saída?" → "Quantos adultos?"
 
 Antes de enviar o link, confirme com o cliente se os dados estão corretos.
 
-Prossiga somente se {{ $('Resolver Tenant').item.json.validation_status }} = approved.
+Prossiga somente se {{validation_status}} = approved.
 </recolecao>`,
   links_template: `<links>
 O pagamento é feito por nossos parceiros.
 
-Status do motor: {{ $('Resolver Tenant').item.json.validation_status }}
-Formato de data do tenant (date_format): {{ $('Resolver Tenant').item.json.date_format }}
+Status do motor: {{validation_status}}
+Formato de data do tenant (date_format): {{date_format}}
 
 NÃO monte o link manualmente. Use a ferramenta "GenerarLinkReserva" passando checkin, checkout (ISO YYYY-MM-DD) e adults. Inclua rooms, children e child_ages apenas se o cliente informou ou o motor exige.
 
@@ -246,4 +254,33 @@ export async function updateObjectiveTemplate(pool, slug, input = {}) {
   );
 
   return getObjectiveTemplate(pool, cleanSlug);
+}
+
+/**
+ * Devuelve las 6 columnas crudas (con tokens neutros sin resolver) del
+ * template ACTIVO para el objetivo dado. Si no existe o no está activo,
+ * devuelve columnas vacías. Pensado para /runtime/tenant-config: n8n las
+ * resuelve en el nodo Code "Armar SPrompt".
+ */
+export async function getRuntimeTemplateColumns(pool, slug) {
+  const cleanSlug = String(slug || '').trim();
+  const empty = emptyTemplateColumns();
+  if (!cleanSlug) {
+    return empty;
+  }
+  const [rows] = await pool.query(
+    `SELECT ${TEMPLATE_COLUMNS.join(', ')}
+     FROM system_prompt_objective_templates
+     WHERE objective_slug = ? AND status = 'active'
+     LIMIT 1`,
+    [cleanSlug]
+  );
+  const row = rows[0];
+  if (!row) {
+    return empty;
+  }
+  return TEMPLATE_COLUMNS.reduce((acc, column) => {
+    acc[column] = row[column] || '';
+    return acc;
+  }, {});
 }

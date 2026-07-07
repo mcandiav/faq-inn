@@ -10,6 +10,18 @@ function validationError(message, statusCode = 400) {
   return error;
 }
 
+function isValidTimezone(tz) {
+  if (!tz || typeof tz !== 'string') {
+    return false;
+  }
+  try {
+    new Intl.DateTimeFormat('en-US', { timeZone: tz });
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 async function loadEvolutionRow(pool, tenantId) {
   const [rows] = await pool.query(
     `SELECT instance_name, status, phone_number, connected_at
@@ -249,6 +261,13 @@ export async function updateOnboardingSetup(
   if (input.business_type !== undefined) {
     settingsUpdates.push('business_type = ?');
     settingsParams.push(String(input.business_type || '').trim());
+  }
+  if (input.timezone !== undefined) {
+    const tz = String(input.timezone || '').trim();
+    if (tz && isValidTimezone(tz)) {
+      settingsUpdates.push('timezone = ?');
+      settingsParams.push(tz);
+    }
   }
 
   if (settingsUpdates.length > 0) {
