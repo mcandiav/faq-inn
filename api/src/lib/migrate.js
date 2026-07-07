@@ -369,6 +369,63 @@ async function applySchemaPatches(pool) {
       );
     }
   }
+
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS agenda_discovery_sessions (
+      id BIGSERIAL PRIMARY KEY,
+      tenant_id BIGINT NOT NULL REFERENCES tenants (id) ON DELETE CASCADE,
+      status VARCHAR(32) NOT NULL DEFAULT 'draft'
+        CHECK (status IN (
+          'draft',
+          'detected',
+          'pending_verification',
+          'approved',
+          'rejected',
+          'cancelled'
+        )),
+      scenarios TEXT NOT NULL DEFAULT '[]',
+      sample_urls TEXT NOT NULL DEFAULT '[]',
+      candidate_template TEXT NOT NULL DEFAULT '',
+      candidate_config TEXT NOT NULL DEFAULT '{}',
+      verification_scenario TEXT NOT NULL DEFAULT '{}',
+      verification_url TEXT NOT NULL DEFAULT '',
+      warnings TEXT NOT NULL DEFAULT '[]',
+      confidence_score DECIMAL(5,2) NOT NULL DEFAULT 0,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    )
+  `);
+
+  await pool.query(`
+    CREATE INDEX IF NOT EXISTS idx_agenda_discovery_tenant
+      ON agenda_discovery_sessions (tenant_id, status)
+  `);
+
+  const agendaSettingsColumns = [
+    ['agenda_url_base', "TEXT NOT NULL DEFAULT ''"],
+    ['agenda_url_template', "TEXT NOT NULL DEFAULT ''"],
+    ['agenda_url_mode', "VARCHAR(32) NOT NULL DEFAULT ''"],
+    ['agenda_validation_status', "VARCHAR(32) NOT NULL DEFAULT 'pending'"],
+    ['agenda_confidence_score', 'DECIMAL(5,2) NOT NULL DEFAULT 0'],
+    ['agenda_config', "TEXT NOT NULL DEFAULT '{}'"],
+    ['agenda_approved_at', 'TIMESTAMPTZ NULL'],
+  ];
+
+  for (const [columnName, columnDef] of agendaSettingsColumns) {
+    const [exists] = await pool.query(
+      `SELECT column_name
+       FROM information_schema.columns
+       WHERE table_schema = current_schema()
+         AND table_name = 'tenant_settings'
+         AND column_name = ?`,
+      [columnName]
+    );
+    if (exists.length === 0) {
+      await pool.query(
+        `ALTER TABLE tenant_settings ADD COLUMN ${columnName} ${columnDef}`
+      );
+    }
+  }
 }
 
 export async function runMigrations(pool, _config) {

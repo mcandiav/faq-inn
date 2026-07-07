@@ -51,7 +51,9 @@ function mapRuntimeRow(row, config) {
   const evolutionApiKey = config.evolutionApiKey || '';
   const tenantSlug = row.tenant_slug || '';
   const bookingApproved = row.validation_status === 'approved';
+  const agendaApproved = row.agenda_validation_status === 'approved';
   const bookingConfig = bookingApproved ? enrichBookingConfig(row.booking_config) : {};
+  const agendaConfig = agendaApproved ? enrichBookingConfig(row.agenda_config) : {};
   return {
     // Slug técnico (filtro Qdrant, SemResposta, clave Redis). No es el id numérico de PostgreSQL.
     tenant_id: tenantSlug,
@@ -82,6 +84,13 @@ function mapRuntimeRow(row, config) {
     supports_rooms: bookingApproved ? Boolean(bookingConfig.supports_rooms) : false,
     supports_children: bookingApproved ? Boolean(bookingConfig.supports_children) : false,
     supports_child_ages: bookingApproved ? Boolean(bookingConfig.supports_child_ages) : false,
+    agenda_url_base: agendaApproved ? row.agenda_url_base || '' : '',
+    agenda_url_template: agendaApproved ? row.agenda_url_template || '' : '',
+    agenda_url_mode: agendaApproved ? row.agenda_url_mode || '' : '',
+    agenda_validation_status: row.agenda_validation_status || 'pending',
+    agenda_confidence_score: agendaApproved ? Number(row.agenda_confidence_score || 0) : 0,
+    agenda_config: agendaApproved ? agendaConfig : {},
+    agenda_config_json: agendaApproved ? JSON.stringify(agendaConfig) : '{}',
     business_hours: row.business_hours || '',
     policies: row.policies || '',
     evolution_instance_name: row.evolution_instance_name || '',
@@ -108,6 +117,8 @@ const TENANT_RUNTIME_SQL = `
          ts.objetivo_slug, ts.destination_url, ts.onboarding_completed, ts.business_type,
          ts.booking_url_base, ts.booking_url_template, ts.booking_url_mode,
          ts.validation_status, ts.confidence_score, ts.booking_config,
+         ts.agenda_url_base, ts.agenda_url_template, ts.agenda_url_mode,
+         ts.agenda_validation_status, ts.agenda_confidence_score, ts.agenda_config,
          ts.business_hours, ts.policies,
          ev.instance_name AS evolution_instance_name, ev.phone_number AS whatsapp_phone
   FROM tenants t
@@ -234,6 +245,12 @@ export function buildRuntimeWorkflowItem(tenant) {
     booking_url_base: tenant.booking_url_base,
     booking_url_template: tenant.booking_url_template,
     booking_url_mode: tenant.booking_url_mode,
+    agenda_url_base: tenant.agenda_url_base,
+    agenda_url_template: tenant.agenda_url_template,
+    agenda_url_mode: tenant.agenda_url_mode,
+    agenda_validation_status: tenant.agenda_validation_status,
+    agenda_confidence_score: tenant.agenda_confidence_score,
+    agenda_config_json: tenant.agenda_config_json,
     validation_status: tenant.validation_status,
     confidence_score: tenant.confidence_score,
     booking_config_json: tenant.booking_config_json,

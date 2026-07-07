@@ -21,6 +21,7 @@ import { accountRoutes } from './routes/account.js';
 import { whatsappRoutes } from './routes/whatsapp.js';
 import { runtimeRoutes } from './routes/runtime.js';
 import { bookingEngineRoutes } from './routes/bookingEngine.js';
+import { agendaEngineRoutes } from './routes/agendaEngine.js';
 import { startEvolutionCleanupScheduler } from './lib/evolutionCleanup.js';
 
 const config = loadConfig();
@@ -61,6 +62,7 @@ await accountRoutes(app, config);
 await whatsappRoutes(app, config);
 await runtimeRoutes(app, config);
 await bookingEngineRoutes(app);
+await agendaEngineRoutes(app);
 
 const stopEvolutionCleanup = startEvolutionCleanupScheduler(
   pool,

@@ -60,7 +60,7 @@ export async function getOnboardingStatus(pool, config, userId, tenantId) {
 
   const [settingsRows] = await pool.query(
     `SELECT objetivo_slug, onboarding_completed, destination_url, welcome_message,
-            primary_language, validation_status, business_type
+            primary_language, validation_status, agenda_validation_status, business_type
      FROM tenant_settings
      WHERE tenant_id = ?`,
     [tenantId]
@@ -86,6 +86,7 @@ export async function getOnboardingStatus(pool, config, userId, tenantId) {
     primary_language: settings.primary_language || 'es',
     destination_url: settings.destination_url || '',
     booking_approved: settings.validation_status === 'approved',
+    agenda_approved: settings.agenda_validation_status === 'approved',
     whatsapp: {
       connected: whatsappConnected,
       phone_number: evo?.phone_number || '',

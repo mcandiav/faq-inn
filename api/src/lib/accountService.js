@@ -37,7 +37,9 @@ export async function getAccountSettings(pool, config, userId, tenantId) {
     `SELECT vertical_slug, primary_language, booking_url_base, booking_url_template,
             booking_url_mode, validation_status, confidence_score, booking_config,
             booking_approved_at, lodging_type, business_hours, policies, welcome_message, address,
-            objetivo_slug, onboarding_completed, destination_url, business_type
+            objetivo_slug, onboarding_completed, destination_url, business_type,
+            agenda_url_base, agenda_url_template, agenda_url_mode,
+            agenda_validation_status, agenda_confidence_score, agenda_config, agenda_approved_at
      FROM tenant_settings
      WHERE tenant_id = ?`,
     [tenantId]
@@ -88,6 +90,15 @@ export async function getAccountSettings(pool, config, userId, tenantId) {
       validation_status: settings.validation_status || 'pending',
       confidence_score: Number(settings.confidence_score || 0),
       booking_approved_at: settings.booking_approved_at || null,
+      agenda_url_base: settings.agenda_url_base || '',
+      agenda_url_template:
+        settings.agenda_validation_status === 'approved'
+          ? settings.agenda_url_template || ''
+          : '',
+      agenda_url_mode: settings.agenda_url_mode || '',
+      agenda_validation_status: settings.agenda_validation_status || 'pending',
+      agenda_confidence_score: Number(settings.agenda_confidence_score || 0),
+      agenda_approved_at: settings.agenda_approved_at || null,
       lodging_type: settings.lodging_type || 'hotel',
       business_hours: settings.business_hours || '',
       policies: settings.policies || '',
