@@ -1,6 +1,7 @@
 import { indexFaqItem } from './indexer.js';
 import { OBJECTIVES, getObjective, isValidObjectiveSlug } from './objectives/index.js';
 import { syncWhatsappConnectionStatus } from './provisionService.js';
+import { seedStarterFaqs } from './seedStarterFaqs.js';
 
 function validationError(message, statusCode = 400) {
   const error = new Error(message);
@@ -31,6 +32,31 @@ async function loadStarterFaqs(pool, tenantId) {
     [tenantId]
   );
   return rows;
+}
+
+async function ensureStarterFaqs(pool, config, tenantId, tenantSlug, primaryLanguage) {
+  let starterFaqs = await loadStarterFaqs(pool, tenantId);
+  if (starterFaqs.length >= 3 || !tenantSlug) {
+    return starterFaqs;
+  }
+
+  try {
+    await seedStarterFaqs(
+      pool,
+      config,
+      {
+        tenantId,
+        tenantSlug,
+        primaryLanguage: primaryLanguage || 'es',
+      },
+      { logger: null }
+    );
+    starterFaqs = await loadStarterFaqs(pool, tenantId);
+  } catch {
+    /* best-effort: el cliente verá el error al completar si siguen faltando */
+  }
+
+  return starterFaqs;
 }
 
 function mapObjectiveForClient(objective) {
@@ -75,7 +101,13 @@ export async function getOnboardingStatus(pool, config, userId, tenantId) {
 
   const whatsappConnected = evo?.status === 'connected';
   const objective = getObjective(settings.objetivo_slug);
-  const starterFaqs = await loadStarterFaqs(pool, tenantId);
+  const starterFaqs = await ensureStarterFaqs(
+    pool,
+    config,
+    tenantId,
+    user.slug,
+    settings.primary_language
+  );
 
   return {
     onboarding_completed: Boolean(settings.onboarding_completed),
