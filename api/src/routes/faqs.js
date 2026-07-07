@@ -53,6 +53,7 @@ export async function faqRoutes(app, config) {
     let sql = `
       SELECT f.id, f.faq_uid, f.question, f.answer, f.category, f.keywords,
              f.language, f.active, f.indexed_at, f.updated_at,
+             f.is_starter_template, f.starter_key,
              a.slug AS agent_slug, a.name AS agent_name
       FROM faq_items f
       JOIN agents a ON a.id = f.agent_id
@@ -223,11 +224,27 @@ export async function faqRoutes(app, config) {
       return { status: 'error', error: 'question y answer no pueden quedar vacíos' };
     }
 
+    const clearStarterTemplate =
+      Boolean(faq.is_starter_template) &&
+      (question !== faq.question ||
+        answer !== faq.answer ||
+        category !== faq.category ||
+        keywords !== faq.keywords);
+
     await pool.query(
       `UPDATE faq_items
-       SET question = ?, answer = ?, category = ?, keywords = ?, active = ?
+       SET question = ?, answer = ?, category = ?, keywords = ?, active = ?,
+           is_starter_template = ?
        WHERE id = ?`,
-      [question, answer, category, keywords, active, faq.id]
+      [
+        question,
+        answer,
+        category,
+        keywords,
+        active,
+        clearStarterTemplate ? false : Boolean(faq.is_starter_template),
+        faq.id,
+      ]
     );
 
     const faqRow = {
@@ -258,6 +275,7 @@ export async function faqRoutes(app, config) {
           id: faq.id,
           indexed: true,
           collection: indexed.collection,
+          is_starter_template: clearStarterTemplate ? false : Boolean(faq.is_starter_template),
         },
       };
     } catch (error) {

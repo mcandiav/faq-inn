@@ -327,6 +327,25 @@ async function applySchemaPatches(pool) {
     CREATE INDEX IF NOT EXISTS idx_booking_short_links_expires
       ON booking_short_links (expires_at)
   `);
+
+  const faqStarterColumns = [
+    ['is_starter_template', 'BOOLEAN NOT NULL DEFAULT FALSE'],
+    ['starter_key', "VARCHAR(64) NOT NULL DEFAULT ''"],
+  ];
+
+  for (const [columnName, columnDef] of faqStarterColumns) {
+    const [exists] = await pool.query(
+      `SELECT column_name
+       FROM information_schema.columns
+       WHERE table_schema = current_schema()
+         AND table_name = 'faq_items'
+         AND column_name = ?`,
+      [columnName]
+    );
+    if (exists.length === 0) {
+      await pool.query(`ALTER TABLE faq_items ADD COLUMN ${columnName} ${columnDef}`);
+    }
+  }
 }
 
 export async function runMigrations(pool, _config) {

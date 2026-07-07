@@ -1,5 +1,6 @@
 import { hashPassword } from './password.js';
 import { ensureTenantCollection } from './indexer.js';
+import { seedStarterFaqs } from './seedStarterFaqs.js';
 import { isValidTenantSlug, normalizeTenantSlug } from './tenantSlug.js';
 
 function validationError(message, statusCode = 400) {
@@ -88,7 +89,7 @@ export async function registerQuickSignup(pool, config, input, { logger } = {}) 
       [tenantId, email, passwordHash]
     );
 
-    await connection.query(
+    const [, agentMeta] = await connection.query(
       `INSERT INTO agents (tenant_id, slug, name, channel, status)
        VALUES (?, 'principal', 'Agente', 'whatsapp', 'active')`,
       [tenantId]
@@ -100,6 +101,24 @@ export async function registerQuickSignup(pool, config, input, { logger } = {}) 
       await ensureTenantCollection(config, slug);
     } catch (error) {
       logger?.warn({ err: error }, 'Colección Qdrant no creada al signup');
+    }
+
+    try {
+      await seedStarterFaqs(
+        pool,
+        config,
+        {
+          tenantId,
+          tenantSlug: slug,
+          agentId: agentMeta.insertId,
+          agentSlug: 'principal',
+          verticalSlug: 'hotel',
+          primaryLanguage: 'es',
+        },
+        { logger }
+      );
+    } catch (error) {
+      logger?.warn({ err: error, tenantSlug: slug }, 'FAQs plantilla no sembradas al signup');
     }
 
     return {
@@ -214,7 +233,7 @@ export async function createHotelTenant(pool, config, input, { logger } = {}) {
       [tenantId, email, passwordHash]
     );
 
-    await connection.query(
+    const [, agentMeta] = await connection.query(
       `INSERT INTO agents (tenant_id, slug, name, channel, status)
        VALUES (?, ?, ?, 'whatsapp', 'active')`,
       [tenantId, agentSlug, agentName]
@@ -232,6 +251,24 @@ export async function createHotelTenant(pool, config, input, { logger } = {}) {
     } catch (error) {
       logger?.warn({ err: error }, 'Colección Qdrant no creada al onboarding');
       qdrantCollection = null;
+    }
+
+    try {
+      await seedStarterFaqs(
+        pool,
+        config,
+        {
+          tenantId,
+          tenantSlug: slug,
+          agentId: agentMeta.insertId,
+          agentSlug,
+          verticalSlug: 'hotel',
+          primaryLanguage,
+        },
+        { logger }
+      );
+    } catch (error) {
+      logger?.warn({ err: error, tenantSlug: slug }, 'FAQs plantilla no sembradas al onboarding');
     }
 
     return {
@@ -318,7 +355,7 @@ export async function createAdminTenant(pool, config, input, { logger } = {}) {
       [tenantId, email, passwordHash]
     );
 
-    await connection.query(
+    const [, agentMeta] = await connection.query(
       `INSERT INTO agents (tenant_id, slug, name, channel, status)
        VALUES (?, ?, ?, 'default', 'active')`,
       [tenantId, agentSlug, agentName]
@@ -330,6 +367,24 @@ export async function createAdminTenant(pool, config, input, { logger } = {}) {
       await ensureTenantCollection(config, slug);
     } catch (error) {
       logger?.warn({ err: error }, 'Colección Qdrant no creada al alta');
+    }
+
+    try {
+      await seedStarterFaqs(
+        pool,
+        config,
+        {
+          tenantId,
+          tenantSlug: slug,
+          agentId: agentMeta.insertId,
+          agentSlug,
+          verticalSlug: 'hotel',
+          primaryLanguage: 'es',
+        },
+        { logger }
+      );
+    } catch (error) {
+      logger?.warn({ err: error, tenantSlug: slug }, 'FAQs plantilla no sembradas al alta admin');
     }
 
     return {
