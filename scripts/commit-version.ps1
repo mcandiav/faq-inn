@@ -19,10 +19,11 @@ Set-Content -Path $versionFile -Value $Version -Encoding UTF8 -NoNewline
 git add $versionFile
 
 if (Test-Path $indexFile) {
-    $indexContent = Get-Content $indexFile -Raw -Encoding UTF8
+    $indexContent = [System.IO.File]::ReadAllText($indexFile, [System.Text.UTF8Encoding]::new($false))
     $indexContent = $indexContent -replace '(i18n\.js\?v=)[0-9.]+', "`${1}$Version"
     $indexContent = $indexContent -replace '(app\.js\?v=)[0-9.]+', "`${1}$Version"
-    Set-Content -Path $indexFile -Value $indexContent -Encoding UTF8 -NoNewline
+    $utf8NoBom = [System.Text.UTF8Encoding]::new($false)
+    [System.IO.File]::WriteAllText($indexFile, $indexContent, $utf8NoBom)
     git add $indexFile
 }
 

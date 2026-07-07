@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="es">
   <head>
     <meta charset="UTF-8" />
@@ -22,8 +22,8 @@
               <img src="/favicon.png" alt="" class="app-logo-icon" width="40" height="40" />
               <div class="topbar-brand-text">
                 <p class="badge" data-app-version>FAQ Inn v1.2.7</p>
-                <h1 id="business-name">?</h1>
-                <p class="sub" id="user-email">?</p>
+                <h1 id="business-name">—</h1>
+                <p class="sub" id="user-email">—</p>
               </div>
             </div>
           </div>
@@ -91,7 +91,7 @@
                   <th data-i18n="table.question">Pregunta</th>
                   <th data-i18n="table.answer">Respuesta</th>
                   <th data-i18n="table.status">Estado</th>
-                  <th data-i18n="table.index">?ndice</th>
+                  <th data-i18n="table.index">Índice</th>
                   <th></th>
                 </tr>
               </thead>
@@ -121,7 +121,7 @@
             </div>
           </div>
           <p class="hint" id="unanswered-hint" data-i18n="unanswered.hint" data-i18n-html="true">
-            Escribe la respuesta aqu? mismo y pulsa <strong>Responderla</strong> para guardar la FAQ y activarla en el asistente.
+            Escribe la respuesta aquí mismo y pulsa <strong>Responderla</strong> para guardar la FAQ y activarla en el asistente.
           </p>
           <p class="form-msg" id="unanswered-msg"></p>
           <div id="unanswered-list" class="unanswered-list"></div>
@@ -136,14 +136,14 @@
             <ol class="onboarding-stepper" id="onboarding-stepper" aria-label="Pasos del onboarding">
               <li class="onboarding-step-marker is-active" data-step="1" data-i18n="onboarding.stepObjective">Objetivo</li>
               <li class="onboarding-step-marker" data-step="2" data-i18n="onboarding.stepBusiness">Negocio</li>
-              <li class="onboarding-step-marker" data-step="3" data-i18n="onboarding.stepConfig">Configuraci?n</li>
+              <li class="onboarding-step-marker" data-step="3" data-i18n="onboarding.stepConfig">Configuración</li>
               <li class="onboarding-step-marker" data-step="4" data-i18n="onboarding.stepFaqs">FAQs</li>
               <li class="onboarding-step-marker" data-step="5" data-i18n="onboarding.stepPause">Pausa</li>
             </ol>
 
             <div id="onboarding-panel-1" class="onboarding-panel">
               <h3 data-i18n="onboarding.objectiveTitle">Elige tu objetivo de negocio</h3>
-              <p class="field-hint" data-i18n="onboarding.objectiveHint">Solo se habilita la configuraci?n que corresponda a tu elecci?n.</p>
+              <p class="field-hint" data-i18n="onboarding.objectiveHint">Solo se habilita la configuración que corresponda a tu elección.</p>
               <div id="onboarding-objectives" class="objective-grid" role="listbox" aria-label="Objetivo"></div>
             </div>
 
@@ -160,15 +160,15 @@
               <label>
                 <span data-i18n="profile.primaryLanguage">Idioma principal</span>
                 <select id="onboarding-language" class="select-inline">
-                  <option value="es">Espa?ol</option>
-                  <option value="pt">Portugu?s</option>
+                  <option value="es">Español</option>
+                  <option value="pt">Português</option>
                   <option value="en">English</option>
                 </select>
               </label>
             </div>
 
             <div id="onboarding-panel-3" class="onboarding-panel hidden">
-              <h3 data-i18n="onboarding.configTitle">Configuraci?n de tu objetivo</h3>
+              <h3 data-i18n="onboarding.configTitle">Configuración de tu objetivo</h3>
               <div id="onboarding-config-reservas" class="hidden">
                 <p class="field-hint" data-i18n="onboarding.bookingHint">Configura el motor de reservas para noches (hotel, hostal, posada).</p>
                 <button type="button" class="btn primary" id="btn-onboarding-booking-engine" data-i18n="profile.bookingSetupBtn">
@@ -177,21 +177,21 @@
                 <p class="field-hint" id="onboarding-booking-status"></p>
               </div>
               <div id="onboarding-config-agenda" class="hidden">
-                <p class="field-hint" data-i18n="onboarding.agendaHint">Indica la URL de tu agenda o sistema de turnos (barber?a, spa, dentista).</p>
+                <p class="field-hint" data-i18n="onboarding.agendaHint">Configura el motor de agenda para turnos (barbería, spa, dentista).</p>
                 <button type="button" class="btn primary" id="btn-onboarding-agenda-engine" data-i18n="onboarding.agendaMotorBtn">
                   Configurar motor de agenda
                 </button>
                 <p class="field-hint" id="onboarding-agenda-status"></p>
               </div>
               <div id="onboarding-config-web" class="hidden">
-                <p class="field-hint" data-i18n="onboarding.webHint">URL a la que el agente derivar? a los clientes.</p>
+                <p class="field-hint" data-i18n="onboarding.webHint">URL a la que el agente derivará a los clientes.</p>
                 <label>
                   <span data-i18n="onboarding.webUrl">URL del sitio web</span>
                   <input type="url" id="onboarding-web-url" placeholder="https://..." />
                 </label>
               </div>
               <div id="onboarding-config-faq-only" class="hidden">
-                <p class="field-hint" data-i18n="onboarding.faqOnlyHint">Tu agente solo responder? preguntas frecuentes. No necesitas motor ni URL.</p>
+                <p class="field-hint" data-i18n="onboarding.faqOnlyHint">Tu agente solo responderá preguntas frecuentes. No necesitas motor ni URL.</p>
               </div>
             </div>
 
@@ -204,16 +204,16 @@
             <div id="onboarding-panel-5" class="onboarding-panel hidden">
               <h3 data-i18n="onboarding.pauseTitle">Pausa del operador</h3>
               <p class="profile-operator-tip onboarding-pause-tip" data-i18n="onboarding.pauseBody">
-                Para suspender el agente por 5 minutos, inicie su intervenci?n con ** (asterisco asterisco). Con esta clave el agente hace una pausa de 5 minutos en esa conversaci?n y usted puede responder al cliente.
+                Para suspender el agente por 5 minutos, inicie su intervención con ** (asterisco asterisco). Con esta clave el agente hace una pausa de 5 minutos en esa conversación y usted puede responder al cliente.
               </p>
               <label class="checkbox onboarding-pause-check">
                 <input type="checkbox" id="onboarding-pause-ack" />
-                <span data-i18n="onboarding.pauseAck">Entiendo c?mo pausar el agente con **</span>
+                <span data-i18n="onboarding.pauseAck">Entiendo cómo pausar el agente con **</span>
               </label>
             </div>
 
             <div class="dialog-actions onboarding-actions">
-              <button type="button" class="btn ghost hidden" id="btn-onboarding-back" data-i18n="onboarding.back">Atr?s</button>
+              <button type="button" class="btn ghost hidden" id="btn-onboarding-back" data-i18n="onboarding.back">Atrás</button>
               <button type="button" class="btn primary" id="btn-onboarding-next" data-i18n="onboarding.next">Siguiente</button>
               <button type="button" class="btn primary hidden" id="btn-onboarding-finish" data-i18n="onboarding.finish">Finalizar y entrar al panel</button>
             </div>
@@ -224,7 +224,7 @@
         <section id="view-profile" class="view hidden">
           <h2 data-i18n="profile.title">Mi cuenta</h2>
           <p class="hint" id="profile-onboard-hint" data-i18n="profile.onboardHint">
-            Completa los datos de tu negocio. El saludo de bienvenida define c?mo responde el asistente por WhatsApp.
+            Completa los datos de tu negocio. El saludo de bienvenida define cómo responde el asistente por WhatsApp.
           </p>
           <form id="profile-form" class="form card-inner">
             <fieldset>
@@ -234,11 +234,11 @@
                 <input type="email" id="profile-email" autocomplete="username" required />
               </label>
               <p class="hint profile-email-hint" data-i18n="profile.emailHint">
-                Para cambiar el email debes ingresar tu contrase?a actual abajo.
+                Para cambiar el email debes ingresar tu contraseña actual abajo.
               </p>
             </fieldset>
             <fieldset id="profile-whatsapp-fieldset" class="profile-whatsapp-fieldset hidden">
-              <legend data-i18n="profile.sectionWhatsapp">Conexi?n WhatsApp</legend>
+              <legend data-i18n="profile.sectionWhatsapp">Conexión WhatsApp</legend>
               <div id="profile-whatsapp-connected" class="profile-whatsapp-block hidden">
                 <div class="profile-whatsapp-status">
                   <span class="pill ok" id="profile-whatsapp-badge" data-i18n="profile.whatsappStatusConnected">Conectado</span>
@@ -246,7 +246,7 @@
                 </div>
                 <p class="hint" id="profile-whatsapp-connected-meta"></p>
                 <p class="hint" data-i18n="profile.whatsappConnectedHint">
-                  Tu asistente responde mensajes entrantes en este n?mero.
+                  Tu asistente responde mensajes entrantes en este número.
                 </p>
               </div>
               <div id="profile-whatsapp-disconnected" class="profile-whatsapp-block hidden">
@@ -254,7 +254,7 @@
                   <span class="pill warn" id="profile-whatsapp-disconnected-badge"></span>
                 </div>
                 <p class="hint" id="profile-whatsapp-disconnected-hint" data-i18n="profile.whatsappDisconnectedHint">
-                  WhatsApp no est? conectado. El asistente no responder? hasta que escanees el c?digo QR de nuevo.
+                  WhatsApp no está conectado. El asistente no responderá hasta que escanees el código QR de nuevo.
                 </p>
                 <button type="button" class="btn primary" id="btn-profile-whatsapp-reconnect" data-i18n="profile.whatsappReconnect">
                   Reconectar WhatsApp
@@ -262,8 +262,8 @@
                 <div id="profile-whatsapp-qr-panel" class="hidden">
                   <p class="hint" data-i18n="provision.qrTitle">Escanea el QR</p>
                   <div class="qr-wrap">
-                    <img id="profile-whatsapp-qr-image" alt="C?digo QR de WhatsApp" class="qr-image hidden" />
-                    <p class="hint" id="profile-whatsapp-qr-waiting" data-i18n="msg.creatingWhatsapp">Generando c?digo QR?</p>
+                    <img id="profile-whatsapp-qr-image" alt="Código QR de WhatsApp" class="qr-image hidden" />
+                    <p class="hint" id="profile-whatsapp-qr-waiting" data-i18n="msg.creatingWhatsapp">Generando código QR…</p>
                   </div>
                   <p class="form-msg" id="profile-whatsapp-qr-msg"></p>
                   <button type="button" class="btn ghost" id="btn-profile-whatsapp-refresh-qr" data-i18n="profile.whatsappRefreshQr">
@@ -277,19 +277,19 @@
               <label>
                 <span data-i18n="profile.business">Nombre comercial</span>
                 <input type="text" id="profile-business" data-i18n-placeholder="profile.businessPlaceholder" placeholder="Ej. Hotel Savoy" />
-                <span class="field-hint" data-i18n="profile.businessHint">Nombre que ver?n tus hu?spedes.</span>
+                <span class="field-hint" data-i18n="profile.businessHint">Nombre que verán tus huéspedes.</span>
               </label>
             </fieldset>
             <fieldset>
               <legend data-i18n="profile.sectionAgent">Agente WhatsApp</legend>
               <label>
                 <span data-i18n="profile.welcomeMessage">Saludo de bienvenida</span>
-                <textarea id="profile-welcome-message" rows="3" placeholder="?Hola! Soy Concierge del Hotel Savoy?"></textarea>
-                <span class="field-hint" data-i18n="profile.welcomeHint">C?mo se presenta el asistente en el primer contacto (incluye nombre si quieres).</span>
+                <textarea id="profile-welcome-message" rows="3" placeholder="¡Hola! Soy Concierge del Hotel Savoy…"></textarea>
+                <span class="field-hint" data-i18n="profile.welcomeHint">Cómo se presenta el asistente en el primer contacto (incluye nombre si quieres).</span>
               </label>
               <div class="profile-booking-setup">
                 <p class="field-hint" data-i18n="profile.bookingSetupHint">
-                  Configura c?mo se construyen los links de reserva de tu motor.
+                  Configura cómo se construyen los links de reserva de tu motor.
                 </p>
                 <button type="button" class="btn ghost" id="btn-go-booking-engine" data-i18n="profile.bookingSetupBtn">
                   Configurar motor de reservas
@@ -298,7 +298,7 @@
               </div>
               <div class="profile-agenda-setup">
                 <p class="field-hint" data-i18n="profile.agendaSetupHint">
-                  Configura c?mo se construyen los links de turnos de tu agenda.
+                  Configura cómo se construyen los links de turnos de tu agenda.
                 </p>
                 <button type="button" class="btn ghost" id="btn-go-agenda-engine" data-i18n="profile.agendaSetupBtn">
                   Configurar motor de agenda
@@ -308,27 +308,27 @@
               <label>
                 <span data-i18n="profile.primaryLanguage">Idioma principal</span>
                 <select id="profile-primary-language" class="select-inline">
-                  <option value="es">Espa?ol</option>
-                  <option value="pt">Portugu?s</option>
+                  <option value="es">Español</option>
+                  <option value="pt">Português</option>
                   <option value="en">English</option>
                 </select>
               </label>
               <p class="profile-operator-tip" data-i18n="profile.pauseHint">
-                Para pausar el agente en un chat, escribile al cliente un mensaje que empiece con ** (dos asteriscos). El asistente queda pausado 5 minutos en esa conversaci?n y pod?s responder vos.
+                Para pausar el agente en un chat, escribile al cliente un mensaje que empiece con ** (dos asteriscos). El asistente queda pausado 5 minutos en esa conversación y podés responder vos.
               </p>
             </fieldset>
             <fieldset>
-              <legend data-i18n="profile.changePassword">Cambiar contrase?a</legend>
+              <legend data-i18n="profile.changePassword">Cambiar contraseña</legend>
               <label>
-                <span data-i18n="profile.currentPassword">Contrase?a actual</span>
+                <span data-i18n="profile.currentPassword">Contraseña actual</span>
                 <input type="password" id="profile-current-password" autocomplete="current-password" />
               </label>
               <label>
-                <span data-i18n="profile.newPassword">Nueva contrase?a</span>
+                <span data-i18n="profile.newPassword">Nueva contraseña</span>
                 <input type="password" id="profile-new-password" autocomplete="new-password" minlength="8" />
               </label>
               <label>
-                <span data-i18n="profile.confirmPassword">Repetir nueva contrase?a</span>
+                <span data-i18n="profile.confirmPassword">Repetir nueva contraseña</span>
                 <input type="password" id="profile-confirm-password" autocomplete="new-password" minlength="8" />
               </label>
             </fieldset>
@@ -344,14 +344,14 @@
           <div class="toolbar">
             <div>
               <button type="button" class="btn ghost view-back-btn" id="btn-booking-back" data-i18n="booking.back">
-                ? Volver a Mi cuenta
+                ← Volver a Mi cuenta
               </button>
               <h2 data-i18n="booking.title">Motor de reservas</h2>
               <p class="faq-count" id="booking-status-label"></p>
             </div>
           </div>
           <p class="hint" data-i18n="booking.intro">
-            Para que el agente env?e links de reserva correctos, pegue tres b?squedas espec?ficas de su motor. FAQ Inn detectar? la plantilla y usted la verificar? antes de aprobarla.
+            Para que el agente envíe links de reserva correctos, pegue tres búsquedas específicas de su motor. FAQ Inn detectará la plantilla y usted la verificará antes de aprobarla.
           </p>
 
           <div id="booking-approved-panel" class="card card-inner hidden">
@@ -367,9 +367,9 @@
 
           <div id="booking-wizard" class="form card-inner">
             <div id="booking-step-scenarios">
-              <h3 data-i18n="booking.stepScenarios">Paso 1 ? Pegar links de prueba</h3>
+              <h3 data-i18n="booking.stepScenarios">Paso 1 — Pegar links de prueba</h3>
               <p class="field-hint" data-i18n="booking.stepScenariosHint">
-                En su motor de reservas real, haga exactamente estas b?squedas y pegue el link resultante en cada campo.
+                En su motor de reservas real, haga exactamente estas búsquedas y pegue el link resultante en cada campo.
               </p>
               <div id="booking-scenarios-list" class="booking-scenarios"></div>
               <button type="button" class="btn primary" id="btn-booking-discover" data-i18n="booking.analyze">
@@ -378,7 +378,7 @@
             </div>
 
             <div id="booking-step-verify" class="hidden">
-              <h3 data-i18n="booking.stepVerify">Paso 2 ? Probar link generado</h3>
+              <h3 data-i18n="booking.stepVerify">Paso 2 — Probar link generado</h3>
               <p class="field-hint" data-i18n="booking.stepVerifyHint">
                 Elija check-in, check-out y adultos. FAQ Inn arma el link de reserva y usted solo abre para verificar que el motor muestra lo correcto.
               </p>
@@ -387,7 +387,7 @@
               <ul id="booking-warnings" class="booking-warnings"></ul>
               <div id="booking-verify-preview" class="booking-preview-form"></div>
               <details class="booking-template-details">
-                <summary data-i18n="booking.showTemplate">Ver plantilla t?cnica detectada</summary>
+                <summary data-i18n="booking.showTemplate">Ver plantilla técnica detectada</summary>
                 <p class="booking-template-preview" id="booking-candidate-template"></p>
               </details>
               <div class="dialog-actions booking-actions">
@@ -408,14 +408,14 @@
           <div class="toolbar">
             <div>
               <button type="button" class="btn ghost view-back-btn" id="btn-agenda-back" data-i18n="agenda.back">
-                ? Volver a Mi cuenta
+                ← Volver a Mi cuenta
               </button>
               <h2 data-i18n="agenda.title">Motor de reservas</h2>
               <p class="faq-count" id="agenda-status-label"></p>
             </div>
           </div>
           <p class="hint" data-i18n="agenda.intro">
-            Para que el agente env?e links de reserva correctos, pegue tres b?squedas espec?ficas de su motor. FAQ Inn detectar? la plantilla y usted la verificar? antes de aprobarla.
+            Para que el agente envíe links de reserva correctos, pegue tres búsquedas específicas de su motor. FAQ Inn detectará la plantilla y usted la verificará antes de aprobarla.
           </p>
 
           <div id="agenda-approved-panel" class="card card-inner hidden">
@@ -431,9 +431,9 @@
 
           <div id="agenda-wizard" class="form card-inner">
             <div id="agenda-step-scenarios">
-              <h3 data-i18n="agenda.stepScenarios">Paso 1 ? Pegar links de prueba</h3>
+              <h3 data-i18n="agenda.stepScenarios">Paso 1 — Pegar links de prueba</h3>
               <p class="field-hint" data-i18n="agenda.stepScenariosHint">
-                En su motor de reservas real, haga exactamente estas b?squedas y pegue el link resultante en cada campo.
+                En su motor de reservas real, haga exactamente estas búsquedas y pegue el link resultante en cada campo.
               </p>
               <div id="agenda-scenarios-list" class="booking-scenarios"></div>
               <button type="button" class="btn primary" id="btn-agenda-discover" data-i18n="agenda.analyze">
@@ -442,7 +442,7 @@
             </div>
 
             <div id="agenda-step-verify" class="hidden">
-              <h3 data-i18n="agenda.stepVerify">Paso 2 ? Probar link generado</h3>
+              <h3 data-i18n="agenda.stepVerify">Paso 2 — Probar link generado</h3>
               <p class="field-hint" data-i18n="agenda.stepVerifyHint">
                 Elija check-in, check-out y adultos. FAQ Inn arma el link de reserva y usted solo abre para verificar que el motor muestra lo correcto.
               </p>
@@ -451,7 +451,7 @@
               <ul id="agenda-warnings" class="agenda-warnings"></ul>
               <div id="agenda-verify-preview" class="booking-preview-form"></div>
               <details class="agenda-template-details">
-                <summary data-i18n="agenda.showTemplate">Ver plantilla t?cnica detectada</summary>
+                <summary data-i18n="agenda.showTemplate">Ver plantilla técnica detectada</summary>
                 <p class="agenda-template-preview" id="agenda-candidate-template"></p>
               </details>
               <div class="dialog-actions agenda-actions">
@@ -473,7 +473,7 @@
           <form id="admin-tenant-form" class="form card-inner">
             <h3 data-i18n="admin.newTenant">Nueva posada</h3>
             <label>
-              <span data-i18n="admin.slug">Slug t?cnico (para Qdrant / n8n)</span>
+              <span data-i18n="admin.slug">Slug técnico (para Qdrant / n8n)</span>
               <input type="text" id="admin-slug" placeholder="faq-inn" required />
             </label>
             <label>
@@ -481,7 +481,7 @@
               <input type="email" id="admin-email" placeholder="reservas@ejemplo.cl" required />
             </label>
             <label>
-              <span data-i18n="admin.initialPassword">Contrase?a inicial</span>
+              <span data-i18n="admin.initialPassword">Contraseña inicial</span>
               <input type="password" id="admin-password" minlength="8" required />
             </label>
             <label>
@@ -554,9 +554,9 @@
         <p class="badge login-version" data-app-version>FAQ Inn v1.2.7</p>
       </div>
 
-      <section class="card landing-hero" aria-label="Ruta de activaci?n">
+      <section class="card landing-hero" aria-label="Ruta de activación">
         <p class="landing-welcome" data-i18n="landing.welcome">
-          En pocos minutos tendr?s tu agente de WhatsApp listo para tu negocio.
+          En pocos minutos tendrás tu agente de WhatsApp listo para tu negocio.
         </p>
         <p class="landing-flow-title" data-i18n="landing.flowTitle">Tres pasos para empezar:</p>
         <ol class="onboarding-flow">
@@ -567,7 +567,7 @@
                 <strong data-i18n="landing.step1Title">Crea tu cuenta</strong>
                 <span class="flow-time" data-i18n="landing.step1Time">~1 min</span>
               </div>
-              <p data-i18n="landing.step1Desc">Email y contrase?a. Con eso accedes al panel.</p>
+              <p data-i18n="landing.step1Desc">Email y contraseña. Con eso accedes al panel.</p>
               <span class="flow-badge" data-i18n="landing.badgeNow">Paso actual</span>
             </div>
           </li>
@@ -578,8 +578,8 @@
                 <strong data-i18n="landing.step2Title">Vincula WhatsApp</strong>
                 <span class="flow-time" data-i18n="landing.step2Time">~2 min</span>
               </div>
-              <p data-i18n="landing.step2Desc">Escanea el QR con tu tel?fono y conecta el n?mero del negocio.</p>
-              <span class="flow-badge" data-i18n="landing.badgeAfterRegister">Justo despu?s del registro</span>
+              <p data-i18n="landing.step2Desc">Escanea el QR con tu teléfono y conecta el número del negocio.</p>
+              <span class="flow-badge" data-i18n="landing.badgeAfterRegister">Justo después del registro</span>
             </div>
           </li>
           <li class="flow-step flow-step--next">
@@ -601,20 +601,20 @@
 
       <form id="signup-form" class="card login-card landing-panel">
         <h1 data-i18n="signup.title">Registra tu usuario</h1>
-        <p class="lead" data-i18n="signup.lead">Email y contrase?a. Luego ver?s el QR para vincular WhatsApp.</p>
+        <p class="lead" data-i18n="signup.lead">Email y contraseña. Luego verás el QR para vincular WhatsApp.</p>
         <label>
-          <span data-i18n="signup.email">Correo electr?nico</span>
+          <span data-i18n="signup.email">Correo electrónico</span>
           <input type="email" id="signup-email" required autocomplete="email" placeholder="reservas@ejemplo.cl" />
         </label>
         <label>
-          <span data-i18n="signup.password">Contrase?a</span>
-          <input type="password" id="signup-password" required minlength="8" autocomplete="new-password" placeholder="M?nimo 8 caracteres" />
+          <span data-i18n="signup.password">Contraseña</span>
+          <input type="password" id="signup-password" required minlength="8" autocomplete="new-password" placeholder="Mínimo 8 caracteres" />
         </label>
         <button type="submit" class="btn primary block" data-i18n="signup.submit">Crear cuenta y vincular WhatsApp</button>
         <p class="form-msg" id="signup-msg"></p>
         <p class="landing-switch">
           <button type="button" class="link-btn" id="link-show-login" data-i18n="landing.hasAccount">
-            ?Ya tienes cuenta? Iniciar sesi?n
+            ¿Ya tienes cuenta? Iniciar sesión
           </button>
         </p>
       </form>
@@ -622,12 +622,12 @@
       <section id="provision-qr-panel" class="card login-card landing-panel hidden">
         <h1 data-i18n="provision.qrTitle">Escanea el QR</h1>
         <p class="lead" id="provision-qr-lead">
-          Abre WhatsApp en tu tel?fono ? Dispositivos vinculados ? Vincular un dispositivo.
+          Abre WhatsApp en tu teléfono → Dispositivos vinculados → Vincular un dispositivo.
         </p>
         <p class="hint hidden" id="provision-instance-label" hidden aria-hidden="true"></p>
         <div class="qr-wrap">
-          <img id="provision-qr-image" alt="C?digo QR de WhatsApp" class="qr-image hidden" />
-          <p class="hint" id="provision-qr-waiting">Generando c?digo QR?</p>
+          <img id="provision-qr-image" alt="Código QR de WhatsApp" class="qr-image hidden" />
+          <p class="hint" id="provision-qr-waiting">Generando código QR…</p>
         </div>
         <p class="form-msg" id="provision-qr-msg"></p>
         <button type="button" class="btn ghost block" id="provision-qr-refresh">Actualizar QR</button>
@@ -636,7 +636,7 @@
       <section id="provision-success-panel" class="card login-card landing-panel hidden" hidden aria-hidden="true">
         <h1 data-i18n="provision.successTitle">WhatsApp conectado</h1>
         <p class="lead" data-i18n="provision.successLead">
-          Tu n?mero qued? vinculado. Completa tu negocio en Mi cuenta y prueba enviando un mensaje desde otro tel?fono.
+          Tu número quedó vinculado. Completa tu negocio en Mi cuenta y prueba enviando un mensaje desde otro teléfono.
         </p>
         <p class="success-phone" id="provision-phone"></p>
         <p class="hint" id="provision-success-meta"></p>
@@ -644,14 +644,14 @@
       </section>
 
       <form id="login-form" class="card login-card landing-panel hidden">
-        <h1 data-i18n="login.title">Iniciar sesi?n</h1>
+        <h1 data-i18n="login.title">Iniciar sesión</h1>
         <p class="lead" data-i18n="login.lead">Administra las respuestas de tu negocio.</p>
         <label>
           <span data-i18n="login.email">Email</span>
           <input type="email" id="login-email" required autocomplete="username" />
         </label>
         <label>
-          <span data-i18n="login.password">Contrase?a</span>
+          <span data-i18n="login.password">Contraseña</span>
           <span class="password-field">
             <input
               type="password"
@@ -665,8 +665,8 @@
               id="login-password-toggle"
               data-i18n="login.showPassword"
               data-i18n-attr="aria-label"
-              aria-label="Mostrar contrase?a"
-              title="Mostrar contrase?a"
+              aria-label="Mostrar contraseña"
+              title="Mostrar contraseña"
             >
               <svg class="icon-eye" viewBox="0 0 24 24" aria-hidden="true">
                 <path
@@ -707,7 +707,7 @@
           <div class="dialog-actions-right">
             <button type="button" class="btn ghost" id="admin-detail-cancel" data-i18n="btn.cancel">Cancelar</button>
             <button type="button" class="btn" id="admin-reset-password" data-i18n="admin.resetPassword">
-              Resetear contrase?a
+              Resetear contraseña
             </button>
           </div>
         </div>
@@ -719,32 +719,32 @@
       <form id="admin-reset-form" class="form">
         <h3 id="admin-reset-dialog-title">Login del cliente</h3>
         <p class="hint" id="admin-reset-dialog-hint">
-          Credenciales para que el due?o del negocio entre a FAQ Inn. No uses el email de admin global.
+          Credenciales para que el dueño del negocio entre a FAQ Inn. No uses el email de admin global.
         </p>
         <label>
-          <span id="admin-reset-email-label">Correo para iniciar sesi?n</span>
+          <span id="admin-reset-email-label">Correo para iniciar sesión</span>
           <input type="email" id="admin-reset-email" required autocomplete="off" aria-labelledby="admin-reset-email-label" />
         </label>
         <label>
-          <span id="admin-reset-password-label">Nueva contrase?a</span>
+          <span id="admin-reset-password-label">Nueva contraseña</span>
           <input
             type="text"
             id="admin-reset-password-input"
             minlength="8"
             autocomplete="new-password"
             aria-labelledby="admin-reset-password-label"
-            placeholder="Opcional: vac?o = se genera sola"
+            placeholder="Opcional: vacío = se genera sola"
           />
         </label>
         <div class="admin-credentials-result hidden" id="admin-reset-result">
-          <p class="admin-credentials-title" id="admin-reset-result-title">Listo ? copia email y contrase?a antes de cerrar:</p>
+          <p class="admin-credentials-title" id="admin-reset-result-title">Listo — copia email y contraseña antes de cerrar:</p>
           <dl class="admin-credentials-list">
             <div class="admin-credentials-row">
               <dt data-i18n="login.email">Email</dt>
               <dd><code id="admin-reset-result-email"></code></dd>
             </div>
             <div class="admin-credentials-row">
-              <dt data-i18n="login.password">Contrase?a</dt>
+              <dt data-i18n="login.password">Contraseña</dt>
               <dd><code id="admin-reset-result-password"></code></dd>
             </div>
           </dl>
@@ -774,7 +774,7 @@
           <textarea id="faq-answer" rows="4" required></textarea>
         </label>
         <label>
-          <span data-i18n="faq.category">Categor?a</span>
+          <span data-i18n="faq.category">Categoría</span>
           <input type="text" id="faq-category" />
         </label>
         <label>
@@ -796,7 +796,7 @@
       </form>
     </dialog>
 
-    <script src="/i18n.js?v=1.7.20"></script>
-    <script src="/app.js?v=1.7.20"></script>
+    <script src="/i18n.js?v=1.7.21"></script>
+    <script src="/app.js?v=1.7.21"></script>
   </body>
 </html>
