@@ -3,6 +3,7 @@ import { normalizeTenantSlug } from '../lib/tenantSlug.js';
 import {
   completeOnboarding,
   getOnboardingStatus,
+  seedOnboardingStarterFaqs,
   updateOnboardingSetup,
 } from '../lib/onboardingService.js';
 import { OBJECTIVES } from '../lib/objectives/index.js';
@@ -92,6 +93,38 @@ export async function onboardingRoutes(app, config) {
         return {
           status: 'error',
           error: error.message || 'No se pudo guardar el onboarding',
+        };
+      }
+    }
+  );
+
+  app.post(
+    '/api/onboarding/seed-starter-faqs',
+    { preHandler: [app.authenticate] },
+    async (request, reply) => {
+      if (!requireClient(request, reply)) {
+        return { status: 'error', error: 'Solo clientes con negocio' };
+      }
+      try {
+        const starterFaqs = await seedOnboardingStarterFaqs(
+          pool,
+          config,
+          request.user.id,
+          request.user.tenant_id,
+          app.log
+        );
+        const onboarding = await getOnboardingStatus(
+          pool,
+          config,
+          request.user.id,
+          request.user.tenant_id
+        );
+        return { status: 'ok', starter_faqs: starterFaqs, onboarding };
+      } catch (error) {
+        reply.code(error.statusCode || 500);
+        return {
+          status: 'error',
+          error: error.message || 'No se pudieron crear las FAQs plantilla',
         };
       }
     }

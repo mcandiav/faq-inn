@@ -2,6 +2,7 @@ import { indexFaqItem } from './indexer.js';
 import { OBJECTIVES, getObjective, isValidObjectiveSlug } from './objectives/index.js';
 import { syncWhatsappConnectionStatus } from './provisionService.js';
 import { seedStarterFaqs } from './seedStarterFaqs.js';
+import { getStarterFaqs } from './faqTemplates/index.js';
 
 function validationError(message, statusCode = 400) {
   const error = new Error(message);
@@ -27,21 +28,38 @@ async function loadStarterFaqs(pool, tenantId) {
             f.is_starter_template, f.starter_key, a.slug AS agent_slug
      FROM faq_items f
      JOIN agents a ON a.id = f.agent_id
-     WHERE f.tenant_id = ? AND f.is_starter_template = TRUE
-     ORDER BY f.id ASC`,
+     WHERE f.tenant_id = ?
+       AND (f.is_starter_template = TRUE OR f.faq_uid LIKE 'starter:%')
+     ORDER BY f.is_starter_template DESC, f.id ASC`,
     [tenantId]
   );
-  return rows;
+  return rows.slice(0, 3);
 }
 
-async function ensureStarterFaqs(pool, config, tenantId, tenantSlug, primaryLanguage) {
+async function reactivateTransversalStarterFaqs(pool, tenantId) {
+  const templates = getStarterFaqs();
+  const uids = templates.map((t) => t.faq_uid).filter(Boolean);
+  if (!uids.length) {
+    return;
+  }
+  const placeholders = uids.map(() => '?').join(', ');
+  await pool.query(
+    `UPDATE faq_items
+     SET is_starter_template = TRUE, updated_at = NOW()
+     WHERE tenant_id = ? AND faq_uid IN (${placeholders})`,
+    [tenantId, ...uids]
+  );
+}
+
+async function ensureStarterFaqs(pool, config, tenantId, tenantSlug, primaryLanguage, logger = null) {
+  await reactivateTransversalStarterFaqs(pool, tenantId);
   let starterFaqs = await loadStarterFaqs(pool, tenantId);
   if (starterFaqs.length >= 3 || !tenantSlug) {
     return starterFaqs;
   }
 
   try {
-    await seedStarterFaqs(
+    const result = await seedStarterFaqs(
       pool,
       config,
       {
@@ -49,11 +67,50 @@ async function ensureStarterFaqs(pool, config, tenantId, tenantSlug, primaryLang
         tenantSlug,
         primaryLanguage: primaryLanguage || 'es',
       },
-      { logger: null }
+      { logger }
     );
+    if (result.errors?.length) {
+      logger?.warn({ tenantId, errors: result.errors }, 'Errores al sembrar FAQs plantilla');
+    }
+    await reactivateTransversalStarterFaqs(pool, tenantId);
     starterFaqs = await loadStarterFaqs(pool, tenantId);
-  } catch {
-    /* best-effort: el cliente verá el error al completar si siguen faltando */
+  } catch (error) {
+    logger?.warn({ err: error, tenantId }, 'No se pudieron sembrar FAQs plantilla');
+  }
+
+  return starterFaqs;
+}
+
+export async function seedOnboardingStarterFaqs(pool, config, userId, tenantId, logger = null) {
+  const [userRows] = await pool.query(
+    `SELECT t.slug
+     FROM users u
+     JOIN tenants t ON t.id = u.tenant_id
+     WHERE u.id = ? AND u.tenant_id = ?`,
+    [userId, tenantId]
+  );
+  const user = userRows[0];
+  if (!user) {
+    throw validationError('Usuario no encontrado', 404);
+  }
+
+  const [settingsRows] = await pool.query(
+    `SELECT primary_language FROM tenant_settings WHERE tenant_id = ?`,
+    [tenantId]
+  );
+  const primaryLanguage = settingsRows[0]?.primary_language || 'es';
+
+  const starterFaqs = await ensureStarterFaqs(
+    pool,
+    config,
+    tenantId,
+    user.slug,
+    primaryLanguage,
+    logger
+  );
+
+  if (starterFaqs.length < 3) {
+    throw validationError('No se pudieron crear las FAQs plantilla del onboarding', 500);
   }
 
   return starterFaqs;
@@ -106,7 +163,8 @@ export async function getOnboardingStatus(pool, config, userId, tenantId) {
     config,
     tenantId,
     user.slug,
-    settings.primary_language
+    settings.primary_language,
+    null
   );
 
   return {
@@ -227,7 +285,8 @@ async function updateStarterFaqs(pool, config, tenantId, status, items) {
               f.is_starter_template, a.slug AS agent_slug
        FROM faq_items f
        JOIN agents a ON a.id = f.agent_id
-       WHERE f.id = ? AND f.tenant_id = ? AND f.is_starter_template = TRUE`,
+       WHERE f.id = ? AND f.tenant_id = ?
+         AND (f.is_starter_template = TRUE OR f.faq_uid LIKE 'starter:%')`,
       [faqId, tenantId]
     );
     const row = rows[0];
