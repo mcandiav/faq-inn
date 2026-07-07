@@ -200,6 +200,9 @@ const MESSAGES = {
       'WhatsApp no está conectado. El asistente no responderá hasta que escanees el código QR de nuevo.',
     'profile.whatsappReconnect': 'Reconectar WhatsApp',
     'profile.whatsappRefreshQr': 'Actualizar QR',
+    'profile.whatsappChangeHint':
+      '¿Cambiaste de teléfono o de número de WhatsApp? Volvé a escanear el QR para reconectar.',
+    'profile.whatsappChange': 'Reescanear QR (cambiar WhatsApp)',
     'help.show': 'Ver ayuda',
     'booking.title': 'Motor de reservas',
     'booking.back': '← Volver a Mi cuenta',
@@ -619,6 +622,9 @@ const MESSAGES = {
       'O WhatsApp não está conectado. O assistente só voltará a responder depois de escanear o QR novamente.',
     'profile.whatsappReconnect': 'Reconectar WhatsApp',
     'profile.whatsappRefreshQr': 'Atualizar QR',
+    'profile.whatsappChangeHint':
+      'Trocou de telefone ou de número de WhatsApp? Escaneie o QR novamente para reconectar.',
+    'profile.whatsappChange': 'Reescanear QR (trocar WhatsApp)',
     'help.show': 'Ver ajuda',
     'booking.title': 'Motor de reservas',
     'booking.back': '← Voltar à Minha conta',
@@ -1036,6 +1042,9 @@ const MESSAGES = {
       'WhatsApp is not connected. The assistant will not reply until you scan the QR code again.',
     'profile.whatsappReconnect': 'Reconnect WhatsApp',
     'profile.whatsappRefreshQr': 'Refresh QR',
+    'profile.whatsappChangeHint':
+      'Changed your phone or WhatsApp number? Scan the QR again to reconnect.',
+    'profile.whatsappChange': 'Rescan QR (change WhatsApp)',
     'help.show': 'Show help',
     'booking.title': 'Booking engine',
     'booking.back': '← Back to My account',

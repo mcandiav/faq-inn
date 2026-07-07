@@ -285,6 +285,7 @@ function showWhatsappQr(qrBase64, instanceName) {
   if (whatsappState.uiTarget === 'profile') {
     ui.qrPanel?.classList.remove('hidden');
     ui.reconnectBtn?.classList.add('hidden');
+    $('#btn-profile-whatsapp-change')?.classList.add('hidden');
   } else {
     hideLandingPanels();
     setWhatsappFocus(true);
@@ -824,10 +825,15 @@ function renderProfileWhatsapp() {
   disconnectedEl?.classList.toggle('hidden', connected);
 
   if (connected) {
-    clearWhatsappPoll();
-    whatsappState.uiTarget = 'landing';
-    $('#profile-whatsapp-qr-panel')?.classList.add('hidden');
+    const rescanning =
+      whatsappState.uiTarget === 'profile' && Boolean(whatsappState.pollTimer);
+    if (!rescanning) {
+      clearWhatsappPoll();
+      whatsappState.uiTarget = 'landing';
+      $('#profile-whatsapp-qr-panel')?.classList.add('hidden');
+    }
     $('#btn-profile-whatsapp-reconnect')?.classList.remove('hidden');
+    $('#btn-profile-whatsapp-change')?.classList.toggle('hidden', rescanning);
 
     const phoneEl = $('#profile-whatsapp-phone');
     if (phoneEl) {
@@ -2663,6 +2669,10 @@ $('#provision-qr-refresh')?.addEventListener('click', async () => {
 });
 
 $('#btn-profile-whatsapp-reconnect')?.addEventListener('click', () => {
+  startProfileWhatsappReconnect();
+});
+
+$('#btn-profile-whatsapp-change')?.addEventListener('click', () => {
   startProfileWhatsappReconnect();
 });
 
