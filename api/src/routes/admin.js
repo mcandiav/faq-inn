@@ -5,6 +5,11 @@ import {
   listAdminTenants,
   resetAdminTenantPassword,
 } from '../lib/adminService.js';
+import {
+  getObjectiveTemplate,
+  listObjectiveTemplates,
+  updateObjectiveTemplate,
+} from '../lib/promptTemplateService.js';
 
 export async function adminRoutes(app, config) {
   const pool = app.db.pool;
@@ -82,6 +87,53 @@ export async function adminRoutes(app, config) {
         return {
           status: 'error',
           error: error.message || 'No se pudo resetear la contraseña',
+        };
+      }
+    }
+  );
+
+  app.get(
+    '/api/admin/prompt-templates',
+    { preHandler: [app.requireAdmin] },
+    async () => {
+      const templates = await listObjectiveTemplates(pool);
+      return { status: 'ok', templates };
+    }
+  );
+
+  app.get(
+    '/api/admin/prompt-templates/:slug',
+    { preHandler: [app.requireAdmin] },
+    async (request, reply) => {
+      try {
+        const template = await getObjectiveTemplate(pool, request.params.slug);
+        return { status: 'ok', template };
+      } catch (error) {
+        reply.code(error.statusCode || 500);
+        return {
+          status: 'error',
+          error: error.message || 'No se pudo cargar la plantilla',
+        };
+      }
+    }
+  );
+
+  app.put(
+    '/api/admin/prompt-templates/:slug',
+    { preHandler: [app.requireAdmin] },
+    async (request, reply) => {
+      try {
+        const template = await updateObjectiveTemplate(
+          pool,
+          request.params.slug,
+          request.body || {}
+        );
+        return { status: 'ok', template };
+      } catch (error) {
+        reply.code(error.statusCode || 500);
+        return {
+          status: 'error',
+          error: error.message || 'No se pudo guardar la plantilla',
         };
       }
     }

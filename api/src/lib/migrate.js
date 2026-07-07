@@ -1,4 +1,5 @@
 import { hashPassword } from './password.js';
+import { seedObjectiveTemplates } from './promptTemplateService.js';
 
 const SCHEMA_SQL = `
 CREATE TABLE IF NOT EXISTS tenants (
@@ -426,6 +427,28 @@ async function applySchemaPatches(pool) {
       );
     }
   }
+
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS system_prompt_objective_templates (
+      id BIGSERIAL PRIMARY KEY,
+      objective_slug VARCHAR(64) NOT NULL,
+      objective_name VARCHAR(255) NOT NULL DEFAULT '',
+      role_template TEXT NOT NULL DEFAULT '',
+      limits_template TEXT NOT NULL DEFAULT '',
+      tools_template TEXT NOT NULL DEFAULT '',
+      date_interpretation_template TEXT NOT NULL DEFAULT '',
+      data_collection_template TEXT NOT NULL DEFAULT '',
+      links_template TEXT NOT NULL DEFAULT '',
+      status VARCHAR(16) NOT NULL DEFAULT 'draft'
+        CHECK (status IN ('draft', 'active', 'archived')),
+      version INTEGER NOT NULL DEFAULT 1,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      UNIQUE (objective_slug)
+    )
+  `);
+
+  await seedObjectiveTemplates(pool);
 }
 
 export async function runMigrations(pool, _config) {
