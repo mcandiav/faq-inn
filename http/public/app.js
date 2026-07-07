@@ -2128,6 +2128,23 @@ function renderOnboardingConfig() {
   }
 }
 
+async function seedOnboardingStarterFaqsFromApi() {
+  try {
+    const data = await api('/onboarding/seed-starter-faqs', { method: 'POST' });
+    if (data.onboarding) {
+      state.onboardingData = data.onboarding;
+    } else if (data.starter_faqs) {
+      state.onboardingData = {
+        ...state.onboardingData,
+        starter_faqs: data.starter_faqs,
+      };
+    }
+    return (state.onboardingData?.starter_faqs || []).length >= 3;
+  } catch {
+    return false;
+  }
+}
+
 async function reloadOnboardingStatus() {
   const data = await api('/onboarding/status');
   state.onboardingData = data.onboarding;
@@ -2142,26 +2159,36 @@ async function ensureOnboardingFaqsReady() {
     return true;
   }
 
-  try {
-    await reloadOnboardingStatus();
-  } catch (error) {
-    setOnboardingMsg(error.message, 'error');
-    return false;
+  let ready = await seedOnboardingStarterFaqsFromApi();
+  if (!ready) {
+    try {
+      await reloadOnboardingStatus();
+      ready = (state.onboardingData?.starter_faqs || []).length >= 3;
+    } catch (error) {
+      renderOnboardingFaqs();
+      return false;
+    }
   }
 
   renderOnboardingFaqs();
-  if ((state.onboardingData?.starter_faqs || []).length < 3) {
-    setOnboardingMsg(t('onboarding.faqsMissing'), 'error');
-    return false;
-  }
-  return true;
+  return ready;
 }
 
 function renderOnboardingFaqs() {
   const list = $('#onboarding-faqs-list');
   const faqs = state.onboardingData?.starter_faqs || [];
+  const emptyHint = $('#onboarding-faqs-empty-hint');
+  const reloadBtn = $('#btn-onboarding-reload-faqs');
   if (!list) return;
 
+  const isEmpty = faqs.length === 0;
+  emptyHint?.classList.toggle('hidden', !isEmpty);
+  reloadBtn?.classList.toggle('hidden', !isEmpty);
+
+  if (isEmpty) {
+    list.innerHTML = '';
+    return;
+  }
   list.innerHTML = faqs
     .map(
       (faq) => `
@@ -2291,9 +2318,14 @@ async function finishOnboarding() {
     if (!saved) return;
   } else {
     try {
-      await reloadOnboardingStatus();
+      const seeded = await seedOnboardingStarterFaqsFromApi();
+      if (!seeded) {
+        await reloadOnboardingStatus();
+      }
     } catch (error) {
       setOnboardingMsg(error.message, 'error');
+      showOnboardingPanel(4);
+      renderOnboardingFaqs();
       return;
     }
     if ((state.onboardingData?.starter_faqs || []).length < 3) {
@@ -2616,11 +2648,24 @@ $('#btn-onboarding-next')?.addEventListener('click', async () => {
   const next = step + 1;
   if (next === 3) renderOnboardingConfig();
   if (next === 4) {
-    const ok = await ensureOnboardingFaqsReady();
-    if (!ok) return;
+    await ensureOnboardingFaqsReady();
   }
   showOnboardingPanel(next);
+  if (next === 4 && (state.onboardingData?.starter_faqs || []).length < 3) {
+    setOnboardingMsg(t('onboarding.faqsMissing'), 'error');
+  } else {
+    setOnboardingMsg('');
+  }
+});
+
+$('#btn-onboarding-reload-faqs')?.addEventListener('click', async () => {
   setOnboardingMsg('');
+  const ok = await ensureOnboardingFaqsReady();
+  if (ok) {
+    setOnboardingMsg('');
+  } else {
+    setOnboardingMsg(t('onboarding.faqsMissing'), 'error');
+  }
 });
 
 $('#btn-onboarding-back')?.addEventListener('click', () => {
