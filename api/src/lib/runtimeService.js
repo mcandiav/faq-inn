@@ -24,6 +24,7 @@ import {
 } from './objectives/index.js';
 import { getRuntimeTemplateColumns } from './promptTemplateService.js';
 import { normalizePreviewScenario } from './bookingScenarios.js';
+import { normalizePreviewScenario as normalizeAgendaPreviewScenario } from './agendaScenarios.js';
 import { buildUrlFromTemplate } from './bookingTemplateBuilder.js';
 import {
   buildPublicShortUrl,
@@ -245,7 +246,7 @@ export function buildRuntimeAgendaUrl(tenant, input = {}) {
 
   let scenario;
   try {
-    scenario = normalizePreviewScenario(input);
+    scenario = normalizeAgendaPreviewScenario(input);
   } catch (error) {
     throw validationError(error.message || 'Datos de agenda inválidos');
   }

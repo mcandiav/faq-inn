@@ -1,6 +1,11 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { buildRuntimeWorkflowItem, buildRuntimeBookingUrl, enrichBookingConfig } from './runtimeService.js';
+import {
+  buildRuntimeWorkflowItem,
+  buildRuntimeBookingUrl,
+  buildRuntimeAgendaUrl,
+  enrichBookingConfig,
+} from './runtimeService.js';
 
 test('enrichBookingConfig derives placeholder_map from variable_params', () => {
   const config = enrichBookingConfig({
@@ -105,4 +110,25 @@ test('buildRuntimeBookingUrl applies tenant date_format to canonical template', 
   assert.match(result.url, /CheckIn=10072026/);
   assert.match(result.url, /CheckOut=13072026/);
   assert.match(result.url, /ad=2/);
+});
+
+test('buildRuntimeAgendaUrl applies tenant template with date and time', () => {
+  const tenant = {
+    agenda_validation_status: 'approved',
+    url: 'https://calendar.example.com?date={{checkin}}&time={{time}}',
+    tenant_url: 'https://calendar.example.com?date={{checkin}}&time={{time}}',
+    agenda_config: { date_format: 'YYYYMMDD', child_ages_format: 'csv' },
+    date_format: 'YYYYMMDD',
+  };
+
+  const result = buildRuntimeAgendaUrl(tenant, {
+    date: '2026-07-10',
+    time: '15:00',
+  });
+
+  assert.equal(result.status, 'ok');
+  assert.equal(result.date_format, 'YYYYMMDD');
+  assert.match(result.url, /date=20260710/);
+  assert.match(result.url, /time=15%3A00|time=15:00/);
+  assert.equal(result.scenario.time, '15:00');
 });
