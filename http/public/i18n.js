@@ -352,6 +352,17 @@ const MESSAGES = {
       '¿Borrar definitivamente «{slug}»? Esta acción no se puede deshacer.',
     'admin.deletingTenant': 'Borrando tenant…',
     'admin.deleteDone': 'Tenant «{slug}» eliminado.',
+    'account.dangerTitle': 'Zona de peligro',
+    'account.deleteHint':
+      'Elimina tu cuenta y todos tus datos (FAQs, motor, conexión de WhatsApp) de forma permanente. Esta acción no se puede deshacer.',
+    'account.deleteConfirmLabel': 'Escribe el slug de tu negocio para confirmar',
+    'account.deleteSlugPlaceholder': 'Tu slug: {slug}',
+    'account.deleteBtn': 'Eliminar mi cuenta',
+    'account.deleteSlugMismatch': 'El slug escrito no coincide con el de tu negocio.',
+    'account.deleteFinalConfirm':
+      '¿Eliminar definitivamente tu cuenta «{slug}»? Se borrarán todos tus datos y no se puede deshacer.',
+    'account.deleting': 'Eliminando tu cuenta…',
+    'account.deleteDone': 'Tu cuenta fue eliminada. Gracias por usar FAQ Inn.',
     'admin.resetPasswordConfirm':
       '¿Generar contraseña temporal para {email}?',
     'admin.createLoginPrompt':
@@ -759,6 +770,17 @@ const MESSAGES = {
       'Excluir definitivamente «{slug}»? Esta ação não pode ser desfeita.',
     'admin.deletingTenant': 'Excluindo tenant…',
     'admin.deleteDone': 'Tenant «{slug}» excluído.',
+    'account.dangerTitle': 'Zona de perigo',
+    'account.deleteHint':
+      'Exclui sua conta e todos os seus dados (FAQs, motor, conexão do WhatsApp) de forma permanente. Esta ação não pode ser desfeita.',
+    'account.deleteConfirmLabel': 'Digite o slug do seu negócio para confirmar',
+    'account.deleteSlugPlaceholder': 'Seu slug: {slug}',
+    'account.deleteBtn': 'Excluir minha conta',
+    'account.deleteSlugMismatch': 'O slug digitado não coincide com o do seu negócio.',
+    'account.deleteFinalConfirm':
+      'Excluir definitivamente sua conta «{slug}»? Todos os seus dados serão apagados e não é possível desfazer.',
+    'account.deleting': 'Excluindo sua conta…',
+    'account.deleteDone': 'Sua conta foi excluída. Obrigado por usar o FAQ Inn.',
     'admin.resetPasswordConfirm':
       'Gerar senha temporária para {email}?',
     'admin.createLoginPrompt':
@@ -1165,6 +1187,17 @@ const MESSAGES = {
       'Permanently delete «{slug}»? This cannot be undone.',
     'admin.deletingTenant': 'Deleting tenant…',
     'admin.deleteDone': 'Tenant «{slug}» deleted.',
+    'account.dangerTitle': 'Danger zone',
+    'account.deleteHint':
+      'Permanently delete your account and all your data (FAQs, engine, WhatsApp connection). This cannot be undone.',
+    'account.deleteConfirmLabel': 'Type your business slug to confirm',
+    'account.deleteSlugPlaceholder': 'Your slug: {slug}',
+    'account.deleteBtn': 'Delete my account',
+    'account.deleteSlugMismatch': 'The slug you typed does not match your business.',
+    'account.deleteFinalConfirm':
+      'Permanently delete your account «{slug}»? All your data will be erased and this cannot be undone.',
+    'account.deleting': 'Deleting your account…',
+    'account.deleteDone': 'Your account has been deleted. Thanks for using FAQ Inn.',
     'admin.resetPasswordConfirm':
       'Generate a temporary password for {email}?',
     'admin.createLoginPrompt':

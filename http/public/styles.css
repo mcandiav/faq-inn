@@ -471,6 +471,27 @@ h3 {
   background: #991b1b;
 }
 
+.danger-zone {
+  margin-top: 1.25rem;
+  border: 1px solid #7f1d1d;
+  border-radius: 12px;
+  background: rgba(127, 29, 29, 0.08);
+}
+
+.danger-zone h3 {
+  margin: 0 0 0.35rem;
+  color: #b91c1c;
+}
+
+.danger-zone .danger-zone-confirm {
+  display: block;
+  margin: 0.75rem 0;
+}
+
+.danger-zone .danger-zone-confirm input {
+  margin-top: 0.35rem;
+}
+
 .row-actions {
   display: flex;
   flex-wrap: wrap;

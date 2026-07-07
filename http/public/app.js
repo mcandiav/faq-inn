@@ -763,11 +763,31 @@ function renderProfile() {
         : t('profile.agendaStatusPending');
     }
 
+    const dangerZone = $('#profile-danger-zone');
+    if (dangerZone) {
+      dangerZone.classList.remove('hidden');
+      const slug = account?.tenant?.slug || user.tenant?.slug || '';
+      const slugHint = $('#account-delete-slug-hint');
+      if (slugHint) {
+        slugHint.textContent = slug
+          ? t('account.deleteSlugPlaceholder', { slug })
+          : '';
+      }
+      const deleteInput = $('#account-delete-confirm-slug');
+      if (deleteInput) deleteInput.value = '';
+      const deleteMsg = $('#account-delete-msg');
+      if (deleteMsg) {
+        deleteMsg.textContent = '';
+        deleteMsg.className = 'form-msg';
+      }
+    }
+
     onboardHint?.classList.remove('hidden');
   } else {
     businessInput.disabled = true;
     businessInput.value = t('profile.globalAdmin');
     onboardHint?.classList.add('hidden');
+    $('#profile-danger-zone')?.classList.add('hidden');
   }
 
   const currentPassword = $('#profile-current-password');
@@ -2672,9 +2692,63 @@ async function logout() {
   showLanding('signup');
 }
 
+async function deleteOwnAccount() {
+  const slugInput = $('#account-delete-confirm-slug');
+  const msg = $('#account-delete-msg');
+  const slug = state.account?.tenant?.slug || state.user?.tenant?.slug || '';
+  const typed = slugInput?.value.trim() || '';
+
+  if (!slug || !msg) {
+    return;
+  }
+
+  if (typed !== slug) {
+    msg.textContent = t('account.deleteSlugMismatch');
+    msg.className = 'form-msg error';
+    slugInput?.focus();
+    return;
+  }
+
+  const ok = window.confirm(t('account.deleteFinalConfirm', { slug }));
+  if (!ok) {
+    return;
+  }
+
+  msg.textContent = t('account.deleting');
+  msg.className = 'form-msg';
+
+  const btn = $('#btn-account-delete');
+  if (btn) btn.disabled = true;
+
+  try {
+    await api('/account', {
+      method: 'DELETE',
+      body: JSON.stringify({ confirm_slug: typed }),
+    });
+    window.alert(t('account.deleteDone'));
+    clearWhatsappPoll();
+    state.user = null;
+    state.account = null;
+    state.faqs = [];
+    state.unanswered = [];
+    try {
+      sessionStorage.removeItem(VIEW_STORAGE_KEY);
+    } catch {
+      /* ignore */
+    }
+    history.replaceState(null, '', location.pathname + location.search);
+    showLanding('login');
+  } catch (error) {
+    msg.textContent = error.message;
+    msg.className = 'form-msg error';
+    if (btn) btn.disabled = false;
+  }
+}
+
 $('#btn-logout').addEventListener('click', logout);
 $('#btn-logout-mobile')?.addEventListener('click', logout);
 $('#btn-logout-profile')?.addEventListener('click', logout);
+$('#btn-account-delete')?.addEventListener('click', deleteOwnAccount);
 
 $$('[data-view]').forEach((btn) => {
   btn.addEventListener('click', () => openView(btn.dataset.view));

@@ -342,6 +342,21 @@
             </button>
             <p class="form-msg" id="profile-msg"></p>
           </form>
+          <div class="card-inner danger-zone hidden" id="profile-danger-zone">
+            <h3 data-i18n="account.dangerTitle">Zona de peligro</h3>
+            <p class="hint" data-i18n="account.deleteHint">
+              Elimina tu cuenta y todos tus datos de forma permanente. No se puede deshacer.
+            </p>
+            <label class="danger-zone-confirm">
+              <span data-i18n="account.deleteConfirmLabel">Escribe el slug de tu negocio para confirmar</span>
+              <input type="text" id="account-delete-confirm-slug" autocomplete="off" spellcheck="false" />
+              <span class="field-hint" id="account-delete-slug-hint"></span>
+            </label>
+            <button type="button" class="btn danger" id="btn-account-delete" data-i18n="account.deleteBtn">
+              Eliminar mi cuenta
+            </button>
+            <p class="form-msg" id="account-delete-msg"></p>
+          </div>
         </section>
 
         <section id="view-booking-engine" class="view hidden">
@@ -800,7 +815,7 @@
       </form>
     </dialog>
 
-    <script src="/i18n.js?v=1.7.26"></script>
-    <script src="/app.js?v=1.7.26"></script>
+    <script src="/i18n.js?v=1.7.27"></script>
+    <script src="/app.js?v=1.7.27"></script>
   </body>
 </html>
