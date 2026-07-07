@@ -575,6 +575,57 @@
             </table>
           </div>
           <div id="admin-cards" class="admin-cards admin-mobile-only" aria-live="polite"></div>
+
+          <div class="sprompt-block card-inner">
+            <h3 data-i18n="sprompt.title">SPrompt — plantillas por objetivo</h3>
+            <p class="hint" data-i18n="sprompt.hint">
+              Editá las columnas del system prompt por objetivo. El runtime las usará para construir el prompt del agente.
+            </p>
+            <label class="sprompt-select-label">
+              <span data-i18n="sprompt.objective">Objetivo</span>
+              <select id="sprompt-objective-select" class="select-inline"></select>
+            </label>
+            <form id="sprompt-form" class="form">
+              <label>
+                <span data-i18n="sprompt.objectiveName">Nombre visible</span>
+                <input type="text" id="sprompt-objective-name" />
+              </label>
+              <label>
+                <span data-i18n="sprompt.status">Estado</span>
+                <select id="sprompt-status" class="select-inline">
+                  <option value="draft" data-i18n="sprompt.statusDraft">Borrador</option>
+                  <option value="active" data-i18n="sprompt.statusActive">Activo</option>
+                  <option value="archived" data-i18n="sprompt.statusArchived">Archivado</option>
+                </select>
+              </label>
+              <label>
+                <span data-i18n="sprompt.role">Rol (&lt;rol&gt;)</span>
+                <textarea id="sprompt-role" rows="7" spellcheck="false"></textarea>
+              </label>
+              <label>
+                <span data-i18n="sprompt.limits">Límites (&lt;limites&gt;)</span>
+                <textarea id="sprompt-limits" rows="6" spellcheck="false"></textarea>
+              </label>
+              <label>
+                <span data-i18n="sprompt.tools">Tools (&lt;tools&gt;)</span>
+                <textarea id="sprompt-tools" rows="6" spellcheck="false"></textarea>
+              </label>
+              <label>
+                <span data-i18n="sprompt.dates">Interpretación de fechas (&lt;interpretacao_datas&gt;)</span>
+                <textarea id="sprompt-dates" rows="8" spellcheck="false"></textarea>
+              </label>
+              <label>
+                <span data-i18n="sprompt.dataCollection">Recolección de datos (&lt;recolecao&gt;)</span>
+                <textarea id="sprompt-data-collection" rows="8" spellcheck="false"></textarea>
+              </label>
+              <label>
+                <span data-i18n="sprompt.links">Links (&lt;links&gt;)</span>
+                <textarea id="sprompt-links" rows="8" spellcheck="false"></textarea>
+              </label>
+              <button type="submit" class="btn primary" data-i18n="sprompt.save">Guardar plantilla</button>
+              <p class="form-msg" id="sprompt-msg"></p>
+            </form>
+          </div>
         </section>
       </main>
 
@@ -863,7 +914,7 @@
       </form>
     </dialog>
 
-    <script src="/i18n.js?v=1.7.37"></script>
-    <script src="/app.js?v=1.7.37"></script>
+    <script src="/i18n.js?v=1.7.39"></script>
+    <script src="/app.js?v=1.7.39"></script>
   </body>
 </html>

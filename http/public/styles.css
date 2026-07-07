@@ -1559,6 +1559,21 @@ code {
   margin-top: 0.5rem;
 }
 
+.sprompt-block {
+  margin-top: 1.5rem;
+}
+
+.sprompt-select-label {
+  display: block;
+  margin-bottom: 1rem;
+}
+
+.sprompt-block textarea {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 0.85rem;
+  line-height: 1.4;
+}
+
 .btn.ghost.danger {
   background: transparent;
   color: #fca5a5;

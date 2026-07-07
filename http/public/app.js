@@ -53,6 +53,7 @@ const state = {
   user: null,
   account: null,
   adminTenants: [],
+  promptTemplates: [],
   faqs: [],
   unanswered: [],
   currentView: 'dashboard',
@@ -2751,6 +2752,115 @@ async function refreshAdmin() {
   const data = await api('/admin/tenants');
   state.adminTenants = data.tenants || [];
   renderAdminTenants(state.adminTenants);
+  await refreshPromptTemplates();
+}
+
+const SPROMPT_FIELDS = {
+  role_template: '#sprompt-role',
+  limits_template: '#sprompt-limits',
+  tools_template: '#sprompt-tools',
+  date_interpretation_template: '#sprompt-dates',
+  data_collection_template: '#sprompt-data-collection',
+  links_template: '#sprompt-links',
+};
+
+async function refreshPromptTemplates() {
+  const select = $('#sprompt-objective-select');
+  if (!select) {
+    return;
+  }
+  try {
+    const data = await api('/admin/prompt-templates');
+    state.promptTemplates = data.templates || [];
+  } catch {
+    state.promptTemplates = [];
+  }
+
+  const previous = select.value;
+  select.innerHTML = state.promptTemplates
+    .map(
+      (tpl) =>
+        `<option value="${escapeAttr(tpl.objective_slug)}">${escapeHtml(
+          tpl.objective_name || tpl.objective_slug
+        )}</option>`
+    )
+    .join('');
+
+  const target =
+    state.promptTemplates.find((tpl) => tpl.objective_slug === previous)
+      ?.objective_slug ||
+    state.promptTemplates[0]?.objective_slug ||
+    '';
+  if (target) {
+    select.value = target;
+    renderPromptTemplateForm(target);
+  }
+}
+
+function renderPromptTemplateForm(slug) {
+  const tpl = (state.promptTemplates || []).find(
+    (item) => item.objective_slug === slug
+  );
+  if (!tpl) {
+    return;
+  }
+  const nameEl = $('#sprompt-objective-name');
+  const statusEl = $('#sprompt-status');
+  if (nameEl) nameEl.value = tpl.objective_name || '';
+  if (statusEl) statusEl.value = tpl.status || 'draft';
+  for (const [field, selector] of Object.entries(SPROMPT_FIELDS)) {
+    const el = $(selector);
+    if (el) el.value = tpl[field] || '';
+  }
+  const msg = $('#sprompt-msg');
+  if (msg) {
+    msg.textContent = '';
+    msg.className = 'form-msg';
+  }
+}
+
+async function savePromptTemplate() {
+  const select = $('#sprompt-objective-select');
+  const msg = $('#sprompt-msg');
+  const slug = select?.value || '';
+  if (!slug) {
+    return;
+  }
+
+  const body = {
+    objective_name: $('#sprompt-objective-name')?.value.trim() || '',
+    status: $('#sprompt-status')?.value || 'draft',
+  };
+  for (const [field, selector] of Object.entries(SPROMPT_FIELDS)) {
+    body[field] = $(selector)?.value ?? '';
+  }
+
+  if (msg) {
+    msg.textContent = '';
+    msg.className = 'form-msg';
+  }
+
+  try {
+    const data = await api(`/admin/prompt-templates/${encodeURIComponent(slug)}`, {
+      method: 'PUT',
+      body: JSON.stringify(body),
+    });
+    const saved = data.template;
+    state.promptTemplates = (state.promptTemplates || []).map((tpl) =>
+      tpl.objective_slug === slug ? saved : tpl
+    );
+    const option = select?.querySelector(`option[value="${CSS.escape(slug)}"]`);
+    if (option) option.textContent = saved.objective_name || saved.objective_slug;
+    if (msg) {
+      msg.textContent = t('sprompt.saved');
+      msg.className = 'form-msg ok';
+    }
+  } catch (error) {
+    if (msg) {
+      msg.textContent = error.message;
+      msg.className = 'form-msg error';
+    }
+  }
 }
 
 function openFaqDialog(id) {
@@ -3418,6 +3528,15 @@ $('#admin-tenant-form').addEventListener('submit', async (event) => {
 
 $('#admin-detail-cancel')?.addEventListener('click', () => {
   $('#admin-tenant-dialog')?.close();
+});
+
+$('#sprompt-objective-select')?.addEventListener('change', (event) => {
+  renderPromptTemplateForm(event.target.value);
+});
+
+$('#sprompt-form')?.addEventListener('submit', (event) => {
+  event.preventDefault();
+  void savePromptTemplate();
 });
 
 $('#admin-reset-password')?.addEventListener('click', () => {
