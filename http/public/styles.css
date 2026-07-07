@@ -679,6 +679,121 @@ th {
   color: #93c5fd;
 }
 
+body.onboarding-wizard .topnav,
+body.onboarding-wizard .bottomnav {
+  display: none;
+}
+
+.onboarding-wizard {
+  max-width: 720px;
+  margin: 0 auto;
+}
+
+.onboarding-stepper {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  list-style: none;
+  padding: 0;
+  margin: 1rem 0 1.25rem;
+}
+
+.onboarding-step-marker {
+  font-size: 0.75rem;
+  padding: 0.25rem 0.6rem;
+  border-radius: 999px;
+  background: #1e293b;
+  color: #94a3b8;
+}
+
+.onboarding-step-marker.is-active {
+  background: #1d4ed8;
+  color: #eff6ff;
+}
+
+.onboarding-step-marker.is-done {
+  background: #14532d;
+  color: #bbf7d0;
+}
+
+.objective-grid {
+  display: grid;
+  gap: 0.75rem;
+  margin-top: 1rem;
+}
+
+@media (min-width: 640px) {
+  .objective-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+.objective-card {
+  text-align: left;
+  border: 1px solid #334155;
+  border-radius: 12px;
+  padding: 1rem;
+  background: #0f172a;
+  color: inherit;
+  cursor: pointer;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.objective-card:hover {
+  border-color: #475569;
+}
+
+.objective-card.is-selected {
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 1px #3b82f6;
+}
+
+.objective-card h4 {
+  margin: 0 0 0.35rem;
+  font-size: 1rem;
+}
+
+.objective-card p {
+  margin: 0;
+  font-size: 0.85rem;
+  color: #94a3b8;
+}
+
+.objective-card .objective-examples {
+  margin-top: 0.5rem;
+  font-size: 0.8rem;
+  color: #64748b;
+}
+
+.onboarding-faqs-list {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  margin-top: 1rem;
+}
+
+.onboarding-faq-item {
+  border: 1px solid #334155;
+  border-radius: 12px;
+  padding: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.onboarding-faq-item .pill.template {
+  align-self: flex-start;
+}
+
+.onboarding-actions {
+  margin-top: 1.25rem;
+  justify-content: flex-end;
+}
+
+.onboarding-pause-tip {
+  margin: 1rem 0;
+}
+
 dialog {
   width: min(560px, 96vw);
   border: 1px solid #334155;

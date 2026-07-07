@@ -124,6 +124,103 @@
           <div id="unanswered-list" class="unanswered-list"></div>
         </section>
 
+        <section id="view-onboarding" class="view hidden">
+          <div class="onboarding-wizard card-inner">
+            <h2 data-i18n="onboarding.title">Completa tu negocio</h2>
+            <p class="hint" data-i18n="onboarding.lead">
+              Configura tu agente de WhatsApp en unos minutos. Este asistente es distinto de Mi cuenta.
+            </p>
+            <ol class="onboarding-stepper" id="onboarding-stepper" aria-label="Pasos del onboarding">
+              <li class="onboarding-step-marker is-active" data-step="1" data-i18n="onboarding.stepObjective">Objetivo</li>
+              <li class="onboarding-step-marker" data-step="2" data-i18n="onboarding.stepBusiness">Negocio</li>
+              <li class="onboarding-step-marker" data-step="3" data-i18n="onboarding.stepConfig">Configuración</li>
+              <li class="onboarding-step-marker" data-step="4" data-i18n="onboarding.stepFaqs">FAQs</li>
+              <li class="onboarding-step-marker" data-step="5" data-i18n="onboarding.stepPause">Pausa</li>
+            </ol>
+
+            <div id="onboarding-panel-1" class="onboarding-panel">
+              <h3 data-i18n="onboarding.objectiveTitle">Elige tu objetivo de negocio</h3>
+              <p class="field-hint" data-i18n="onboarding.objectiveHint">Solo se habilita la configuración que corresponda a tu elección.</p>
+              <div id="onboarding-objectives" class="objective-grid" role="listbox" aria-label="Objetivo"></div>
+            </div>
+
+            <div id="onboarding-panel-2" class="onboarding-panel hidden">
+              <h3 data-i18n="onboarding.businessTitle">Datos de tu negocio</h3>
+              <label>
+                <span data-i18n="profile.business">Nombre comercial</span>
+                <input type="text" id="onboarding-business" data-i18n-placeholder="profile.businessPlaceholder" />
+              </label>
+              <label>
+                <span data-i18n="profile.welcomeMessage">Saludo de bienvenida</span>
+                <textarea id="onboarding-welcome" rows="3"></textarea>
+              </label>
+              <label>
+                <span data-i18n="profile.primaryLanguage">Idioma principal</span>
+                <select id="onboarding-language" class="select-inline">
+                  <option value="es">Español</option>
+                  <option value="pt">Português</option>
+                  <option value="en">English</option>
+                </select>
+              </label>
+            </div>
+
+            <div id="onboarding-panel-3" class="onboarding-panel hidden">
+              <h3 data-i18n="onboarding.configTitle">Configuración de tu objetivo</h3>
+              <div id="onboarding-config-reservas" class="hidden">
+                <p class="field-hint" data-i18n="onboarding.bookingHint">Configura el motor de reservas para noches (hotel, hostal, posada).</p>
+                <button type="button" class="btn primary" id="btn-onboarding-booking-engine" data-i18n="profile.bookingSetupBtn">
+                  Configurar motor de reservas
+                </button>
+                <p class="field-hint" id="onboarding-booking-status"></p>
+              </div>
+              <div id="onboarding-config-agenda" class="hidden">
+                <p class="field-hint" data-i18n="onboarding.agendaHint">Indica la URL de tu agenda o sistema de turnos (barbería, spa, dentista).</p>
+                <label>
+                  <span data-i18n="onboarding.agendaUrl">URL de agenda</span>
+                  <input type="url" id="onboarding-agenda-url" placeholder="https://..." />
+                </label>
+                <button type="button" class="btn ghost" disabled data-i18n="onboarding.agendaMotorSoon">
+                  Configurar motor de agenda (próximamente)
+                </button>
+              </div>
+              <div id="onboarding-config-web" class="hidden">
+                <p class="field-hint" data-i18n="onboarding.webHint">URL a la que el agente derivará a los clientes.</p>
+                <label>
+                  <span data-i18n="onboarding.webUrl">URL del sitio web</span>
+                  <input type="url" id="onboarding-web-url" placeholder="https://..." />
+                </label>
+              </div>
+              <div id="onboarding-config-faq-only" class="hidden">
+                <p class="field-hint" data-i18n="onboarding.faqOnlyHint">Tu agente solo responderá preguntas frecuentes. No necesitas motor ni URL.</p>
+              </div>
+            </div>
+
+            <div id="onboarding-panel-4" class="onboarding-panel hidden">
+              <h3 data-i18n="onboarding.faqsTitle">Tus preguntas frecuentes iniciales</h3>
+              <p class="field-hint" data-i18n="onboarding.faqsHint">Edita las respuestas con los datos reales de tu negocio.</p>
+              <div id="onboarding-faqs-list" class="onboarding-faqs-list"></div>
+            </div>
+
+            <div id="onboarding-panel-5" class="onboarding-panel hidden">
+              <h3 data-i18n="onboarding.pauseTitle">Pausa del operador</h3>
+              <p class="profile-operator-tip onboarding-pause-tip" data-i18n="onboarding.pauseBody">
+                Para suspender el agente por 5 minutos, inicie su intervención con ** (asterisco asterisco). Con esta clave el agente hace una pausa de 5 minutos en esa conversación y usted puede responder al cliente.
+              </p>
+              <label class="checkbox onboarding-pause-check">
+                <input type="checkbox" id="onboarding-pause-ack" />
+                <span data-i18n="onboarding.pauseAck">Entiendo cómo pausar el agente con **</span>
+              </label>
+            </div>
+
+            <div class="dialog-actions onboarding-actions">
+              <button type="button" class="btn ghost hidden" id="btn-onboarding-back" data-i18n="onboarding.back">Atrás</button>
+              <button type="button" class="btn primary" id="btn-onboarding-next" data-i18n="onboarding.next">Siguiente</button>
+              <button type="button" class="btn primary hidden" id="btn-onboarding-finish" data-i18n="onboarding.finish">Finalizar y entrar al panel</button>
+            </div>
+            <p class="form-msg" id="onboarding-msg"></p>
+          </div>
+        </section>
+
         <section id="view-profile" class="view hidden">
           <h2 data-i18n="profile.title">Mi cuenta</h2>
           <p class="hint" id="profile-onboard-hint" data-i18n="profile.onboardHint">
@@ -626,7 +723,7 @@
       </form>
     </dialog>
 
-    <script src="/i18n.js?v=1.7.13"></script>
-    <script src="/app.js?v=1.7.13"></script>
+    <script src="/i18n.js?v=1.7.18"></script>
+    <script src="/app.js?v=1.7.18"></script>
   </body>
 </html>

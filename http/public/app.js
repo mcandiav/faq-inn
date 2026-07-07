@@ -2,7 +2,7 @@ const APP_VERSION = '1.5.0';
 const APP_PRODUCT_NAME = 'FAQ Inn';
 const apiBase = window.FAQ_INN_API_URL || window.DFAQ_API_URL || '/api';
 const VIEW_STORAGE_KEY = 'faq-inn-current-view';
-const VALID_VIEWS = ['dashboard', 'unanswered', 'profile', 'booking-engine', 'admin'];
+const VALID_VIEWS = ['dashboard', 'unanswered', 'profile', 'onboarding', 'booking-engine', 'admin'];
 
 const state = {
   user: null,
@@ -23,6 +23,9 @@ const state = {
     previewValues: null,
     dateFormat: '',
   },
+  onboardingStep: 1,
+  onboardingData: null,
+  onboardingSelectedObjective: '',
 };
 const appMeta = {
   productName: APP_PRODUCT_NAME,
@@ -262,7 +265,14 @@ async function onWhatsappConnected(phoneNumber) {
 
   showApp();
   renderHeader();
-  await openView('profile');
+  await loadOnboardingState();
+
+  const view = clientNeedsOnboarding() ? 'onboarding' : 'profile';
+  await openView(view);
+
+  if (view !== 'profile') {
+    return;
+  }
 
   const msg = $('#profile-msg');
   if (msg) {
@@ -393,6 +403,52 @@ function clientNeedsWhatsappReconnect() {
   );
 }
 
+function clientNeedsOnboarding() {
+  if (state.user?.role !== 'client') {
+    return false;
+  }
+  const completed =
+    state.onboardingData?.onboarding_completed ??
+    state.account?.settings?.onboarding_completed;
+  if (completed) {
+    return false;
+  }
+  const connected =
+    state.onboardingData?.whatsapp?.connected ??
+    state.account?.whatsapp?.connection_status === 'connected';
+  return Boolean(connected);
+}
+
+async function loadOnboardingState() {
+  if (state.user?.role !== 'client') {
+    return;
+  }
+  try {
+    const data = await api('/onboarding/status');
+    state.onboardingData = data.onboarding;
+    state.onboardingSelectedObjective =
+      data.onboarding?.objetivo_slug || state.onboardingSelectedObjective || '';
+    if (state.account?.settings) {
+      state.account.settings.onboarding_completed =
+        data.onboarding.onboarding_completed;
+      state.account.settings.objetivo_slug = data.onboarding.objetivo_slug;
+      state.account.settings.destination_url = data.onboarding.destination_url;
+    }
+  } catch {
+    /* onboarding API no disponible aún */
+  }
+}
+
+function resolveClientEntryView(requested) {
+  if (clientNeedsWhatsappReconnect()) {
+    return requested === 'dashboard' ? 'profile' : resolveView(requested);
+  }
+  if (clientNeedsOnboarding()) {
+    return 'onboarding';
+  }
+  return resolveView(requested);
+}
+
 async function resumeWhatsappOnboarding(account) {
   whatsappState.uiTarget = 'landing';
   showLanding('signup');
@@ -449,6 +505,9 @@ function resolveView(name) {
   if (view === 'booking-engine' && user.role !== 'client') {
     return 'dashboard';
   }
+  if (view === 'onboarding' && user.role !== 'client') {
+    return 'dashboard';
+  }
   return view;
 }
 
@@ -481,6 +540,7 @@ function setView(name) {
   state.currentView = view;
   $$('.view').forEach((el) => el.classList.add('hidden'));
   $(`#view-${view}`)?.classList.remove('hidden');
+  document.body.classList.toggle('onboarding-wizard', view === 'onboarding');
   updateNavActive(view);
   rememberView(view);
 }
@@ -489,6 +549,7 @@ async function refreshViewData(view) {
   if (view === 'dashboard') await refreshFaqs();
   if (view === 'unanswered') await refreshUnanswered();
   if (view === 'profile') await refreshProfile();
+  if (view === 'onboarding') await refreshOnboarding();
   if (view === 'booking-engine') await refreshBookingEngine();
   if (view === 'admin') await refreshAdmin();
 }
@@ -577,6 +638,17 @@ function renderProfile() {
     const welcomeEl = $('#profile-welcome-message');
     const langEl = $('#profile-primary-language');
     const bookingStatusEl = $('#profile-booking-status');
+    const bookingSetupEl = document.querySelector('.profile-booking-setup');
+    const objetivo =
+      account?.settings?.objetivo_slug ||
+      state.onboardingData?.objetivo_slug ||
+      '';
+    if (bookingSetupEl) {
+      bookingSetupEl.classList.toggle(
+        'hidden',
+        Boolean(objetivo) && objetivo !== 'reservar_noches'
+      );
+    }
 
     if (welcomeEl) {
       welcomeEl.value = account?.settings?.welcome_message || '';
@@ -1812,6 +1884,269 @@ function escapeAttr(text) {
   return escapeHtml(text).replaceAll("'", '&#39;');
 }
 
+function escapeAttr(text) {
+  return escapeHtml(text).replaceAll("'", '&#39;');
+}
+
+const ONBOARDING_STEP_COUNT = 5;
+
+function setOnboardingMsg(text, type = '') {
+  const msg = $('#onboarding-msg');
+  if (!msg) return;
+  msg.textContent = text || '';
+  msg.className = type ? `form-msg ${type}` : 'form-msg';
+}
+
+function updateOnboardingStepper(step) {
+  $$('#onboarding-stepper .onboarding-step-marker').forEach((el) => {
+    const n = Number(el.dataset.step);
+    el.classList.toggle('is-active', n === step);
+    el.classList.toggle('is-done', n < step);
+  });
+}
+
+function showOnboardingPanel(step) {
+  state.onboardingStep = step;
+  for (let i = 1; i <= ONBOARDING_STEP_COUNT; i += 1) {
+    $(`#onboarding-panel-${i}`)?.classList.toggle('hidden', i !== step);
+  }
+  updateOnboardingStepper(step);
+  $('#btn-onboarding-back')?.classList.toggle('hidden', step <= 1);
+  $('#btn-onboarding-next')?.classList.toggle('hidden', step >= ONBOARDING_STEP_COUNT);
+  $('#btn-onboarding-finish')?.classList.toggle('hidden', step !== ONBOARDING_STEP_COUNT);
+}
+
+function renderOnboardingObjectives() {
+  const grid = $('#onboarding-objectives');
+  const data = state.onboardingData;
+  if (!grid || !data?.objectives?.length) {
+    return;
+  }
+
+  const selected =
+    state.onboardingSelectedObjective || data.objetivo_slug || '';
+
+  grid.innerHTML = data.objectives
+    .map(
+      (objective) => `
+      <button
+        type="button"
+        class="objective-card${selected === objective.slug ? ' is-selected' : ''}"
+        data-objective="${escapeAttr(objective.slug)}"
+        role="option"
+        aria-selected="${selected === objective.slug}"
+      >
+        <h4>${escapeHtml(objective.name)}</h4>
+        <p>${escapeHtml(objective.description)}</p>
+        <p class="objective-examples">${escapeHtml(objective.examples)}</p>
+      </button>`
+    )
+    .join('');
+
+  grid.querySelectorAll('[data-objective]').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      state.onboardingSelectedObjective = btn.dataset.objective || '';
+      grid.querySelectorAll('.objective-card').forEach((card) => {
+        card.classList.toggle(
+          'is-selected',
+          card.dataset.objective === state.onboardingSelectedObjective
+        );
+      });
+    });
+  });
+}
+
+function renderOnboardingConfig() {
+  const slug =
+    state.onboardingSelectedObjective ||
+    state.onboardingData?.objetivo_slug ||
+    '';
+
+  $('#onboarding-config-reservas')?.classList.toggle(
+    'hidden',
+    slug !== 'reservar_noches'
+  );
+  $('#onboarding-config-agenda')?.classList.toggle(
+    'hidden',
+    slug !== 'reservar_horarios'
+  );
+  $('#onboarding-config-web')?.classList.toggle(
+    'hidden',
+    slug !== 'enviar_a_sitio_web'
+  );
+  $('#onboarding-config-faq-only')?.classList.toggle(
+    'hidden',
+    slug !== 'responder_preguntas'
+  );
+
+  const bookingStatus = $('#onboarding-booking-status');
+  if (bookingStatus) {
+    const approved = Boolean(state.onboardingData?.booking_approved);
+    bookingStatus.textContent = approved
+      ? t('onboarding.bookingApproved')
+      : t('onboarding.bookingOptional');
+  }
+
+  const destination = state.onboardingData?.destination_url || '';
+  const agendaUrl = $('#onboarding-agenda-url');
+  const webUrl = $('#onboarding-web-url');
+  if (agendaUrl && !agendaUrl.matches(':focus')) {
+    agendaUrl.value = slug === 'reservar_horarios' ? destination : agendaUrl.value;
+  }
+  if (webUrl && !webUrl.matches(':focus')) {
+    webUrl.value = slug === 'enviar_a_sitio_web' ? destination : webUrl.value;
+  }
+}
+
+function renderOnboardingFaqs() {
+  const list = $('#onboarding-faqs-list');
+  const faqs = state.onboardingData?.starter_faqs || [];
+  if (!list) return;
+
+  list.innerHTML = faqs
+    .map(
+      (faq) => `
+      <article class="onboarding-faq-item" data-faq-id="${faq.id}">
+        ${statusPillTemplate(true)}
+        <label>
+          <span>${escapeHtml(t('table.question'))}</span>
+          <input type="text" class="onboarding-faq-q" value="${escapeAttr(faq.question)}" />
+        </label>
+        <label>
+          <span>${escapeHtml(t('table.answer'))}</span>
+          <textarea class="onboarding-faq-a" rows="3">${escapeHtml(faq.answer)}</textarea>
+        </label>
+      </article>`
+    )
+    .join('');
+}
+
+function collectOnboardingStarterFaqs() {
+  return [...document.querySelectorAll('.onboarding-faq-item')].map((el) => ({
+    id: Number(el.dataset.faqId),
+    question: el.querySelector('.onboarding-faq-q')?.value?.trim(),
+    answer: el.querySelector('.onboarding-faq-a')?.value?.trim(),
+  }));
+}
+
+function syncOnboardingBusinessFields() {
+  const data = state.onboardingData;
+  const business = $('#onboarding-business');
+  const welcome = $('#onboarding-welcome');
+  const language = $('#onboarding-language');
+  if (business) business.value = data?.business_name || '';
+  if (welcome) welcome.value = data?.welcome_message || '';
+  if (language) language.value = data?.primary_language || 'es';
+}
+
+async function refreshOnboarding() {
+  setOnboardingMsg('');
+  try {
+    const data = await api('/onboarding/status');
+    state.onboardingData = data.onboarding;
+    state.onboardingSelectedObjective =
+      data.onboarding.objetivo_slug || state.onboardingSelectedObjective || '';
+    if (data.onboarding.onboarding_completed) {
+      await openView('dashboard');
+      return;
+    }
+  } catch (error) {
+    setOnboardingMsg(error.message, 'error');
+    return;
+  }
+
+  if (!state.onboardingStep || state.onboardingStep < 1) {
+    state.onboardingStep = state.onboardingData?.objetivo_slug ? 2 : 1;
+  }
+
+  renderOnboardingObjectives();
+  syncOnboardingBusinessFields();
+  renderOnboardingConfig();
+  renderOnboardingFaqs();
+  showOnboardingPanel(state.onboardingStep);
+}
+
+async function saveOnboardingStep(step) {
+  const payload = {};
+
+  if (step === 1) {
+    const slug = state.onboardingSelectedObjective;
+    if (!slug) {
+      setOnboardingMsg(t('onboarding.pickObjective'), 'error');
+      return false;
+    }
+    payload.objetivo_slug = slug;
+  }
+
+  if (step === 2) {
+    payload.business_name = $('#onboarding-business')?.value?.trim() || '';
+    payload.welcome_message = $('#onboarding-welcome')?.value?.trim() || '';
+    payload.primary_language = $('#onboarding-language')?.value || 'es';
+  }
+
+  if (step === 3) {
+    const slug =
+      state.onboardingSelectedObjective ||
+      state.onboardingData?.objetivo_slug ||
+      '';
+    if (slug === 'reservar_horarios') {
+      payload.destination_url = $('#onboarding-agenda-url')?.value?.trim() || '';
+    }
+    if (slug === 'enviar_a_sitio_web') {
+      payload.destination_url = $('#onboarding-web-url')?.value?.trim() || '';
+    }
+  }
+
+  if (step === 4) {
+    payload.starter_faqs = collectOnboardingStarterFaqs();
+  }
+
+  try {
+    const data = await api('/onboarding/setup', {
+      method: 'PATCH',
+      body: JSON.stringify(payload),
+    });
+    state.onboardingData = data.onboarding;
+    state.onboardingSelectedObjective = data.onboarding.objetivo_slug || '';
+    if (state.account?.settings) {
+      state.account.settings.objetivo_slug = data.onboarding.objetivo_slug;
+      state.account.settings.destination_url = data.onboarding.destination_url;
+    }
+    renderHeader();
+    return true;
+  } catch (error) {
+    setOnboardingMsg(error.message, 'error');
+    return false;
+  }
+}
+
+async function finishOnboarding() {
+  if (!$('#onboarding-pause-ack')?.checked) {
+    setOnboardingMsg(t('onboarding.pauseAck'), 'error');
+    return;
+  }
+
+  const saved = await saveOnboardingStep(4);
+  if (!saved) return;
+
+  try {
+    const data = await api('/onboarding/complete', {
+      method: 'POST',
+      body: JSON.stringify({ pause_acknowledged: true }),
+    });
+    state.onboardingData = data.onboarding;
+    if (state.account?.settings) {
+      state.account.settings.onboarding_completed = true;
+    }
+    setOnboardingMsg(t('onboarding.done'), 'ok');
+    await ensureClientAppOrWhatsapp();
+    renderHeader();
+    await openView('dashboard');
+  } catch (error) {
+    setOnboardingMsg(error.message, 'error');
+  }
+}
+
 async function loadSession() {
   try {
     const data = await api('/auth/me');
@@ -1821,17 +2156,14 @@ async function loadSession() {
       return;
     }
 
+    await loadOnboardingState();
     showApp();
     renderHeader();
-    const requested = getRequestedView();
-    const view =
-      clientNeedsWhatsappReconnect() && requested === 'dashboard'
-        ? 'profile'
-        : resolveView(requested);
+    const view = resolveClientEntryView(getRequestedView());
     setView(view);
     history.replaceState({ view }, '', `#${view}`);
     await refreshViewData(view);
-    if (state.user.role === 'client' && view !== 'unanswered') {
+    if (state.user.role === 'client' && view !== 'unanswered' && !clientNeedsOnboarding()) {
       await refreshUnanswered();
     }
   } catch {
@@ -2003,11 +2335,12 @@ $('#login-form').addEventListener('submit', async (event) => {
     });
     state.user = data.user;
     await ensureClientAppOrWhatsapp();
+    await loadOnboardingState();
     showApp();
     renderHeader();
-    const view = clientNeedsWhatsappReconnect() ? 'profile' : 'dashboard';
+    const view = resolveClientEntryView('dashboard');
     await openView(view);
-    if (state.user.role === 'client') {
+    if (state.user.role === 'client' && !clientNeedsOnboarding()) {
       await refreshUnanswered();
     }
   } catch (error) {
@@ -2100,6 +2433,31 @@ $$('[data-view]').forEach((btn) => {
 });
 
 $('#btn-go-booking-engine')?.addEventListener('click', () => openView('booking-engine'));
+$('#btn-onboarding-next')?.addEventListener('click', async () => {
+  const step = state.onboardingStep || 1;
+  const saved = await saveOnboardingStep(step);
+  if (!saved) return;
+  if (step >= ONBOARDING_STEP_COUNT) return;
+  const next = step + 1;
+  if (next === 3) renderOnboardingConfig();
+  if (next === 4) renderOnboardingFaqs();
+  showOnboardingPanel(next);
+  setOnboardingMsg('');
+});
+
+$('#btn-onboarding-back')?.addEventListener('click', () => {
+  const step = Math.max(1, (state.onboardingStep || 1) - 1);
+  showOnboardingPanel(step);
+  setOnboardingMsg('');
+});
+
+$('#btn-onboarding-finish')?.addEventListener('click', () => finishOnboarding());
+
+$('#btn-onboarding-booking-engine')?.addEventListener('click', () => {
+  state.bookingReturnView = 'onboarding';
+  openView('booking-engine');
+});
+
 $('#btn-booking-back')?.addEventListener('click', () => openView(state.bookingReturnView || 'profile'));
 
 $('#view-booking-engine')?.addEventListener('click', async (event) => {

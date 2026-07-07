@@ -1,29 +1,120 @@
-# Onboarding de tenants hoteleros
+# Onboarding de tenants FAQ Inn
 
-## Decisión vigente
+Documento vigente del flujo de alta: cuenta, WhatsApp, onboarding dedicado (distinto de Mi cuenta).
 
-El MVP inmediato valida solo el onboarding automático de WhatsApp con Evolution API.
-
-No incluye todavía lógica conversacional, n8n productivo, carga de FAQs, prompts finales ni panel completo de administración.
-
-## Flujo objetivo MVP
+## Principio
 
 ```text
-1. Usuario entra a inn.at-once.cl.
-2. Ingresa nombre comercial y correo electrónico.
-3. Pulsa Registrar y continuar.
-4. Backend FAQ Inn genera tenant_slug único y crea tenant en PostgreSQL (draft).
-5. Backend crea instancia Evolution API con instance_name = faqinn_<tenant_slug>.
-6. Backend configura webhook (MESSAGES_UPSERT) y settings de instancia.
-7. Backend obtiene QR en Base64 desde Evolution API.
-8. Frontend muestra QR e instrucciones de escaneo.
-9. Frontend consulta GET /api/provision/status/:instance cada 3 segundos (sin pedir QR nuevo).
-10. Cuando Evolution reporta state=open, backend captura phone_number.
-11. Backend actualiza tenant a connected.
-12. Frontend muestra pantalla de éxito con número vinculado.
+Onboarding = wizard único post-WhatsApp (objetivo, negocio, motor/URL, FAQs, pausa operador)
+Mi cuenta   = mantenimiento posterior (perfil, cambios, recordatorios)
 ```
 
-## Endpoints propios del MVP
+El onboarding **no** es la pantalla Mi cuenta. Es una ruta/vista bloqueante hasta `onboarding_completed = true`.
+
+---
+
+## Flujo completo
+
+```text
+1. Crea tu cuenta        → email + contraseña
+2. Vincula WhatsApp      → QR Evolution + polling hasta connected
+3. Onboarding (wizard)   → ver pasos abajo
+4. Panel operativo       → FAQs, sin respuesta, etc.
+```
+
+```mermaid
+flowchart TB
+  A[Signup] --> B[QR WhatsApp]
+  B --> C[Onboarding wizard]
+  C --> D[Panel operativo]
+  C --> C1[Paso 1: Objetivo]
+  C1 --> C2[Paso 2: Nombre + saludo]
+  C2 --> C3[Paso 3: Motor o URL según objetivo]
+  C3 --> C4[Paso 4: 3 FAQs transversales]
+  C4 --> C5[Paso 5: Pausa operador **]
+  C5 --> D
+```
+
+---
+
+## Paso 1 — Elige tu objetivo de negocio
+
+El tenant elige **un** objetivo principal. Solo se habilita la configuración que corresponda.
+
+| Opción visible | `objetivo_slug` | Ejemplos de rubro | Config que sigue |
+|---|---|---|---|
+| Agendar horarios | `reservar_horarios` | barbería, salón, spa, dentista | Motor de **agenda** |
+| Reservar noches | `reservar_noches` | hotel, posada, hostal | Motor de **reservas** |
+| Llevar a un sitio web | `enviar_a_sitio_web` | catálogo, landing, tienda | URL destino |
+| Solo responder preguntas | `responder_preguntas` | cualquier rubro informativo | Ningún motor ni URL |
+
+Regla: los botones **Configurar motor de reservas** y **Configurar motor de agenda** son distintos; solo se habilita el del objetivo elegido.
+
+Documentos relacionados:
+
+- Motor de reservas (noches): [../motor-reservas/README.md](../motor-reservas/README.md)
+- Motor de agenda (horarios): pendiente de módulo hermano
+
+---
+
+## Paso 2 — Datos mínimos del negocio
+
+| Campo | Uso |
+|---|---|
+| Nombre comercial | Nombre visible del negocio en respuestas del agente |
+| Saludo de bienvenida | Presentación única al inicio de cada chat nuevo |
+| Idioma principal | Idioma por defecto del agente |
+
+Campos que **ya no** van en onboarding/perfil (pasaron a FAQ):
+
+- Dirección → FAQ transversal «¿Dónde están ubicados?»
+- Horario de atención → FAQ transversal «¿Cuál es su horario de atención?»
+- Contacto humano → FAQ transversal «¿Puedo hablar con una persona?»
+
+---
+
+## Paso 3 — Configuración según objetivo
+
+| Objetivo | Acción en onboarding |
+|---|---|
+| `reservar_noches` | Botón **Configurar motor de reservas** (wizard existente en `docs/motor-reservas/`) |
+| `reservar_horarios` | Botón **Configurar motor de agenda** (módulo pendiente; misma idea: plantilla aprobada) |
+| `enviar_a_sitio_web` | Campo **URL destino** del sitio |
+| `responder_preguntas` | Sin paso adicional |
+
+El tenant puede posponer motor/URL y completar después, pero el onboarding debe dejar claro qué falta para operar reservas o derivación web.
+
+---
+
+## Paso 4 — FAQs transversales
+
+Tres FAQs plantilla editables antes de finalizar. Detalle canónico: [faqs-transversales.md](faqs-transversales.md).
+
+```text
+1. ¿Dónde están ubicados?
+2. ¿Cuál es su horario de atención?
+3. ¿Puedo hablar con una persona?
+```
+
+---
+
+## Paso 5 — Pausa del operador (obligatorio en onboarding)
+
+Debe quedar **explícito** en el wizard, no solo en Mi cuenta.
+
+Texto canónico:
+
+> Para suspender el agente por **5 minutos**, inicie su intervención con **`**`** (asterisco asterisco). Con esta clave el agente hace una pausa de 5 minutos en esa conversación.
+
+Detalle técnico e i18n: [pausa-operador.md](pausa-operador.md).
+
+---
+
+## MVP Evolution (WhatsApp) — ya validado
+
+Etapas 1–2 del flujo (registro + QR) están operativas. Ver [../evolution-api/ESTADO-MODULO.md](../evolution-api/ESTADO-MODULO.md).
+
+### Endpoints provisioner
 
 ```text
 POST /api/provision/register
@@ -31,108 +122,74 @@ POST /api/provision/whatsapp
 GET  /api/provision/status/:instance
 ```
 
-El frontend nunca debe llamar directamente a Evolution API.
-
-## Datos mínimos de registro
+### Reglas de seguridad
 
 ```text
-commercial_name
-email
-tenant_slug generado automáticamente
+El frontend nunca llama directo a Evolution API.
+La API key de Evolution vive solo en variables de entorno del backend.
+instance_name = faqinn_<tenant_slug>
 ```
 
-## Persistencia mínima
+---
 
-Tablas mínimas esperadas:
+## Persistencia esperada
+
+### Flag de onboarding
+
+```text
+onboarding_completed  BOOLEAN  DEFAULT false
+objetivo_slug         VARCHAR  -- vacío hasta paso 1
+destination_url       TEXT     -- para sitio web o agenda simple (fase inicial)
+```
+
+### Tablas involucradas
 
 ```text
 tenants
+tenant_settings
+tenant_provisioning
 evolution_instances
+faq_items          -- 3 starter al completar paso 4
+agents
 ```
 
-Campos mínimos conceptuales para `tenants`:
+---
+
+## Onboarding vs Mi cuenta
+
+| | Onboarding | Mi cuenta |
+|---|---|---|
+| Frecuencia | Una vez (hasta completar) | Siempre disponible |
+| Objetivo | Elegir y fijar flujo principal | Ver/editar (si se permite cambio) |
+| 3 FAQs plantilla | Edición guiada en wizard | Panel FAQs normal |
+| Motor reservas / agenda | Botón según objetivo | Mismo botón, solo el habilitado |
+| Pausa `**` | Explicación obligatoria | Recordatorio |
+| Contraseña / email | No | Sí |
+
+---
+
+## Criterio de éxito del onboarding completo
 
 ```text
-id
-commercial_name
-email
-tenant_slug
-status
-created_at
-updated_at
+Tenant connected en WhatsApp
++ objetivo_slug definido
++ nombre comercial y saludo guardados
++ configuración del objetivo iniciada o pospuesta con aviso claro
++ 3 FAQs transversales confirmadas o editadas
++ operador informado de la pausa con **
+→ onboarding_completed = true → acceso al panel
 ```
 
-Campos mínimos conceptuales para `evolution_instances`:
+---
+
+## Fuera de alcance inmediato
 
 ```text
-id
-tenant_id
-instance_name
-status
-phone_number
-webhook_url
-last_qr_at
-connected_at
-created_at
-updated_at
-```
-
-Campo definido por arquitecto para etapa posterior (no implementado en MVP onboarding):
-
-```text
-instance_token_encrypted
-```
-
-## Cierre MVP Evolution
-
-Validado en producción. Ver [../evolution-api/ESTADO-MODULO.md](../evolution-api/ESTADO-MODULO.md).
-
-## Estados del MVP
-
-```text
-draft
-qr_pending
-connected
-error
-```
-
-Estados posteriores, fuera del MVP inmediato:
-
-```text
-webhook_configured
-testing
-active
-suspended
-cancelled
-```
-
-## Reglas de seguridad
-
-```text
-La API key de Evolution API vive solo en variables de entorno del backend.
-El frontend no recibe credenciales de Evolution API.
-El estado se consulta contra backend FAQ Inn, no contra Evolution API.
-Para pruebas controladas se permite sesión efímera o token firmado; no usar solo slug público como mecanismo de autorización definitivo.
-```
-
-## Fuera de alcance del MVP inmediato
-
-```text
-n8n conversacional
-carga de FAQs
-prompts por vertical
-respuestas automáticas
-Chatwoot operativo
-panel completo de administración
-login completo de usuarios
-```
-
-## Criterio de éxito
-
-```text
-Un usuario externo puede crear un tenant mínimo y dejar un número de WhatsApp vinculado en Evolution API sin tocar código, n8n, EasyPanel ni configuración manual.
+Cambio de objetivo con migración automática de motores
+Motor de agenda implementado (solo documentado como hermano del motor de reservas)
+Seed retroactivo para tenants legacy (tenants actuales son descartables)
 ```
 
 ## Regla operativa
 
-MorroReservas no debe usarse para pruebas de onboarding. Todo piloto se realiza sobre FAQ Inn o tenants demo nuevos.
+MorroReservas no debe usarse para pruebas. Todo piloto usa tenants demo nuevos en FAQ Inn.

@@ -7,7 +7,8 @@ Esta carpeta concentra documentos complementarios del proyecto FAQ Inn.
 | Carpeta | Función |
 |---|---|
 | `arquitectura/` | Decisiones arquitectónicas, componentes, dominios y límites del sistema. |
-| `onboarding/` | Flujos de alta de tenants, QR WhatsApp, estados y validaciones. |
+| `onboarding/` | Flujos de alta: cuenta, WhatsApp, wizard por objetivo, FAQs transversales y pausa operador. Ver `onboarding/README.md`, `faqs-transversales.md`, `pausa-operador.md`. |
+| `motor-reservas/` | Motor de reservas (noches): `motor-reservas/README.md`. Motor de agenda (horarios): pendiente. |
 | `prompts/` | Plantillas de prompts por vertical. |
 | `n8n/` | Plantillas y contratos de workflows n8n. |
 | `evolution-api/` | Contratos, cierre del módulo onboarding y decisiones de integración con Evolution API. |
