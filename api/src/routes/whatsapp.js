@@ -1,6 +1,7 @@
 import {
   getProvisionStatus,
   startWhatsappProvision,
+  disconnectWhatsapp,
 } from '../lib/provisionService.js';
 
 function tenantFromUser(user) {
@@ -54,6 +55,37 @@ export async function whatsappRoutes(app, config) {
         return {
           status: 'error',
           error: error.message || 'No se pudo iniciar WhatsApp',
+        };
+      }
+    }
+  );
+
+  app.post(
+    '/api/whatsapp/disconnect',
+    { preHandler: [app.authenticate] },
+    async (request, reply) => {
+      if (!requireClient(request, reply)) {
+        return { status: 'error', error: 'Solo clientes con negocio' };
+      }
+
+      try {
+        const result = await disconnectWhatsapp(
+          pool,
+          config,
+          tenantFromUser(request.user)
+        );
+
+        return {
+          status: 'ok',
+          connection_status: result.status,
+          instance_name: result.instanceName,
+        };
+      } catch (error) {
+        app.log.error({ err: error }, 'whatsapp disconnect failed');
+        reply.code(error.statusCode || 500);
+        return {
+          status: 'error',
+          error: error.message || 'No se pudo desconectar WhatsApp',
         };
       }
     }

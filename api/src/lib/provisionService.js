@@ -164,6 +164,45 @@ export async function syncWhatsappConnectionStatus(pool, config, tenantId, insta
   };
 }
 
+/**
+ * Autoservicio: el cliente desconecta su WhatsApp desde Mi cuenta.
+ * Hace logout en Evolution (best-effort, solo instancias faqinn_) y marca
+ * la instancia como disconnected en la base. No borra la instancia: permite
+ * reconectar/reescanear el QR después.
+ */
+export async function disconnectWhatsapp(pool, config, tenant) {
+  const [rows] = await pool.query(
+    `SELECT id, instance_name, status, phone_number
+     FROM evolution_instances
+     WHERE tenant_id = ?
+     ORDER BY id DESC
+     LIMIT 1`,
+    [tenant.id]
+  );
+  const row = rows[0];
+  if (!row || !row.instance_name) {
+    return { status: 'none', instanceName: '' };
+  }
+
+  const prefix = (config.evolutionInstancePrefix || 'faqinn_').replace(/_+$/, '_');
+  if (!row.instance_name.startsWith(prefix)) {
+    throw validationError('instance_name inválido', 400);
+  }
+
+  if (config.evolutionApiBaseUrl && config.evolutionApiKey) {
+    const evolution = createEvolutionClient(config);
+    try {
+      await evolution.logoutInstance(row.instance_name);
+    } catch {
+      /* best-effort: igual marcamos disconnected en la base */
+    }
+  }
+
+  await markInstanceDisconnected(pool, tenant.id, row, 'manual_disconnect');
+
+  return { status: 'disconnected', instanceName: row.instance_name };
+}
+
 async function markTenantConnected(pool, tenant, instanceRow, instanceName, phoneNumber) {
   if (instanceRow?.id) {
     await pool.query(
