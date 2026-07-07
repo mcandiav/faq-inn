@@ -1,10 +1,11 @@
-import { HOTEL_STARTER_FAQS } from './hotel.js';
+import { TRANSVERSAL_STARTER_FAQS } from './transversal.js';
 
-const BY_VERTICAL = {
-  hotel: HOTEL_STARTER_FAQS,
-};
+/** Pack universal de FAQs para onboarding (independiente del objetivo). */
+export function getStarterFaqs() {
+  return TRANSVERSAL_STARTER_FAQS;
+}
 
-export function getStarterFaqsForVertical(verticalSlug) {
-  const key = String(verticalSlug || 'hotel').trim().toLowerCase();
-  return BY_VERTICAL[key] || HOTEL_STARTER_FAQS;
+/** @deprecated Use getStarterFaqs — vertical ya no gobierna el pack. */
+export function getStarterFaqsForVertical(_verticalSlug) {
+  return getStarterFaqs();
 }

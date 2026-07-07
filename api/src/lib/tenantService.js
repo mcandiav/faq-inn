@@ -112,7 +112,6 @@ export async function registerQuickSignup(pool, config, input, { logger } = {}) 
           tenantSlug: slug,
           agentId: agentMeta.insertId,
           agentSlug: 'principal',
-          verticalSlug: 'hotel',
           primaryLanguage: 'es',
         },
         { logger }
@@ -262,7 +261,6 @@ export async function createHotelTenant(pool, config, input, { logger } = {}) {
           tenantSlug: slug,
           agentId: agentMeta.insertId,
           agentSlug,
-          verticalSlug: 'hotel',
           primaryLanguage,
         },
         { logger }
@@ -378,7 +376,6 @@ export async function createAdminTenant(pool, config, input, { logger } = {}) {
           tenantSlug: slug,
           agentId: agentMeta.insertId,
           agentSlug,
-          verticalSlug: 'hotel',
           primaryLanguage: 'es',
         },
         { logger }

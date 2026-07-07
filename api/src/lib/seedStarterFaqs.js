@@ -1,14 +1,14 @@
 import { indexFaqItem } from './indexer.js';
 import { getDefaultAgent } from './faqService.js';
-import { getStarterFaqsForVertical } from './faqTemplates/index.js';
+import { getStarterFaqs } from './faqTemplates/index.js';
 
 export async function seedStarterFaqs(
   pool,
   config,
-  { tenantId, tenantSlug, agentId, agentSlug, verticalSlug, primaryLanguage },
+  { tenantId, tenantSlug, agentId, agentSlug, primaryLanguage },
   { logger } = null
 ) {
-  const templates = getStarterFaqsForVertical(verticalSlug);
+  const templates = getStarterFaqs();
   if (!templates.length) {
     return { created: 0, skipped: 0, errors: [] };
   }

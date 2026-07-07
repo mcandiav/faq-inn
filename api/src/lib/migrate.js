@@ -346,6 +346,29 @@ async function applySchemaPatches(pool) {
       await pool.query(`ALTER TABLE faq_items ADD COLUMN ${columnName} ${columnDef}`);
     }
   }
+
+  const onboardingSettingsColumns = [
+    ['objetivo_slug', "VARCHAR(64) NOT NULL DEFAULT ''"],
+    ['onboarding_completed', 'BOOLEAN NOT NULL DEFAULT FALSE'],
+    ['destination_url', "TEXT NOT NULL DEFAULT ''"],
+    ['business_type', "VARCHAR(64) NOT NULL DEFAULT ''"],
+  ];
+
+  for (const [columnName, columnDef] of onboardingSettingsColumns) {
+    const [exists] = await pool.query(
+      `SELECT column_name
+       FROM information_schema.columns
+       WHERE table_schema = current_schema()
+         AND table_name = 'tenant_settings'
+         AND column_name = ?`,
+      [columnName]
+    );
+    if (exists.length === 0) {
+      await pool.query(
+        `ALTER TABLE tenant_settings ADD COLUMN ${columnName} ${columnDef}`
+      );
+    }
+  }
 }
 
 export async function runMigrations(pool, _config) {

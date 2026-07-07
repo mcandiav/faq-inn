@@ -36,7 +36,8 @@ export async function getAccountSettings(pool, config, userId, tenantId) {
   const [settingsRows] = await pool.query(
     `SELECT vertical_slug, primary_language, booking_url_base, booking_url_template,
             booking_url_mode, validation_status, confidence_score, booking_config,
-            booking_approved_at, lodging_type, business_hours, policies, welcome_message, address
+            booking_approved_at, lodging_type, business_hours, policies, welcome_message, address,
+            objetivo_slug, onboarding_completed, destination_url, business_type
      FROM tenant_settings
      WHERE tenant_id = ?`,
     [tenantId]
@@ -73,6 +74,10 @@ export async function getAccountSettings(pool, config, userId, tenantId) {
     },
     settings: {
       vertical_slug: settings.vertical_slug || 'hotel',
+      objetivo_slug: settings.objetivo_slug || '',
+      onboarding_completed: Boolean(settings.onboarding_completed),
+      destination_url: settings.destination_url || '',
+      business_type: settings.business_type || settings.vertical_slug || '',
       primary_language: settings.primary_language || 'es',
       booking_url_base: settings.booking_url_base || '',
       booking_url_template:
