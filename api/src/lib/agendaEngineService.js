@@ -5,9 +5,11 @@ import {
   refreshDiscoveryScenarios,
   refreshVerificationScenario,
 } from './agendaScenarios.js';
-import { extractBookingTemplate } from './bookingUrlExtractor.js';
-import { buildUrlFromTemplate } from './bookingTemplateBuilder.js';
-import { buildApprovedBookingRecord } from './bookingApprovedFormat.js';
+import { extractAgendaTemplate } from './agendaUrlExtractor.js';
+import {
+  buildUrlFromTemplate,
+  normalizeTemplateToCanonical,
+} from './bookingTemplateBuilder.js';
 
 function validationError(message, statusCode = 400) {
   const error = new Error(message);
@@ -162,39 +164,27 @@ export async function discoverFromUrls(pool, tenantId, sessionId, urls) {
   }
 
   const scenarios = buildDiscoveryScenarios();
-  const result = extractBookingTemplate(scenarios, urls);
+  const result = extractAgendaTemplate(scenarios, urls);
 
   if (!result.ok) {
     throw validationError(result.error);
   }
 
   const verificationScenario = buildVerificationScenario(scenarios[0]?.checkin);
-  const buildOptions = {
-    date_format: result.date_format,
-    child_ages_format: result.child_ages_format,
-  };
+  const buildOptions = { date_format: result.date_format };
   const verificationUrl = buildUrlFromTemplate(
-    result.booking_url_template,
+    result.agenda_url_template,
     verificationScenario,
     buildOptions
   );
 
   const candidateConfig = {
     date_format: result.date_format,
-    child_ages_format: result.child_ages_format,
-    occupancy_format: result.occupancy_format,
     required_fields: result.required_fields,
-    defaults: {
-      rooms: 1,
-      children: 0,
-      child_ages: [],
-    },
-    supports_rooms: result.supports_rooms,
-    supports_children: result.supports_children,
-    supports_child_ages: result.supports_child_ages,
+    supports_time: result.supports_time,
     fixed_params: result.fixed_params,
     variable_params: result.variable_params,
-    booking_engine_name: result.booking_engine_name,
+    agenda_engine_name: result.agenda_engine_name,
   };
 
   await pool.query(
@@ -213,7 +203,7 @@ export async function discoverFromUrls(pool, tenantId, sessionId, urls) {
     [
       serializeJson(scenarios),
       serializeJson(urls),
-      result.booking_url_template,
+      result.agenda_url_template,
       serializeJson(candidateConfig),
       serializeJson(verificationScenario),
       verificationUrl,
@@ -225,7 +215,7 @@ export async function discoverFromUrls(pool, tenantId, sessionId, urls) {
 
   return {
     session_id: sessionId,
-    candidate_template: result.booking_url_template,
+    candidate_template: result.agenda_url_template,
     confidence_score: result.confidence_score,
     validation_status: result.validation_status,
     date_format: result.date_format,
@@ -279,36 +269,33 @@ export async function approveDiscovery(pool, tenantId, userId, sessionId) {
   }
 
   const candidateConfig = parseJson(session.candidate_config, {});
-  const sampleUrls = parseJson(session.sample_urls, []);
-  let bookingUrlBase = '';
-  try {
-    if (sampleUrls[0]) {
-      bookingUrlBase = new URL(sampleUrls[0]).origin;
-    }
-  } catch {
-    bookingUrlBase = '';
-  }
 
-  const approved = buildApprovedBookingRecord(
-    { ...session, candidate_config: candidateConfig, warnings: parseJson(session.warnings, []) },
-    userId,
-    bookingUrlBase
-  );
+  const agendaConfig = {
+    required_fields: Array.isArray(candidateConfig.required_fields)
+      ? candidateConfig.required_fields
+      : ['checkin'],
+    date_format: candidateConfig.date_format || '',
+    supports_time: Boolean(candidateConfig.supports_time),
+    fixed_params: candidateConfig.fixed_params || {},
+    variable_params: candidateConfig.variable_params || {},
+    agenda_engine_name: candidateConfig.agenda_engine_name || '',
+    warnings: parseJson(session.warnings, []),
+    approved_by_user_id: userId,
+  };
 
   await pool.query(
     `UPDATE tenant_settings
      SET tenant_url = ?,
-         agenda_validation_status = ?,
+         agenda_validation_status = 'approved',
          agenda_confidence_score = ?,
          agenda_config = ?,
          agenda_approved_at = NOW(),
          updated_at = NOW()
      WHERE tenant_id = ?`,
     [
-      approved.booking_url_template,
-      approved.validation_status,
-      approved.confidence_score,
-      serializeJson(approved.booking_config),
+      normalizeTemplateToCanonical(session.candidate_template),
+      Number(session.confidence_score || 0),
+      serializeJson(agendaConfig),
       tenantId,
     ]
   );

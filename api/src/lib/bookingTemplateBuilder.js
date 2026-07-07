@@ -55,6 +55,8 @@ function buildResolvers(options = {}) {
   return {
     checkin: (s) => formatDateForTenant(s.checkin, dateFormat),
     checkout: (s) => formatDateForTenant(s.checkout, dateFormat),
+    // Motor de agenda: hora de la cita (HH:MM), literal.
+    time: (s) => String(s.time || ''),
     checkin_yyyy_mm_dd: (s) => formatDateVariants(s.checkin).yyyy_mm_dd,
     checkout_yyyy_mm_dd: (s) => formatDateVariants(s.checkout).yyyy_mm_dd,
     checkin_ddmmyyyy: (s) => formatDateVariants(s.checkin).ddmmyyyy,
