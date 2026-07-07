@@ -3,7 +3,9 @@ import assert from 'node:assert/strict';
 import {
   OBJECTIVES,
   OBJECTIVE_SLUGS,
+  PRIMARY_OBJECTIVE_SLUGS,
   getObjective,
+  isPrimaryObjectiveSlug,
   isValidObjectiveSlug,
 } from './index.js';
 
@@ -26,4 +28,10 @@ test('getObjective returns motor for reservar_noches', () => {
 test('isValidObjectiveSlug rejects unknown', () => {
   assert.equal(isValidObjectiveSlug('hotel'), false);
   assert.equal(isValidObjectiveSlug('responder_preguntas'), true);
+});
+
+test('primary objectives exclude responder_preguntas', () => {
+  assert.equal(PRIMARY_OBJECTIVE_SLUGS.length, 3);
+  assert.equal(isPrimaryObjectiveSlug('reservar_noches'), true);
+  assert.equal(isPrimaryObjectiveSlug('responder_preguntas'), false);
 });

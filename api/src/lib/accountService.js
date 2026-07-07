@@ -1,5 +1,6 @@
 import { syncWhatsappConnectionStatus } from './provisionService.js';
 import { deleteAdminTenant } from './adminService.js';
+import { getObjective, isPrimaryObjectiveSlug } from './objectives/index.js';
 
 function validationError(message, statusCode = 400) {
   const error = new Error(message);
@@ -136,6 +137,35 @@ export async function updateAccountSettings(pool, config, userId, tenantId, inpu
   const primaryLanguage = input.primary_language?.trim();
   const businessHours = input.business_hours?.trim();
   const policies = input.policies?.trim();
+  const destinationUrl =
+    input.destination_url !== undefined
+      ? String(input.destination_url || '').trim()
+      : undefined;
+  const objetivoSlug =
+    input.objetivo_slug !== undefined
+      ? String(input.objetivo_slug || '').trim()
+      : undefined;
+
+  if (objetivoSlug !== undefined) {
+    if (!isPrimaryObjectiveSlug(objetivoSlug)) {
+      throw validationError('objetivo_slug inválido');
+    }
+  }
+
+  const nextObjetivoSlug =
+    objetivoSlug !== undefined ? objetivoSlug : account.settings.objetivo_slug;
+  const nextDestinationUrl =
+    destinationUrl !== undefined
+      ? destinationUrl
+      : account.settings.destination_url || '';
+  const nextObjective = getObjective(nextObjetivoSlug);
+  if (
+    nextObjective?.needs_destination_url &&
+    !nextDestinationUrl &&
+    (objetivoSlug !== undefined || destinationUrl !== undefined)
+  ) {
+    throw validationError('URL destino es obligatoria para este objetivo');
+  }
 
   if (businessName !== undefined) {
     if (businessName.length < 2) {
@@ -169,6 +199,14 @@ export async function updateAccountSettings(pool, config, userId, tenantId, inpu
   if (policies !== undefined) {
     settingsUpdates.push('policies = ?');
     settingsParams.push(policies);
+  }
+  if (objetivoSlug !== undefined) {
+    settingsUpdates.push('objetivo_slug = ?');
+    settingsParams.push(objetivoSlug);
+  }
+  if (destinationUrl !== undefined) {
+    settingsUpdates.push('destination_url = ?');
+    settingsParams.push(destinationUrl);
   }
 
   if (settingsUpdates.length > 0) {
