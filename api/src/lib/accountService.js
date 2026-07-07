@@ -1,6 +1,10 @@
 import { syncWhatsappConnectionStatus } from './provisionService.js';
 import { deleteAdminTenant } from './adminService.js';
-import { getObjective, isPrimaryObjectiveSlug } from './objectives/index.js';
+import {
+  getObjective,
+  isValidObjectiveSlug,
+  normalizeObjectiveSlug,
+} from './objectives/index.js';
 
 function validationError(message, statusCode = 400) {
   const error = new Error(message);
@@ -141,15 +145,14 @@ export async function updateAccountSettings(pool, config, userId, tenantId, inpu
     input.destination_url !== undefined
       ? String(input.destination_url || '').trim()
       : undefined;
+  // Objetivo opcional y excluyente. Deshabilitar (vacío / "faq") => responder_preguntas.
   const objetivoSlug =
     input.objetivo_slug !== undefined
-      ? String(input.objetivo_slug || '').trim()
+      ? normalizeObjectiveSlug(input.objetivo_slug)
       : undefined;
 
-  if (objetivoSlug !== undefined) {
-    if (!isPrimaryObjectiveSlug(objetivoSlug)) {
-      throw validationError('objetivo_slug inválido');
-    }
+  if (objetivoSlug !== undefined && !isValidObjectiveSlug(objetivoSlug)) {
+    throw validationError('objetivo_slug inválido');
   }
 
   const nextObjetivoSlug =

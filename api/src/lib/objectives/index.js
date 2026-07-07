@@ -61,3 +61,38 @@ export function getObjective(slug) {
 export function isValidObjectiveSlug(slug) {
   return BY_SLUG.has(String(slug || '').trim());
 }
+
+/** Objetivo por defecto (transversal): solo responder preguntas / FAQ. */
+export const DEFAULT_OBJECTIVE_SLUG = 'responder_preguntas';
+
+/**
+ * Normaliza el slug de objetivo: cualquier valor vacío, "faq" o inválido
+ * cae en responder_preguntas (FAQ transversal siempre activa).
+ */
+export function normalizeObjectiveSlug(slug) {
+  const value = String(slug || '').trim().toLowerCase();
+  if (value === 'faq') return DEFAULT_OBJECTIVE_SLUG;
+  return isValidObjectiveSlug(value) ? value : DEFAULT_OBJECTIVE_SLUG;
+}
+
+/**
+ * Frase en lenguaje natural para el prompt "Tu objetivo es {{objetivo}}".
+ * El agente la interpreta directamente; {{url}} se resuelve aparte.
+ */
+export function buildObjetivoDirective(slug, url) {
+  const clean = normalizeObjectiveSlug(slug);
+  const link = String(url || '').trim();
+  switch (clean) {
+    case 'reservar_noches':
+      return link ? `reservar usando el link ${link}` : 'reservar noches';
+    case 'reservar_horarios':
+      return link ? `agendar usando el link ${link}` : 'agendar horarios';
+    case 'enviar_a_sitio_web':
+      return link
+        ? `llevar al cliente a ${link}`
+        : 'llevar al cliente al sitio web';
+    case 'responder_preguntas':
+    default:
+      return 'responder preguntas';
+  }
+}

@@ -18,6 +18,10 @@ function slugFromInstanceName(instanceName, prefix) {
 }
 
 import { buildPlaceholderMap, buildRequiredFields } from './bookingApprovedFormat.js';
+import {
+  buildObjetivoDirective,
+  normalizeObjectiveSlug,
+} from './objectives/index.js';
 import { normalizePreviewScenario } from './bookingScenarios.js';
 import { buildUrlFromTemplate } from './bookingTemplateBuilder.js';
 import {
@@ -54,6 +58,18 @@ function mapRuntimeRow(row, config) {
   const agendaApproved = row.agenda_validation_status === 'approved';
   const bookingConfig = bookingApproved ? enrichBookingConfig(row.booking_config) : {};
   const agendaConfig = agendaApproved ? enrichBookingConfig(row.agenda_config) : {};
+  // Objetivo canónico: vacío / inválido / "faq" => responder_preguntas (FAQ transversal).
+  const objetivoSlug = normalizeObjectiveSlug(row.objetivo_slug);
+  let objetivoUrl = '';
+  if (objetivoSlug === 'reservar_noches') {
+    objetivoUrl = bookingApproved ? row.booking_url_template || '' : '';
+  } else if (objetivoSlug === 'reservar_horarios') {
+    objetivoUrl = agendaApproved ? row.agenda_url_template || '' : '';
+  } else if (objetivoSlug === 'enviar_a_sitio_web') {
+    objetivoUrl = row.destination_url || '';
+  }
+  // Frase natural para el prompt "Tu objetivo es {{objetivo}}".
+  const objetivo = buildObjetivoDirective(objetivoSlug, objetivoUrl);
   return {
     // Slug técnico (filtro Qdrant, SemResposta, clave Redis). No es el id numérico de PostgreSQL.
     tenant_id: tenantSlug,
@@ -63,7 +79,9 @@ function mapRuntimeRow(row, config) {
     tenant_display_name: row.tenant_name || '',
     business_type: row.business_type || row.vertical_slug || 'hotel',
     vertical: row.vertical_slug || 'hotel',
-    objetivo_slug: row.objetivo_slug || '',
+    objetivo_slug: objetivoSlug,
+    objetivo,
+    url: objetivoUrl,
     destination_url: row.destination_url || '',
     onboarding_completed: Boolean(row.onboarding_completed),
     agent_id: agentSlug,
@@ -236,6 +254,8 @@ export function buildRuntimeWorkflowItem(tenant) {
     business_type: tenant.business_type || tenant.vertical || 'hotel',
     vertical: tenant.vertical,
     objetivo_slug: tenant.objetivo_slug || '',
+    objetivo: tenant.objetivo || 'responder preguntas',
+    url: tenant.url || '',
     destination_url: tenant.destination_url || '',
     onboarding_completed: Boolean(tenant.onboarding_completed),
     primary_language: tenant.primary_language,
