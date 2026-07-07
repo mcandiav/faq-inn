@@ -1229,6 +1229,28 @@ function renderMotorPreviewForm(container, values, previewUrl = '', hintKey = nu
   const hintHtml = hintKey
     ? `<p class="field-hint">${escapeHtml(t(hintKey))}</p>`
     : '';
+  if (kind === 'agenda') {
+    container.innerHTML = `
+      ${hintHtml}
+      <div class="booking-preview-grid">
+        <label>
+          ${fieldLabelWithHelp(t('agenda.previewDate'), 'agenda.previewDateHelp')}
+          <input type="date" class="booking-preview-checkin" value="${escapeHtml(v.checkin)}" />
+        </label>
+        <label>
+          ${fieldLabelWithHelp(t('agenda.previewTime'), 'agenda.previewTimeHelp')}
+          <input type="time" class="booking-preview-time" value="${escapeHtml(v.time || '10:00')}" />
+        </label>
+      </div>
+      <button type="button" class="btn primary booking-preview-generate">${escapeHtml(mtk('generateLink', kind))}</button>
+      <div class="booking-preview-result ${previewUrl ? '' : 'hidden'}">
+        <a class="btn primary booking-preview-open" href="${escapeHtml(previewUrl)}" target="_blank" rel="noopener noreferrer">${escapeHtml(mtk('previewLink', kind))}</a>
+        <p class="booking-preview-link">${escapeHtml(previewUrl)}</p>
+      </div>
+    `;
+    bindFieldHelpButtons(container);
+    return;
+  }
   container.innerHTML = `
     ${hintHtml}
     <div class="booking-preview-grid">
@@ -1277,6 +1299,7 @@ function readBookingPreviewValues(container) {
   return {
     checkin: container.querySelector('.booking-preview-checkin')?.value || '',
     checkout: container.querySelector('.booking-preview-checkout')?.value || '',
+    time: container.querySelector('.booking-preview-time')?.value || '',
     adults: container.querySelector('.booking-preview-adults')?.value || '1',
     children: container.querySelector('.booking-preview-children')?.value || '0',
     child_ages: container.querySelector('.booking-preview-child-ages')?.value || '',
@@ -1335,6 +1358,29 @@ function renderMotorScenarios(scenarios, kind = activeMotorKind()) {
   const list = m$('scenarios-list', kind);
   const def = motorDef(kind);
   if (!list) {
+    return;
+  }
+  if (kind === 'agenda') {
+    list.innerHTML = scenarios
+      .map(
+        (scenario, index) => `
+        <div class="booking-scenario card-inner">
+          <h4>${escapeHtml(t('agenda.scenarioLabel', { n: index + 1 }))}</h4>
+          <p>${escapeHtml(
+            t('agenda.scenarioSlot', {
+              date: scenario.checkin,
+              time: scenario.time || '',
+            })
+          )}</p>
+          <label>
+            ${fieldLabelWithHelp(t('agenda.scenarioUrl'), 'agenda.scenarioUrlHelp')}
+            <input type="url" class="booking-scenario-url" data-scenario-index="${index}" placeholder="https://…" />
+          </label>
+        </div>
+      `
+      )
+      .join('');
+    bindFieldHelpButtons(list);
     return;
   }
   list.innerHTML = scenarios
