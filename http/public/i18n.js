@@ -200,6 +200,7 @@ const MESSAGES = {
       'WhatsApp no está conectado. El asistente no responderá hasta que escanees el código QR de nuevo.',
     'profile.whatsappReconnect': 'Reconectar WhatsApp',
     'profile.whatsappRefreshQr': 'Actualizar QR',
+    'help.show': 'Ver ayuda',
     'booking.title': 'Motor de reservas',
     'booking.back': '← Volver a Mi cuenta',
     'booking.intro':
@@ -220,6 +221,20 @@ const MESSAGES = {
     'booking.children': 'Menores',
     'booking.childAges': 'Edades menores (ej. 8 o 10,11)',
     'booking.rooms': 'Habitaciones',
+    'booking.checkinHelp':
+      'Solo para probar que el link abre bien en tu motor. El agente pedirá la fecha de entrada al huésped y la usará con la plantilla aprobada.',
+    'booking.checkoutHelp':
+      'Fecha de salida de la prueba. El agente la pedirá en el chat para armar el link de reserva.',
+    'booking.adultsHelp':
+      'Cantidad de adultos de la prueba. El agente pregunta lo mismo al huésped antes de enviar el link.',
+    'booking.childrenHelp':
+      'Menores en la prueba (0 si no aplica). El agente lo usa si tu motor lo soporta.',
+    'booking.childAgesHelp':
+      'Edades separadas por coma (ej. 8 o 10,11). Solo si hay menores en la búsqueda.',
+    'booking.roomsHelp':
+      'Habitaciones de la prueba. El agente las incluye en el link si tu motor lo requiere.',
+    'booking.scenarioUrlHelp':
+      'Pegá el link completo que devuelve tu motor al hacer exactamente la búsqueda indicada arriba. FAQ Inn detecta la plantilla para que el agente arme links iguales.',
     'booking.generateLink': 'Generar link de prueba',
     'booking.previewLink': 'Abrir link generado',
     'booking.previewUrl': 'Link generado',
@@ -261,6 +276,20 @@ const MESSAGES = {
     'agenda.children': 'Menores',
     'agenda.childAges': 'Edades menores',
     'agenda.rooms': 'Servicios / cupos',
+    'agenda.checkinHelp':
+      'Solo para probar que el link abre bien en tu agenda. El agente pedirá la fecha de inicio al cliente y la usará con la plantilla aprobada.',
+    'agenda.checkoutHelp':
+      'Fecha fin de la prueba. El agente la pedirá en el chat si tu sistema la requiere.',
+    'agenda.adultsHelp':
+      'Personas de la prueba. El agente pregunta lo mismo al cliente antes de enviar el link.',
+    'agenda.childrenHelp':
+      'Menores en la prueba (0 si no aplica). El agente lo usa si tu sistema lo soporta.',
+    'agenda.childAgesHelp':
+      'Edades separadas por coma. Solo si hay menores en la búsqueda.',
+    'agenda.roomsHelp':
+      'Cupos o servicios de la prueba. El agente los incluye en el link si tu agenda lo requiere.',
+    'agenda.scenarioUrlHelp':
+      'Pegá el link completo que devuelve tu agenda al hacer exactamente la búsqueda indicada arriba. FAQ Inn detecta la plantilla para que el agente arme links iguales.',
     'agenda.generateLink': 'Generar link de prueba',
     'agenda.previewLink': 'Abrir link generado',
     'agenda.showTemplate': 'Ver plantilla técnica detectada',
@@ -579,6 +608,7 @@ const MESSAGES = {
       'O WhatsApp não está conectado. O assistente só voltará a responder depois de escanear o QR novamente.',
     'profile.whatsappReconnect': 'Reconectar WhatsApp',
     'profile.whatsappRefreshQr': 'Atualizar QR',
+    'help.show': 'Ver ajuda',
     'booking.title': 'Motor de reservas',
     'booking.back': '← Voltar à Minha conta',
     'booking.intro':
@@ -599,6 +629,20 @@ const MESSAGES = {
     'booking.children': 'Menores',
     'booking.childAges': 'Idades menores (ex. 8 ou 10,11)',
     'booking.rooms': 'Quartos',
+    'booking.checkinHelp':
+      'Só para testar se o link abre corretamente no seu motor. O agente pedirá a data de entrada ao hóspede e usará o modelo aprovado.',
+    'booking.checkoutHelp':
+      'Data de saída do teste. O agente pedirá no chat para montar o link de reserva.',
+    'booking.adultsHelp':
+      'Adultos do teste. O agente pergunta o mesmo ao hóspede antes de enviar o link.',
+    'booking.childrenHelp':
+      'Menores no teste (0 se não aplicar). O agente usa se o motor suportar.',
+    'booking.childAgesHelp':
+      'Idades separadas por vírgula (ex. 8 ou 10,11). Só se houver menores.',
+    'booking.roomsHelp':
+      'Quartos do teste. O agente inclui no link se o motor exigir.',
+    'booking.scenarioUrlHelp':
+      'Cole o link completo que o motor devolve ao fazer exatamente a busca indicada acima. O FAQ Inn detecta o modelo para o agente montar links iguais.',
     'booking.generateLink': 'Gerar link de teste',
     'booking.previewLink': 'Abrir link gerado',
     'booking.previewUrl': 'Link gerado',
@@ -640,6 +684,20 @@ const MESSAGES = {
     'agenda.children': 'Menores',
     'agenda.childAges': 'Idades menores',
     'agenda.rooms': 'Serviços / vagas',
+    'agenda.checkinHelp':
+      'Só para testar se o link abre corretamente na sua agenda. O agente pedirá a data de início ao cliente.',
+    'agenda.checkoutHelp':
+      'Data fim do teste. O agente pedirá no chat se o sistema exigir.',
+    'agenda.adultsHelp':
+      'Pessoas do teste. O agente pergunta o mesmo ao cliente antes de enviar o link.',
+    'agenda.childrenHelp':
+      'Menores no teste (0 se não aplicar). O agente usa se o sistema suportar.',
+    'agenda.childAgesHelp':
+      'Idades separadas por vírgula. Só se houver menores.',
+    'agenda.roomsHelp':
+      'Vagas ou serviços do teste. O agente inclui no link se a agenda exigir.',
+    'agenda.scenarioUrlHelp':
+      'Cole o link completo que a agenda devolve ao fazer exatamente a busca indicada acima.',
     'agenda.generateLink': 'Gerar link de teste',
     'agenda.previewLink': 'Abrir link gerado',
     'agenda.showTemplate': 'Ver modelo técnico detectado',
@@ -956,6 +1014,7 @@ const MESSAGES = {
       'WhatsApp is not connected. The assistant will not reply until you scan the QR code again.',
     'profile.whatsappReconnect': 'Reconnect WhatsApp',
     'profile.whatsappRefreshQr': 'Refresh QR',
+    'help.show': 'Show help',
     'booking.title': 'Booking engine',
     'booking.back': '← Back to My account',
     'booking.intro':
@@ -976,6 +1035,20 @@ const MESSAGES = {
     'booking.children': 'Children',
     'booking.childAges': 'Child ages (e.g. 8 or 10,11)',
     'booking.rooms': 'Rooms',
+    'booking.checkinHelp':
+      'Only to verify the link opens correctly in your engine. The agent will ask the guest for check-in and use the approved template.',
+    'booking.checkoutHelp':
+      'Check-out date for this test. The agent asks the same in chat to build the booking link.',
+    'booking.adultsHelp':
+      'Adults in this test. The agent asks the guest before sending the link.',
+    'booking.childrenHelp':
+      'Children in this test (0 if none). The agent uses this if your engine supports it.',
+    'booking.childAgesHelp':
+      'Ages separated by commas (e.g. 8 or 10,11). Only when children are included.',
+    'booking.roomsHelp':
+      'Rooms in this test. The agent includes them in the link if your engine requires it.',
+    'booking.scenarioUrlHelp':
+      'Paste the full link your engine returns when you run exactly the search described above. FAQ Inn learns the template so the agent can build matching links.',
     'booking.generateLink': 'Generate test link',
     'booking.previewLink': 'Open generated link',
     'booking.previewUrl': 'Generated link',
@@ -1017,6 +1090,20 @@ const MESSAGES = {
     'agenda.children': 'Children',
     'agenda.childAges': 'Child ages',
     'agenda.rooms': 'Services / slots',
+    'agenda.checkinHelp':
+      'Only to verify the link opens correctly in your scheduling system. The agent will ask the client for the start date.',
+    'agenda.checkoutHelp':
+      'End date for this test. The agent asks in chat if your system requires it.',
+    'agenda.adultsHelp':
+      'People in this test. The agent asks the client before sending the link.',
+    'agenda.childrenHelp':
+      'Children in this test (0 if none). The agent uses this if your system supports it.',
+    'agenda.childAgesHelp':
+      'Ages separated by commas. Only when children are included.',
+    'agenda.roomsHelp':
+      'Slots or services in this test. The agent includes them if your system requires it.',
+    'agenda.scenarioUrlHelp':
+      'Paste the full link your scheduling system returns for exactly the search described above.',
     'agenda.generateLink': 'Generate test link',
     'agenda.previewLink': 'Open generated link',
     'agenda.showTemplate': 'View detected technical template',

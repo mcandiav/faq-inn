@@ -879,6 +879,7 @@ function renderMotorPreviewForm(container, values, previewUrl = '', hintKey = nu
     return;
   }
   const v = values || defaultBookingPreviewValues();
+  const def = motorDef(kind);
   const hintHtml = hintKey
     ? `<p class="field-hint">${escapeHtml(t(hintKey))}</p>`
     : '';
@@ -886,27 +887,27 @@ function renderMotorPreviewForm(container, values, previewUrl = '', hintKey = nu
     ${hintHtml}
     <div class="booking-preview-grid">
       <label>
-        <span>${escapeHtml(mtk('checkin', kind))}</span>
+        ${fieldLabelWithHelp(mtk('checkin', kind), `${def.tk}.checkinHelp`)}
         <input type="date" class="booking-preview-checkin" value="${escapeHtml(v.checkin)}" />
       </label>
       <label>
-        <span>${escapeHtml(mtk('checkout', kind))}</span>
+        ${fieldLabelWithHelp(mtk('checkout', kind), `${def.tk}.checkoutHelp`)}
         <input type="date" class="booking-preview-checkout" value="${escapeHtml(v.checkout)}" />
       </label>
       <label>
-        <span>${escapeHtml(mtk('adults', kind))}</span>
+        ${fieldLabelWithHelp(mtk('adults', kind), `${def.tk}.adultsHelp`)}
         <input type="number" min="1" class="booking-preview-adults" value="${escapeHtml(String(v.adults))}" />
       </label>
       <label>
-        <span>${escapeHtml(mtk('children', kind))}</span>
+        ${fieldLabelWithHelp(mtk('children', kind), `${def.tk}.childrenHelp`)}
         <input type="number" min="0" class="booking-preview-children" value="${escapeHtml(String(v.children))}" />
       </label>
       <label>
-        <span>${escapeHtml(mtk('childAges', kind))}</span>
+        ${fieldLabelWithHelp(mtk('childAges', kind), `${def.tk}.childAgesHelp`)}
         <input type="text" class="booking-preview-child-ages" value="${escapeHtml(v.child_ages || '')}" placeholder="8" />
       </label>
       <label>
-        <span>${escapeHtml(mtk('rooms', kind))}</span>
+        ${fieldLabelWithHelp(mtk('rooms', kind), `${def.tk}.roomsHelp`)}
         <input type="number" min="1" class="booking-preview-rooms" value="${escapeHtml(String(v.rooms))}" />
       </label>
     </div>
@@ -916,6 +917,7 @@ function renderMotorPreviewForm(container, values, previewUrl = '', hintKey = nu
       <p class="booking-preview-link">${escapeHtml(previewUrl)}</p>
     </div>
   `;
+  bindFieldHelpButtons(container);
 }
 
 function renderBookingPreviewForm(container, values, previewUrl = '', hintKey = null) {
@@ -1017,13 +1019,14 @@ function renderMotorScenarios(scenarios, kind = activeMotorKind()) {
           )}</p>
           <p>${guests}</p>
           <label>
-            <span>${escapeHtml(t(`${def.tk}.scenarioUrl`))}</span>
+            ${fieldLabelWithHelp(t(`${def.tk}.scenarioUrl`), `${def.tk}.scenarioUrlHelp`)}
             <input type="url" class="booking-scenario-url" data-scenario-index="${index}" placeholder="https://…" />
           </label>
         </div>
       `;
     })
     .join('');
+  bindFieldHelpButtons(list);
 }
 
 function renderBookingScenarios(scenarios) {
@@ -2010,8 +2013,46 @@ function escapeAttr(text) {
   return escapeHtml(text).replaceAll("'", '&#39;');
 }
 
-function escapeAttr(text) {
-  return escapeHtml(text).replaceAll("'", '&#39;');
+function fieldLabelWithHelp(labelText, helpKey) {
+  if (!helpKey) {
+    return `<span>${escapeHtml(labelText)}</span>`;
+  }
+  const helpText = t(helpKey);
+  if (!helpText || helpText === helpKey) {
+    return `<span>${escapeHtml(labelText)}</span>`;
+  }
+  const panelId = `fh-${String(helpKey).replace(/\W+/g, '-')}-${Math.random().toString(36).slice(2, 7)}`;
+  return `
+    <span class="field-label-row">
+      <span>${escapeHtml(labelText)}</span>
+      <button type="button" class="field-help-btn" aria-expanded="false" aria-controls="${panelId}" data-help-key="${escapeAttr(helpKey)}" title="${escapeAttr(t('help.show'))}">?</button>
+    </span>
+    <p class="field-help-detail hidden" id="${panelId}" role="note">${escapeHtml(helpText)}</p>
+  `;
+}
+
+function bindFieldHelpButtons(root) {
+  if (!root) return;
+  root.querySelectorAll('.field-help-btn').forEach((btn) => {
+    if (btn.dataset.helpBound === '1') return;
+    btn.dataset.helpBound = '1';
+    btn.addEventListener('click', () => {
+      const panelId = btn.getAttribute('aria-controls');
+      const panel = panelId ? document.getElementById(panelId) : null;
+      if (!panel) return;
+      const willOpen = panel.classList.contains('hidden');
+      root.querySelectorAll('.field-help-detail').forEach((el) => {
+        el.classList.add('hidden');
+      });
+      root.querySelectorAll('.field-help-btn').forEach((other) => {
+        other.setAttribute('aria-expanded', 'false');
+      });
+      if (willOpen) {
+        panel.classList.remove('hidden');
+        btn.setAttribute('aria-expanded', 'true');
+      }
+    });
+  });
 }
 
 const ONBOARDING_STEP_COUNT = 5;

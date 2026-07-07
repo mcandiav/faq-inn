@@ -561,6 +561,44 @@ textarea {
   color: #94a3b8;
 }
 
+.field-label-row {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.field-help-btn {
+  flex-shrink: 0;
+  width: 1.25rem;
+  height: 1.25rem;
+  padding: 0;
+  border-radius: 50%;
+  border: 1px solid #475569;
+  background: #1e293b;
+  color: #94a3b8;
+  font-size: 0.75rem;
+  font-weight: 600;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.field-help-btn:hover,
+.field-help-btn[aria-expanded='true'] {
+  border-color: #38bdf8;
+  color: #e2e8f0;
+}
+
+.field-help-detail {
+  margin: 0.25rem 0 0.35rem;
+  padding: 0.5rem 0.65rem;
+  font-size: 0.82rem;
+  line-height: 1.4;
+  color: #cbd5e1;
+  background: #0f172a;
+  border: 1px solid #334155;
+  border-radius: 8px;
+}
+
 fieldset {
   border: 1px solid #334155;
   border-radius: 10px;
