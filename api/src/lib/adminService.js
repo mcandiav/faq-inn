@@ -1,7 +1,7 @@
 import { randomBytes } from 'node:crypto';
 import { createEvolutionClient } from './evolutionClient.js';
 import { isFaqInnInstance } from './evolutionCleanup.js';
-import { deleteAllTenantPoints, ensureTenantCollection } from './indexer.js';
+import { deleteTenantCollection, ensureTenantCollection } from './indexer.js';
 import { hashPassword } from './password.js';
 
 function validationError(message, statusCode = 400) {
@@ -116,7 +116,7 @@ export async function deleteAdminTenant(pool, config, tenantId, confirmSlug, log
 
   let qdrantResult = { deleted: false };
   try {
-    qdrantResult = await deleteAllTenantPoints(config, tenant.slug);
+    qdrantResult = await deleteTenantCollection(config, tenant.slug);
   } catch (error) {
     logger?.warn?.({ err: error, slug: tenant.slug }, 'admin: qdrant cleanup failed');
     qdrantResult = { deleted: false, error: error.message };

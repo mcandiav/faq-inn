@@ -44,6 +44,32 @@ export async function deleteAllTenantPoints(config, tenantSlug) {
   return { collection, deleted: true };
 }
 
+/**
+ * Borra la colección completa del tenant (una colección por tenant:
+ * kb_<slug>_...). Usar solo al eliminar el tenant entero; para vaciar FAQs
+ * sin borrar el tenant usar deleteAllTenantPoints.
+ */
+export async function deleteTenantCollection(config, tenantSlug) {
+  const collection = resolveCollectionName(
+    config.qdrantCollectionTemplate,
+    tenantSlug
+  );
+
+  const { response, body } = await qdrantRequest(
+    config,
+    'DELETE',
+    `/collections/${encodeURIComponent(collection)}?wait=true`
+  );
+
+  if (!response.ok) {
+    const error = new Error('No se pudo borrar la colección Qdrant del tenant');
+    error.detail = body;
+    throw error;
+  }
+
+  return { collection, deleted: true };
+}
+
 export async function deleteFaqPoints(config, collection, tenantSlug, faqUid, extraPointIds = []) {
   const ids = new Set();
 
