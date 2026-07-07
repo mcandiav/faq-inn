@@ -195,6 +195,9 @@ const MESSAGES = {
     'onboarding.faqsReload': 'Cargar FAQs iniciales',
     'onboarding.done': '¡Listo! Tu negocio ya está configurado.',
     'profile.primaryLanguage': 'Idioma principal',
+    'profile.timezone': 'Zona horaria',
+    'profile.timezoneHint':
+      'Usada para calcular fechas (hoy, mañana) en el agente. Por defecto es la de tu onboarding.',
     'profile.businessExample': 'Ej. {name}',
     'profile.slug': 'Identificador técnico',
     'profile.changePassword': 'Cambiar contraseña',
@@ -654,6 +657,9 @@ const MESSAGES = {
     'onboarding.faqsReload': 'Carregar FAQs iniciais',
     'onboarding.done': 'Pronto! Seu negócio já está configurado.',
     'profile.primaryLanguage': 'Idioma principal',
+    'profile.timezone': 'Fuso horário',
+    'profile.timezoneHint':
+      'Usado para calcular datas (hoje, amanhã) no agente. Por padrão é o do seu onboarding.',
     'profile.businessExample': 'Ex. {name}',
     'profile.slug': 'Identificador técnico',
     'profile.changePassword': 'Alterar senha',
@@ -1111,6 +1117,9 @@ const MESSAGES = {
     'onboarding.faqsReload': 'Load starter FAQs',
     'onboarding.done': 'Done! Your business is set up.',
     'profile.primaryLanguage': 'Primary language',
+    'profile.timezone': 'Time zone',
+    'profile.timezoneHint':
+      'Used to compute dates (today, tomorrow) in the agent. Defaults to your onboarding one.',
     'profile.businessExample': 'E.g. {name}',
     'profile.slug': 'Technical identifier',
     'profile.changePassword': 'Change password',

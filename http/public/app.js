@@ -746,6 +746,59 @@ function renderHeader() {
   renderProfile();
 }
 
+function browserTimezone() {
+  try {
+    return Intl.DateTimeFormat().resolvedOptions().timeZone || '';
+  } catch {
+    return '';
+  }
+}
+
+const TIMEZONE_FALLBACK = [
+  'America/Santiago',
+  'America/Argentina/Buenos_Aires',
+  'America/Sao_Paulo',
+  'America/Bogota',
+  'America/Lima',
+  'America/Mexico_City',
+  'America/New_York',
+  'America/Los_Angeles',
+  'Europe/Madrid',
+  'Europe/Lisbon',
+  'UTC',
+];
+
+function timezoneList() {
+  try {
+    if (typeof Intl.supportedValuesOf === 'function') {
+      const list = Intl.supportedValuesOf('timeZone');
+      if (Array.isArray(list) && list.length) {
+        return list;
+      }
+    }
+  } catch {
+    /* fallback abajo */
+  }
+  return TIMEZONE_FALLBACK;
+}
+
+function populateTimezoneSelect(selected) {
+  const el = $('#profile-timezone');
+  if (!el) return;
+  const value = selected || browserTimezone() || 'America/Santiago';
+  const zones = timezoneList();
+  if (!zones.includes(value)) {
+    zones.unshift(value);
+  }
+  el.innerHTML = zones
+    .map(
+      (tz) =>
+        `<option value="${tz}"${tz === value ? ' selected' : ''}>${tz}</option>`
+    )
+    .join('');
+  el.value = value;
+}
+
 function renderProfile() {
   const user = state.user;
   const emailEl = $('#profile-email');
@@ -795,6 +848,9 @@ function renderProfile() {
     if (langEl) {
       langEl.value = account?.settings?.primary_language || 'es';
     }
+    populateTimezoneSelect(
+      account?.settings?.timezone || browserTimezone() || 'America/Santiago'
+    );
     if (bookingStatusEl) {
       const approved = account?.settings?.validation_status === 'approved';
       bookingStatusEl.textContent = approved
@@ -2594,6 +2650,10 @@ async function saveOnboardingStep(step) {
     payload.business_name = $('#onboarding-business')?.value?.trim() || '';
     payload.welcome_message = $('#onboarding-welcome')?.value?.trim() || '';
     payload.primary_language = $('#onboarding-language')?.value || 'es';
+    const tz = browserTimezone();
+    if (tz) {
+      payload.timezone = tz;
+    }
   }
 
   if (step === 3) {
@@ -3464,6 +3524,10 @@ $('#profile-form').addEventListener('submit', async (event) => {
         welcome_message: $('#profile-welcome-message')?.value.trim() || '',
         primary_language: $('#profile-primary-language')?.value || 'es',
       };
+      const timezone = $('#profile-timezone')?.value || '';
+      if (timezone) {
+        accountBody.timezone = timezone;
+      }
       const businessName = $('#profile-business').value.trim();
       if (businessName.length >= 2) {
         accountBody.business_name = businessName;
