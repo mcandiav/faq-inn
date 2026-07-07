@@ -9,6 +9,13 @@ const PRIMARY_OBJECTIVE_SLUGS = new Set([
   'reservar_horarios',
   'enviar_a_sitio_web',
 ]);
+// Objetivo transversal por defecto: deshabilitar un objetivo comercial cae aquí.
+const DEFAULT_OBJECTIVE_SLUG = 'responder_preguntas';
+// Slugs que el cliente puede elegir en Mi cuenta (los 3 comerciales + FAQ).
+const SELECTABLE_OBJECTIVE_SLUGS = new Set([
+  ...PRIMARY_OBJECTIVE_SLUGS,
+  DEFAULT_OBJECTIVE_SLUG,
+]);
 
 const MOTOR_DEFS = {
   booking: {
@@ -881,7 +888,7 @@ function renderProfileObjectiveCards() {
   const selected =
     state.profileObjectiveDraft || currentProfileObjective() || '';
   const objectives = state.objectivesCatalog.filter((item) =>
-    PRIMARY_OBJECTIVE_SLUGS.has(item.slug)
+    SELECTABLE_OBJECTIVE_SLUGS.has(item.slug)
   );
 
   grid.innerHTML = objectives
@@ -966,9 +973,9 @@ function renderProfileObjective() {
 function openProfileObjectivePicker() {
   const current = currentProfileObjective();
   state.profileObjectivePickerOpen = true;
-  state.profileObjectiveDraft = PRIMARY_OBJECTIVE_SLUGS.has(current)
+  state.profileObjectiveDraft = SELECTABLE_OBJECTIVE_SLUGS.has(current)
     ? current
-    : '';
+    : DEFAULT_OBJECTIVE_SLUG;
   const msg = $('#profile-objective-msg');
   if (msg) {
     msg.textContent = '';
@@ -991,7 +998,7 @@ function closeProfileObjectivePicker() {
 async function saveProfileObjective() {
   const msg = $('#profile-objective-msg');
   const slug = state.profileObjectiveDraft || '';
-  if (!PRIMARY_OBJECTIVE_SLUGS.has(slug)) {
+  if (!SELECTABLE_OBJECTIVE_SLUGS.has(slug)) {
     if (msg) {
       msg.textContent = t('profile.objectivePick');
       msg.className = 'form-msg error';
