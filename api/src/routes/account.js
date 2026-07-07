@@ -1,6 +1,7 @@
 import {
   getAccountSettings,
   updateAccountSettings,
+  deleteOwnTenant,
 } from '../lib/accountService.js';
 
 function requireClient(request, reply) {
@@ -62,6 +63,34 @@ export async function accountRoutes(app, config) {
         return {
           status: 'error',
           error: error.message || 'No se pudo guardar la cuenta',
+        };
+      }
+    }
+  );
+
+  app.delete(
+    '/api/account',
+    { preHandler: [app.authenticate] },
+    async (request, reply) => {
+      if (!requireClient(request, reply)) {
+        return { status: 'error', error: 'Solo clientes con negocio' };
+      }
+
+      try {
+        const result = await deleteOwnTenant(
+          pool,
+          config,
+          request.user.tenant_id,
+          request.body?.confirm_slug,
+          app.log
+        );
+        app.clearAuthCookie(reply);
+        return { status: 'ok', ...result };
+      } catch (error) {
+        reply.code(error.statusCode || 500);
+        return {
+          status: 'error',
+          error: error.message || 'No se pudo eliminar la cuenta',
         };
       }
     }

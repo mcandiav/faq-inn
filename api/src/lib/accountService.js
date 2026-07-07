@@ -1,4 +1,5 @@
 import { syncWhatsappConnectionStatus } from './provisionService.js';
+import { deleteAdminTenant } from './adminService.js';
 
 function validationError(message, statusCode = 400) {
   const error = new Error(message);
@@ -189,4 +190,13 @@ export async function updateAccountSettings(pool, config, userId, tenantId, inpu
   }
 
   return getAccountSettings(pool, config, userId, tenantId);
+}
+
+/**
+ * Autoservicio: el cliente elimina su propio tenant.
+ * Reutiliza el mismo teardown que el admin (Evolution + Qdrant + DELETE con
+ * cascada FK). Exige confirmSlug === slug del propio negocio.
+ */
+export async function deleteOwnTenant(pool, config, tenantId, confirmSlug, logger) {
+  return deleteAdminTenant(pool, config, tenantId, confirmSlug, logger);
 }
