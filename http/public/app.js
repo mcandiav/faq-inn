@@ -452,6 +452,33 @@ async function startProfileWhatsappReconnect() {
   }
 }
 
+async function disconnectProfileWhatsapp() {
+  if (!window.confirm(t('profile.whatsappDisconnectConfirm'))) {
+    return;
+  }
+  const btn = $('#btn-profile-whatsapp-disconnect');
+  const meta = $('#profile-whatsapp-connected-meta');
+  if (btn) {
+    btn.disabled = true;
+  }
+  try {
+    clearWhatsappPoll();
+    whatsappState.uiTarget = 'landing';
+    await api('/whatsapp/disconnect', { method: 'POST' });
+    state.account = await api('/account/settings');
+    renderProfileWhatsapp();
+  } catch (error) {
+    if (meta) {
+      meta.textContent = error.message || t('profile.whatsappDisconnectError');
+      meta.className = 'hint error';
+    }
+  } finally {
+    if (btn) {
+      btn.disabled = false;
+    }
+  }
+}
+
 async function ensureClientAppOrWhatsapp() {
   if (state.user?.role !== 'client') {
     return true;
@@ -834,6 +861,7 @@ function renderProfileWhatsapp() {
     }
     $('#btn-profile-whatsapp-reconnect')?.classList.remove('hidden');
     $('#btn-profile-whatsapp-change')?.classList.toggle('hidden', rescanning);
+    $('#btn-profile-whatsapp-disconnect')?.classList.toggle('hidden', rescanning);
 
     const phoneEl = $('#profile-whatsapp-phone');
     if (phoneEl) {
@@ -2674,6 +2702,10 @@ $('#btn-profile-whatsapp-reconnect')?.addEventListener('click', () => {
 
 $('#btn-profile-whatsapp-change')?.addEventListener('click', () => {
   startProfileWhatsappReconnect();
+});
+
+$('#btn-profile-whatsapp-disconnect')?.addEventListener('click', () => {
+  disconnectProfileWhatsapp();
 });
 
 $('#btn-profile-whatsapp-refresh-qr')?.addEventListener('click', () => {

@@ -203,6 +203,10 @@ const MESSAGES = {
     'profile.whatsappChangeHint':
       '¿Cambiaste de teléfono o de número de WhatsApp? Volvé a escanear el QR para reconectar.',
     'profile.whatsappChange': 'Reescanear QR (cambiar WhatsApp)',
+    'profile.whatsappDisconnect': 'Desconectar WhatsApp',
+    'profile.whatsappDisconnectConfirm':
+      '¿Seguro que querés desconectar WhatsApp? El asistente dejará de responder hasta que vuelvas a escanear el QR.',
+    'profile.whatsappDisconnectError': 'No se pudo desconectar WhatsApp.',
     'help.show': 'Ver ayuda',
     'booking.title': 'Motor de reservas',
     'booking.back': '← Volver a Mi cuenta',
@@ -625,6 +629,10 @@ const MESSAGES = {
     'profile.whatsappChangeHint':
       'Trocou de telefone ou de número de WhatsApp? Escaneie o QR novamente para reconectar.',
     'profile.whatsappChange': 'Reescanear QR (trocar WhatsApp)',
+    'profile.whatsappDisconnect': 'Desconectar WhatsApp',
+    'profile.whatsappDisconnectConfirm':
+      'Tem certeza de que deseja desconectar o WhatsApp? O assistente deixará de responder até você escanear o QR novamente.',
+    'profile.whatsappDisconnectError': 'Não foi possível desconectar o WhatsApp.',
     'help.show': 'Ver ajuda',
     'booking.title': 'Motor de reservas',
     'booking.back': '← Voltar à Minha conta',
@@ -1045,6 +1053,10 @@ const MESSAGES = {
     'profile.whatsappChangeHint':
       'Changed your phone or WhatsApp number? Scan the QR again to reconnect.',
     'profile.whatsappChange': 'Rescan QR (change WhatsApp)',
+    'profile.whatsappDisconnect': 'Disconnect WhatsApp',
+    'profile.whatsappDisconnectConfirm':
+      'Are you sure you want to disconnect WhatsApp? The assistant will stop replying until you scan the QR again.',
+    'profile.whatsappDisconnectError': 'Could not disconnect WhatsApp.',
     'help.show': 'Show help',
     'booking.title': 'Booking engine',
     'booking.back': '← Back to My account',

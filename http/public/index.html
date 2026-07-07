@@ -255,9 +255,14 @@
                 <p class="hint" data-i18n="profile.whatsappChangeHint">
                   ¿Cambiaste de teléfono o de número de WhatsApp? Volvé a escanear el QR para reconectar.
                 </p>
-                <button type="button" class="btn ghost" id="btn-profile-whatsapp-change" data-i18n="profile.whatsappChange">
-                  Reescanear QR (cambiar WhatsApp)
-                </button>
+                <div class="profile-whatsapp-actions">
+                  <button type="button" class="btn ghost" id="btn-profile-whatsapp-change" data-i18n="profile.whatsappChange">
+                    Reescanear QR (cambiar WhatsApp)
+                  </button>
+                  <button type="button" class="btn ghost danger" id="btn-profile-whatsapp-disconnect" data-i18n="profile.whatsappDisconnect">
+                    Desconectar WhatsApp
+                  </button>
+                </div>
               </div>
               <div id="profile-whatsapp-disconnected" class="profile-whatsapp-block hidden">
                 <div class="profile-whatsapp-status">
@@ -821,7 +826,7 @@
       </form>
     </dialog>
 
-    <script src="/i18n.js?v=1.7.31"></script>
-    <script src="/app.js?v=1.7.31"></script>
+    <script src="/i18n.js?v=1.7.33"></script>
+    <script src="/app.js?v=1.7.33"></script>
   </body>
 </html>
