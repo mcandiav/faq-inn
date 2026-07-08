@@ -1,0 +1,535 @@
+{
+  "updatedAt": "2026-07-08T09:35:34.765Z",
+  "createdAt": "2026-07-07T21:54:56.280Z",
+  "id": "rt5MZuQBonSFwS7J",
+  "name": "FAQ Productivo",
+  "description": null,
+  "active": true,
+  "isArchived": false,
+  "nodes": [
+    {
+      "id": "b697981c-webhook-prod",
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        -128,
+        240
+      ],
+      "webhookId": "49942dba-3ddf-4ee6-bfac-428d4473fbaf",
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "faq-prototipo",
+        "options": {}
+      }
+    },
+    {
+      "id": "1a2571da-aa93-464f-beda-d1fb792089cd",
+      "name": "If",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        80,
+        240
+      ],
+      "parameters": {
+        "conditions": {
+          "combinator": "or",
+          "conditions": [
+            {
+              "id": "conversation",
+              "leftValue": "={{ $('Webhook').item.json.body.data.messageType }}",
+              "operator": {
+                "operation": "equals",
+                "type": "string"
+              },
+              "rightValue": "conversation"
+            },
+            {
+              "id": "extended",
+              "leftValue": "={{ $('Webhook').item.json.body.data.messageType }}",
+              "operator": {
+                "operation": "equals",
+                "type": "string"
+              },
+              "rightValue": "extendedTextMessage"
+            },
+            {
+              "id": "ephemeral",
+              "leftValue": "={{ $('Webhook').item.json.body.data.messageType }}",
+              "operator": {
+                "operation": "equals",
+                "type": "string"
+              },
+              "rightValue": "ephemeralMessage"
+            }
+          ],
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          }
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "e810d5ba-b09e-4511-ade6-c525ccc62133",
+      "name": "No Operation, do nothing1",
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [
+        336,
+        496
+      ],
+      "parameters": {}
+    },
+    {
+      "id": "resolver-tenant-faqinn",
+      "name": "Datos Tenant",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        384,
+        224
+      ],
+      "credentials": {
+        "httpBearerAuth": {
+          "id": "ARUMugu6H8hqM1iA",
+          "name": "dFAQ Morroreservas"
+        }
+      },
+      "parameters": {
+        "url": "http://n8n_inn-api:3000/api/runtime/tenant-config",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpBearerAuth",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "instance_name",
+              "value": "={{ $('Webhook').item.json.body.instance }}"
+            }
+          ]
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "a083dcaf-de74-4343-95f7-c4ff2a6738b1",
+      "name": "Detecta **",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        816,
+        288
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "pause-trigger",
+              "leftValue": "={{ ($('Webhook').item.json.body.data.message.conversation || $('Webhook').item.json.body.data.message.extendedTextMessage?.text || '').trim().startsWith($json.pause_trigger || '**') }}",
+              "operator": {
+                "operation": "equals",
+                "type": "boolean"
+              },
+              "rightValue": true
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "c8b711b8-3fac-4bf7-85ea-7ca3667ae25d",
+      "name": "Redis pausa 5 min",
+      "type": "n8n-nodes-base.redis",
+      "typeVersion": 1,
+      "position": [
+        1168,
+        64
+      ],
+      "credentials": {
+        "redis": {
+          "id": "NbPfpx7A8OjXX4Yt",
+          "name": "Redis"
+        }
+      },
+      "parameters": {
+        "operation": "incr",
+        "key": "={{ 'faqinn:pause:' + $json.tenant_slug + ':' + $json.agent_id + ':' + ($('Webhook').item.json.body.data.key.remoteJid.split('@')[0].replace(/\\D/g, '') || 'manual') }}",
+        "expire": true,
+        "ttl": "={{ $json.pause_ttl_seconds }}"
+      }
+    },
+    {
+      "id": "22f4ad44-78e5-4964-9220-e970aa6f29fa",
+      "name": "No Operation, do nothing",
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [
+        1472,
+        48
+      ],
+      "parameters": {}
+    },
+    {
+      "id": "2a83bcb7-fefc-4b57-acc6-a68169aa5a68",
+      "name": "Redis consulta pausa",
+      "type": "n8n-nodes-base.redis",
+      "typeVersion": 1,
+      "position": [
+        1088,
+        352
+      ],
+      "alwaysOutputData": true,
+      "credentials": {
+        "redis": {
+          "id": "NbPfpx7A8OjXX4Yt",
+          "name": "Redis"
+        }
+      },
+      "parameters": {
+        "operation": "get",
+        "propertyName": "pause_lock",
+        "key": "={{ 'faqinn:pause:' + $json.tenant_slug + ':' + $json.agent_id + ':' + ($('Webhook').item.json.body.data.key.remoteJid.split('@')[0].replace(/\\D/g, '') || 'manual') }}",
+        "keyType": "string",
+        "options": {
+          "dotNotation": true
+        }
+      }
+    },
+    {
+      "id": "fafbf08e-a8b5-47e0-8cff-5b069e34e133",
+      "name": "¿Pausa vigente?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        1312,
+        352
+      ],
+      "parameters": {
+        "conditions": {
+          "combinator": "and",
+          "conditions": [
+            {
+              "id": "sigue-agente",
+              "leftValue": "={{ !$json.pause_lock && $('Webhook').item.json.body.data.key.fromMe === false }}",
+              "operator": {
+                "operation": "equals",
+                "type": "boolean"
+              },
+              "rightValue": true
+            }
+          ],
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          }
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "e5ddf180-56e4-4f1e-a6fa-a9c2ea83af38",
+      "name": "Armar SPrompt",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1760,
+        240
+      ],
+      "parameters": {
+        "jsCode": "// \"Armar SPrompt\": resuelve los tokens neutros de las columnas del system\n// prompt (nodo \"Datos Tenant\") con datos del tenant y fechas segun timezone.\nconst tenant = $('Datos Tenant').first().json;\nconst sprompt = tenant.sprompt || {};\nconst tz = tenant.timezone || 'America/Santiago';\n\nfunction ymdInTz(date, timeZone) {\n  const parts = new Intl.DateTimeFormat('en-CA', {\n    timeZone,\n    year: 'numeric',\n    month: '2-digit',\n    day: '2-digit',\n  }).formatToParts(date);\n  const get = (type) => (parts.find((p) => p.type === type) || {}).value;\n  return `${get('year')}-${get('month')}-${get('day')}`;\n}\n\nfunction addDaysIso(iso, days) {\n  const d = new Date(`${iso}T12:00:00Z`);\n  d.setUTCDate(d.getUTCDate() + days);\n  return d.toISOString().slice(0, 10);\n}\n\nconst today = ymdInTz(new Date(), tz);\nconst tokens = {\n  tenant_display_name: tenant.tenant_display_name || tenant.tenant_name || '',\n  business_type: tenant.business_type || '',\n  initial_greeting: tenant.initial_greeting || '',\n  objetivo: tenant.objetivo || 'responder preguntas',\n  url: tenant.url || tenant.tenant_url || '',\n  validation_status: tenant.validation_status || 'pending',\n  agenda_validation_status: tenant.agenda_validation_status || 'pending',\n  date_format: tenant.date_format || '',\n  supports_rooms: String(tenant.supports_rooms === true),\n  supports_children: String(tenant.supports_children === true),\n  today,\n  today_plus_1: addDaysIso(today, 1),\n  today_plus_2: addDaysIso(today, 2),\n};\n\nfunction resolve(tpl) {\n  let out = String(tpl || '');\n  for (const key of Object.keys(tokens)) {\n    const re = new RegExp('\\\\{\\\\{\\\\s*' + key + '\\\\s*\\\\}\\\\}', 'g');\n    out = out.replace(re, tokens[key]);\n  }\n  return out;\n}\n\nconst sections = {\n  rol: resolve(sprompt.role_template),\n  limites: resolve(sprompt.limits_template),\n  tools: resolve(sprompt.tools_template),\n  interpretar_fecha: resolve(sprompt.date_interpretation_template),\n  data_collect: resolve(sprompt.data_collection_template),\n  links: resolve(sprompt.links_template),\n  // Admin-only por tenant. Vacio = no altera el prompt.\n  custom_sprompt: resolve(tenant.custom_sprompt || ''),\n  timezone: tz,\n  today,\n};\n\nreturn $input.all().map((item) => ({\n  json: { ...item.json, ...sections },\n}));\n"
+      }
+    },
+    {
+      "id": "c708f9b9-55ce-4a28-8f75-84d402da6356",
+      "name": "DeepSeek Chat Model",
+      "type": "@n8n/n8n-nodes-langchain.lmChatDeepSeek",
+      "typeVersion": 1,
+      "position": [
+        1744,
+        576
+      ],
+      "credentials": {
+        "deepSeekApi": {
+          "id": "y1f0DIAfsqME6J0e",
+          "name": "DeepSeek account"
+        }
+      },
+      "parameters": {
+        "model": "deepseek-v4-flash",
+        "options": {
+          "temperature": 0.1
+        }
+      }
+    },
+    {
+      "id": "4eb1e2b9-5bc3-4eb8-bf03-104fc2f5680c",
+      "name": "Postgres Chat Memory",
+      "type": "@n8n/n8n-nodes-langchain.memoryPostgresChat",
+      "typeVersion": 1.3,
+      "position": [
+        1984,
+        624
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "w0gmidedC6eabqxQ",
+          "name": "Postgres account"
+        }
+      },
+      "parameters": {
+        "sessionIdType": "customKey",
+        "sessionKey": "={{ ($('Webhook').item.json.body.data.key.remoteJid.split('@')[0].replace(/\\D/g, '') || 'manual') + $('Datos Tenant').item.json.tenant_slug }}",
+        "tableName": "n8n_inn_chat"
+      }
+    },
+    {
+      "id": "bd582110-9179-47c2-a55e-f7a7b6472b5e",
+      "name": "Respostas",
+      "type": "n8n-nodes-base.httpRequestTool",
+      "typeVersion": 4.4,
+      "position": [
+        2224,
+        608
+      ],
+      "credentials": {
+        "httpBearerAuth": {
+          "id": "ARUMugu6H8hqM1iA",
+          "name": "dFAQ Morroreservas"
+        }
+      },
+      "parameters": {
+        "toolDescription": "Respostas",
+        "method": "POST",
+        "url": "http://n8n_inn-api:3000/api/search",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpBearerAuth",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            { "name": "tenant_id", "value": "={{ $('Datos Tenant').item.json.tenant_id }}" },
+            { "name": "tenant_slug", "value": "={{ $('Datos Tenant').item.json.tenant_slug }}" },
+            { "name": "agent_id", "value": "={{ $('Datos Tenant').item.json.agent_id }}" },
+            { "name": "query", "value": "={{ $('Webhook').item.json.body.data.message.conversation || $('Webhook').item.json.body.data.message.extendedTextMessage?.text || '' }}" },
+            { "name": "limit", "value": "={{ $('Datos Tenant').item.json.search_limit }}" }
+          ]
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "441ac8ae-d003-4656-bdbb-613c22a9d450",
+      "name": "SemResposta",
+      "type": "n8n-nodes-base.httpRequestTool",
+      "typeVersion": 4.4,
+      "position": [
+        2416,
+        608
+      ],
+      "credentials": {
+        "httpBearerAuth": {
+          "id": "ARUMugu6H8hqM1iA",
+          "name": "dFAQ Morroreservas"
+        }
+      },
+      "parameters": {
+        "toolDescription": "Sem Resposta",
+        "method": "POST",
+        "url": "http://n8n_inn-api:3000/api/unanswered",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpBearerAuth",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            { "name": "tenant_id", "value": "={{ $('Datos Tenant').item.json.tenant_id }}" },
+            { "name": "tenant_slug", "value": "={{ $('Datos Tenant').item.json.tenant_slug }}" },
+            { "name": "agent_id", "value": "={{ $('Datos Tenant').item.json.agent_id }}" },
+            { "name": "question", "value": "={{ $('Webhook').item.json.body.data.message.conversation || $('Webhook').item.json.body.data.message.extendedTextMessage?.text || '' }}" },
+            { "name": "phone", "value": "={{ $('Webhook').item.json.body.data.key.remoteJid.split('@')[0].replace(/\\D/g, '') || 'manual' }}" },
+            { "name": "chat_id", "value": "={{ $('Webhook').item.json.body.data.key.remoteJid.split('@')[0].replace(/\\D/g, '') || 'manual' }}" },
+            { "name": "channel", "value": "whatsapp_evolution" },
+            { "name": "limit", "value": "={{ $('Datos Tenant').item.json.unanswered_limit }}" }
+          ]
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "generar-link-reserva-faqinn",
+      "name": "GenerarLinkReserva",
+      "type": "n8n-nodes-base.httpRequestTool",
+      "typeVersion": 4.4,
+      "position": [
+        2592,
+        608
+      ],
+      "credentials": {
+        "httpBearerAuth": {
+          "id": "ARUMugu6H8hqM1iA",
+          "name": "dFAQ Morroreservas"
+        }
+      },
+      "parameters": {
+        "toolDescription": "Gera link de reserva. Obrigatorio: checkin, checkout (ISO) e adults. Retorna short_url (use esse campo no WhatsApp). Opcional: rooms (1), children (0), child_ages ('').",
+        "method": "POST",
+        "url": "http://n8n_inn-api:3000/api/runtime/booking-link",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpBearerAuth",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            { "name": "instance_name", "value": "={{ $('Webhook').item.json.body.instance }}" },
+            { "name": "checkin", "value": "={{ $fromAI('checkin', 'data de entrada ISO YYYY-MM-DD', 'string') }}" },
+            { "name": "checkout", "value": "={{ $fromAI('checkout', 'data de saida ISO YYYY-MM-DD', 'string') }}" },
+            { "name": "adults", "value": "={{ $fromAI('adults', 'quantidade de adultos', 'number') }}" },
+            { "name": "rooms", "value": "={{ $fromAI('rooms', 'quantidade de quartos (opcional)', 'number', 1) }}" },
+            { "name": "children", "value": "={{ $fromAI('children', 'quantidade de menores (opcional)', 'number', 0) }}" },
+            { "name": "child_ages", "value": "={{ $fromAI('child_ages', 'idades dos menores separadas por virgula (opcional)', 'string', '') }}" }
+          ]
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "generar-link-agenda-faqinn",
+      "name": "GenerarLinkAgenda",
+      "type": "n8n-nodes-base.httpRequestTool",
+      "typeVersion": 4.4,
+      "position": [
+        2784,
+        608
+      ],
+      "parameters": {
+        "authentication": "genericCredentialType",
+        "bodyParameters": {
+          "parameters": [
+            { "name": "instance_name", "value": "={{ $('Webhook').item.json.body.instance }}" },
+            { "name": "date", "value": "={{ $fromAI('date', 'fecha de cita ISO YYYY-MM-DD', 'string') }}" },
+            { "name": "time", "value": "={{ $fromAI('time', 'hora de la cita HH:MM', 'string') }}" }
+          ]
+        },
+        "genericAuthType": "httpBearerAuth",
+        "method": "POST",
+        "options": {},
+        "sendBody": true,
+        "toolDescription": "Genera link de agenda. Obrigatorio: date (ISO) y time (HH:MM). Retorna short_url (use ese campo en WhatsApp).",
+        "url": "http://n8n_inn-api:3000/api/runtime/agenda-link"
+      },
+      "credentials": {
+        "httpBearerAuth": {
+          "id": "ARUMugu6H8hqM1iA",
+          "name": "dFAQ Morroreservas"
+        }
+      }
+    },
+    {
+      "id": "f3aecbf3-26ff-4bf9-a122-7ff004760fcf",
+      "name": "FAQ inn",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 2.1,
+      "position": [
+        2144,
+        144
+      ],
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ $('Webhook').item.json.body.data.message.conversation || $('Webhook').item.json.body.data.message.extendedTextMessage?.text || '' }}",
+        "options": {
+          "systemMessage": "={{ $('Armar SPrompt').item.json.rol }}\n\n{{ $('Armar SPrompt').item.json.limites }}\n\n{{ $('Armar SPrompt').item.json.tools }}\n\n{{ $('Armar SPrompt').item.json.interpretar_fecha }}\n\n{{ $('Armar SPrompt').item.json.data_collect }}\n\n{{ $('Armar SPrompt').item.json.links }}\n\n{{ $('Armar SPrompt').item.json.custom_sprompt }}\n"
+        }
+      }
+    },
+    {
+      "id": "enviar-whatsapp-faqinn",
+      "name": "Enviar WhatsApp",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        2928,
+        192
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $('Datos Tenant').item.json.evolution_api_url + '/message/sendText/' + encodeURIComponent($('Datos Tenant').item.json.evolution_instance_name) }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "apikey", "value": "={{ $('Datos Tenant').item.json.evolution_api_key }}" }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ number: ($('Webhook').item.json.body.data.key.remoteJid.split('@')[0].replace(/\\D/g, '') || 'manual'), text: $json.output || $json.text || '' }) }}",
+        "options": {}
+      }
+    }
+  ],
+  "connections": {
+    "Webhook": { "main": [[{ "node": "If", "type": "main", "index": 0 }]] },
+    "If": { "main": [[{ "node": "Datos Tenant", "type": "main", "index": 0 }],[{ "node": "No Operation, do nothing1", "type": "main", "index": 0 }]] },
+    "Datos Tenant": { "main": [[{ "node": "Detecta **", "type": "main", "index": 0 }]] },
+    "Detecta **": { "main": [[{ "node": "Redis pausa 5 min", "type": "main", "index": 0 }],[{ "node": "Redis consulta pausa", "type": "main", "index": 0 }]] },
+    "Redis pausa 5 min": { "main": [[{ "node": "No Operation, do nothing", "type": "main", "index": 0 }]] },
+    "Redis consulta pausa": { "main": [[{ "node": "¿Pausa vigente?", "type": "main", "index": 0 }]] },
+    "¿Pausa vigente?": { "main": [[{ "node": "Armar SPrompt", "type": "main", "index": 0 }],[{ "node": "No Operation, do nothing", "type": "main", "index": 0 }]] },
+    "Armar SPrompt": { "main": [[{ "node": "FAQ inn", "type": "main", "index": 0 }]] },
+    "DeepSeek Chat Model": { "ai_languageModel": [[{ "node": "FAQ inn", "type": "ai_languageModel", "index": 0 }]] },
+    "Postgres Chat Memory": { "ai_memory": [[{ "node": "FAQ inn", "type": "ai_memory", "index": 0 }]] },
+    "Respostas": { "ai_tool": [[{ "node": "FAQ inn", "type": "ai_tool", "index": 0 }]] },
+    "SemResposta": { "ai_tool": [[{ "node": "FAQ inn", "type": "ai_tool", "index": 0 }]] },
+    "GenerarLinkReserva": { "ai_tool": [[{ "node": "FAQ inn", "type": "ai_tool", "index": 0 }]] },
+    "GenerarLinkAgenda": { "ai_tool": [[{ "node": "FAQ inn", "type": "ai_tool", "index": 0 }]] },
+    "FAQ inn": { "main": [[{ "node": "Enviar WhatsApp", "type": "main", "index": 0 }]] }
+  },
+  "settings": { "executionOrder": "v1" }
+}
+  ],
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "If",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If": {
+      "main": [
+        [
+          {
+            "node": "Datos Tenant",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "No Operation, do nothing1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  }
+}

@@ -41,6 +41,8 @@ Thumbs.db
 # Datos locales o exportaciones sensibles
 exports/
 backups/
+!docs/n8n/workflows/backups/
+!docs/n8n/workflows/backups/*.json
 data/
 *.sqlite
 *.db
