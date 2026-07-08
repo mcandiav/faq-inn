@@ -829,12 +829,40 @@
           </button>
           <div class="dialog-actions-right">
             <button type="button" class="btn ghost" id="admin-detail-cancel" data-i18n="btn.cancel">Cancelar</button>
+            <button type="button" class="btn" id="admin-custom-sprompt" data-i18n="admin.customSprompt">
+              Custom SPrompt
+            </button>
             <button type="button" class="btn" id="admin-reset-password" data-i18n="admin.resetPassword">
               Resetear contraseña
             </button>
           </div>
         </div>
         <p class="form-msg" id="admin-detail-msg"></p>
+      </form>
+    </dialog>
+
+    <dialog id="admin-custom-sprompt-dialog">
+      <form id="admin-custom-sprompt-form" class="form">
+        <h3 id="admin-custom-sprompt-dialog-title">Custom SPrompt</h3>
+        <p class="hint" id="admin-custom-sprompt-hint" data-i18n="admin.customSpromptHint">
+          Texto admin-only concatenado al final del system prompt. Si está vacío, no altera nada.
+        </p>
+        <input type="hidden" id="admin-custom-sprompt-tenant-id" />
+        <label>
+          <span data-i18n="admin.customSpromptLabel">custom_sprompt</span>
+          <textarea id="admin-custom-sprompt-text" rows="14" spellcheck="false"></textarea>
+        </label>
+        <div class="dialog-actions">
+          <div class="dialog-actions-right">
+            <button type="button" class="btn ghost" id="admin-custom-sprompt-cancel" data-i18n="btn.cancel">
+              Cancelar
+            </button>
+            <button type="submit" class="btn primary" id="admin-custom-sprompt-save" data-i18n="btn.save">
+              Guardar
+            </button>
+          </div>
+        </div>
+        <p class="form-msg" id="admin-custom-sprompt-msg"></p>
       </form>
     </dialog>
 
@@ -919,7 +947,7 @@
       </form>
     </dialog>
 
-    <script src="/i18n.js?v=1.7.47"></script>
-    <script src="/app.js?v=1.7.47"></script>
+    <script src="/i18n.js?v=1.7.51"></script>
+    <script src="/app.js?v=1.7.51"></script>
   </body>
 </html>

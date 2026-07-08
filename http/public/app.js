@@ -2107,6 +2107,14 @@ function renderAdminTenantDetail(tenant) {
     [t('admin.createdAt'), escapeHtml(formatDate(tenant.created_at))],
     [t('admin.faqCount'), escapeHtml(String(tenant.faq_count ?? '—'))],
     [t('admin.unansweredCount'), escapeHtml(String(tenant.unanswered_count ?? '—'))],
+    [
+      t('admin.customSpromptStatus'),
+      escapeHtml(
+        tenant.custom_sprompt_configured
+          ? t('admin.customSpromptConfigured')
+          : t('admin.customSpromptEmpty')
+      ),
+    ],
   ];
 
   list.innerHTML = rows
@@ -2119,6 +2127,89 @@ function renderAdminTenantDetail(tenant) {
       `
     )
     .join('');
+}
+
+async function openAdminCustomSpromptDialog(id) {
+  const dialog = $('#admin-custom-sprompt-dialog');
+  const msg = $('#admin-custom-sprompt-msg');
+  const text = $('#admin-custom-sprompt-text');
+  const tenantIdInput = $('#admin-custom-sprompt-tenant-id');
+  if (!dialog || !text || !tenantIdInput) {
+    return;
+  }
+
+  if (msg) {
+    msg.textContent = '';
+    msg.className = 'form-msg';
+  }
+
+  try {
+    const data = await api(`/admin/tenants/${id}/custom-sprompt`);
+    tenantIdInput.value = String(data.tenant_id || id);
+    text.value = data.custom_sprompt || '';
+    $('#admin-custom-sprompt-dialog-title').textContent =
+      `${t('admin.customSpromptTitle')}: ${data.slug || id}`;
+    dialog.showModal();
+  } catch (error) {
+    const detailMsg = $('#admin-detail-msg');
+    if (detailMsg) {
+      detailMsg.textContent = error.message;
+      detailMsg.className = 'form-msg error';
+    }
+  }
+}
+
+async function submitAdminCustomSprompt(event) {
+  event.preventDefault();
+  const tenantId = Number($('#admin-custom-sprompt-tenant-id')?.value);
+  const msg = $('#admin-custom-sprompt-msg');
+  const saveBtn = $('#admin-custom-sprompt-save');
+  if (!tenantId) {
+    return;
+  }
+
+  if (msg) {
+    msg.textContent = t('admin.customSpromptSaving');
+    msg.className = 'form-msg';
+  }
+  if (saveBtn) {
+    saveBtn.disabled = true;
+  }
+
+  try {
+    const data = await api(`/admin/tenants/${tenantId}/custom-sprompt`, {
+      method: 'PUT',
+      body: JSON.stringify({
+        custom_sprompt: $('#admin-custom-sprompt-text')?.value || '',
+      }),
+    });
+    state.adminTenants = state.adminTenants.map((row) =>
+      Number(row.id) === tenantId
+        ? {
+            ...row,
+            custom_sprompt: data.custom_sprompt || '',
+            custom_sprompt_configured: Boolean(data.custom_sprompt_configured),
+          }
+        : row
+    );
+    const current = state.adminTenants.find((row) => Number(row.id) === tenantId);
+    if (current && String($('#admin-tenant-id')?.value) === String(tenantId)) {
+      renderAdminTenantDetail(current);
+    }
+    if (msg) {
+      msg.textContent = t('admin.customSpromptSaved');
+      msg.className = 'form-msg ok';
+    }
+  } catch (error) {
+    if (msg) {
+      msg.textContent = error.message;
+      msg.className = 'form-msg error';
+    }
+  } finally {
+    if (saveBtn) {
+      saveBtn.disabled = false;
+    }
+  }
 }
 
 async function openAdminTenantDialog(id) {
@@ -3656,6 +3747,16 @@ $('#sprompt-form')?.addEventListener('submit', (event) => {
 
 $('#admin-reset-password')?.addEventListener('click', () => {
   resetAdminTenantPassword(Number($('#admin-tenant-id')?.value));
+});
+
+$('#admin-custom-sprompt')?.addEventListener('click', () => {
+  openAdminCustomSpromptDialog(Number($('#admin-tenant-id')?.value));
+});
+
+$('#admin-custom-sprompt-form')?.addEventListener('submit', submitAdminCustomSprompt);
+
+$('#admin-custom-sprompt-cancel')?.addEventListener('click', () => {
+  $('#admin-custom-sprompt-dialog')?.close();
 });
 
 $('#admin-reset-form')?.addEventListener('submit', submitAdminResetAccess);
