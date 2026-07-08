@@ -252,21 +252,35 @@ body {
   color: #e2e8f0;
 }
 
+.qr-scan-layout {
+  --qr-size: 260px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1rem;
+  margin: 1rem 0;
+  width: 100%;
+}
+
 .qr-wrap {
   display: flex;
   flex-direction: column;
   align-items: center;
+  justify-content: center;
   gap: 0.75rem;
-  margin: 1rem 0;
+  margin: 0;
   padding: 1rem;
   border: 1px dashed #334155;
   border-radius: 12px;
   background: #0b1220;
+  width: fit-content;
+  max-width: 100%;
 }
 
 .qr-image {
   display: block;
-  width: min(260px, 72vw);
+  width: min(var(--qr-size), 72vw);
   max-width: 100%;
   height: auto;
   border-radius: 8px;
@@ -275,11 +289,14 @@ body {
 }
 
 .qr-scan-help {
-  margin: 0 0 1rem;
+  margin: 0;
   padding: 0.65rem 0.85rem;
   border: 1px solid #334155;
   border-radius: 12px;
   background: rgba(15, 23, 42, 0.72);
+  width: fit-content;
+  max-width: min(calc(var(--qr-size) * 2), 100%);
+  text-align: center;
 }
 
 .qr-scan-help > summary {
@@ -287,8 +304,9 @@ body {
   list-style: none;
   color: #e2e8f0;
   font-weight: 600;
-  font-size: 0.92rem;
+  font-size: 0.88rem;
   line-height: 1.4;
+  text-align: center;
 }
 
 .qr-scan-help > summary::-webkit-details-marker {
@@ -308,18 +326,19 @@ body {
 }
 
 .qr-scan-help-figure {
-  margin: 0.85rem 0 0.25rem;
+  margin: 0.75rem 0 0.15rem;
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 0.65rem;
+  gap: 0.55rem;
 }
 
 .qr-scan-help-gif {
   display: block;
-  width: min(280px, 78vw);
+  width: auto;
+  max-width: min(calc(var(--qr-size) * 2), 100%);
+  max-height: calc(var(--qr-size) * 2);
   height: auto;
-  max-height: min(420px, 55vh);
   object-fit: contain;
   border-radius: 14px;
   background: #000;
@@ -329,7 +348,8 @@ body {
 .qr-scan-help-figure figcaption {
   margin: 0;
   text-align: center;
-  font-size: 0.86rem;
+  font-size: 0.8rem;
+  max-width: min(calc(var(--qr-size) * 2), 100%);
 }
 
 #provision-qr-panel {
@@ -338,7 +358,29 @@ body {
 }
 
 #provision-qr-panel.login-card {
-  width: min(560px, 96vw);
+  width: min(720px, 96vw);
+}
+
+@media (min-width: 680px) {
+  .qr-scan-layout {
+    flex-direction: row;
+    align-items: center;
+    justify-content: center;
+    gap: 1.25rem;
+  }
+
+  .qr-scan-help {
+    max-width: var(--qr-size);
+  }
+
+  .qr-scan-help-gif {
+    max-width: var(--qr-size);
+    max-height: calc(var(--qr-size) * 2);
+  }
+
+  .qr-scan-help-figure figcaption {
+    max-width: var(--qr-size);
+  }
 }
 
 .success-phone {
