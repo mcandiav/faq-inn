@@ -118,8 +118,40 @@ evolution_api_url
 evolution_api_key
 faq_search_endpoint
 unanswered_endpoint
+custom_sprompt
+sprompt.*                 (columnas del objetivo activo: role/limits/tools/…)
 pause_enabled / pause_trigger / pause_ttl_seconds / pause_scope
 ```
+
+## Workflow FAQ Productivo — Armar SPrompt y `custom_sprompt`
+
+Workflow productivo vigente (backup versionado arriba): **FAQ Productivo**.
+
+Cadena relevante al system prompt:
+
+```text
+Resolver Tenant → … → Datos Tenant → Armar SPrompt → AI Agent (systemMessage)
+```
+
+1. **Resolver Tenant** carga `custom_sprompt` y `sprompt` desde `GET /api/runtime/tenant-config`.
+2. **Armar SPrompt** (Code) resuelve tokens neutros (`tenant_display_name`, `url`, `today`, `validation_status`, etc.) en cada columna del objetivo y en `custom_sprompt`.
+3. El **systemMessage** del AI Agent concatena, en este orden:
+
+```text
+{{ $('Armar SPrompt').item.json.rol }}
+{{ $('Armar SPrompt').item.json.limites }}
+{{ $('Armar SPrompt').item.json.tools }}
+{{ $('Armar SPrompt').item.json.interpretar_fecha }}
+{{ $('Armar SPrompt').item.json.data_collect }}
+{{ $('Armar SPrompt').item.json.links }}
+{{ $('Armar SPrompt').item.json.custom_sprompt }}
+```
+
+Reglas:
+
+- `custom_sprompt` vacío → no altera el prompt.
+- Solo Admin lo edita (no el cliente del tenant).
+- No hardcodear el prompt completo en el nodo del agente; siempre partir de **Armar SPrompt**.
 
 ## Workflow FAQ prototipo — propagación al agente
 
@@ -133,6 +165,7 @@ Parse Evolution → Es mensaje entrante? → Resolver Tenant → Detecta ** → 
 - **Resolver Tenant**: `GET /api/runtime/tenant-config?instance_name=…` devuelve solo **config del tenant** (item plano). El mensaje (`chatInput`, `sessionId`) viene de **Parse Evolution**, no de la API.
 - **Datos / TextoFinal**: merge **Parse Evolution** + **Resolver Tenant**; propaga variables al agente.
 - El system prompt del agente usa `{{booking_url_template}}`, `{{validation_status}}`, etc. desde `$json` de **TextoFinal**.
+- En **FAQ Productivo** (no en el prototipo legado) el system prompt pasa por **Armar SPrompt** e incluye `custom_sprompt` al final.
 
 ## Memoria conversacional PostgreSQL (dominio n8n)
 
@@ -165,23 +198,29 @@ Configuración del nodo: `tableName = n8n_faq_inn`, `contextWindowLength = 8`.
 ## Workflow de referencia actual
 
 ```text
-FAQ prototipo
+FAQ Productivo   (productivo; webhook path faq-prototipo)
+FAQ prototipo    (legado / referencia histórica)
 ```
 
-Estado: prototipo de runtime multitenant.
+Estado: **FAQ Productivo** es el runtime multitenant activo. Backup: `docs/n8n/workflows/backups/FAQ-Productivo.rt5MZuQBonSFwS7J.2026-07-08.json`.
 
 Características incorporadas:
 
 ```text
-Resolver Tenant (GET inn-api) devuelve solo config tenant.
+Resolver Tenant (GET inn-api) devuelve solo config tenant (incluye custom_sprompt y sprompt).
+Armar SPrompt resuelve tokens y expone rol/limites/tools/…/custom_sprompt.
+systemMessage del AI Agent termina con {{ $('Armar SPrompt').item.json.custom_sprompt }}.
 Redis TTL para pausa humana por chat.
 Clave Redis: faqinn:pause:{tenant_slug}:{agent_id}:{chat_id}.
 Datos merge Evolution + inn-api.
 initial_greeting vive como variable, no como texto fijo del prompt.
 Respostas y SemResposta reciben tenant_id, tenant_slug y agent_id.
+Tools: GenerarLinkReserva, GenerarLinkAgenda, Enviar WhatsApp.
 ```
 
 `tenant_id` en runtime es el **slug** (`miguel-telefono`), no el id numérico de PostgreSQL. Coincide con el filtro Qdrant y con `docs/N8N-SEARCH.md`.
+
+**Nota UI (fuera de n8n):** el botón **Descargar Excel** del dashboard FAQ es export CSV en el front HTTP; no forma parte del workflow.
 
 ## Sin verificación de conexión en runtime
 

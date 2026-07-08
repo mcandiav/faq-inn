@@ -4,6 +4,8 @@
 
 | Fecha | Versión | Cambio realizado | Motivo | Impacto | Sección afectada |
 |---|---|---|---|---|---|
+| 2026-07-08 | V1.14 | Se documenta el botón **Descargar Excel** del dashboard FAQ (export CSV client-side). | Faltaba inventario operativo simétrico al Importar Excel / Sincronizar respuestas. | El cliente puede bajar `id,question,answer,category,keywords,active` con BOM UTF-8 para Excel; no pasa por n8n. | Variables FAQ, Estado actual, UI dashboard |
+| 2026-07-08 | V1.13 | Se documenta `custom_sprompt` admin-only por tenant y su uso en n8n como `{{ $('Armar SPrompt').item.json.custom_sprompt }}`. | Un tenant puede necesitar instrucciones extra al final del system prompt sin editar la matriz de objetivos. | Campo `tenant_settings.custom_sprompt`; runtime `GET /api/runtime/tenant-config`; Admin `GET/PUT /api/admin/tenants/:id/custom-sprompt`; n8n **FAQ Productivo** lo appendea tras `links`. Vacío = sin cambio. | n8n, Variables agente/prompt, docs/systemprompt-configurable, Estado actual |
 | 2026-07-05 | V1.12 | Se consolida inventario único de variables del proyecto por módulo. | El módulo `motor-reservas` incorporó variables nuevas y el runtime n8n ya consume variables adicionales de tenant, agente, pausa, Evolution API, FAQ y reservas. | El README principal pasa a gobernar las variables canónicas de FAQ Inn y separa responsabilidad por módulo para evitar hardcodeos y duplicación documental. | Variables obligatorias por tenant, motor-reservas, n8n como motor de conversaciones |
 | 2026-07-05 | V1.11 | Se crea módulo documental `motor-reservas`. | Separar la lógica de descubrimiento y validación de URLs de reserva del prompt y del runtime conversacional n8n. | FAQ Inn tendrá una página/servicio para construir `booking_url_template` por tenant usando links de prueba; n8n consumirá solo plantillas aprobadas. | docs/motor-reservas, n8n como motor de conversaciones, Estado actual |
 | 2026-07-04 | V1.10 | Cierre documental del módulo Evolution API (onboarding MVP). | Validación operativa en inn.at-once.cl y alineación con arquitectura V1.9. | Subproyecto `01-evolution-onboarding-mvp` aprobado; pendientes explícitos (token instancia, desconexión teléfono, payload n8n) fuera de alcance. | docs/evolution-api, docs/pruebas, Estado actual |
@@ -327,6 +329,7 @@ primary_language
 timezone
 booking_url_base
 booking_url_template
+custom_sprompt
 evolution_instance_name
 evolution_api_url
 faq_search_endpoint
@@ -336,6 +339,38 @@ pause_trigger
 pause_ttl_seconds
 pause_scope
 ```
+
+#### 8.2.1 Composición del system prompt en FAQ Productivo
+
+El workflow productivo (**FAQ Productivo**, backup en `docs/n8n/workflows/backups/`) no hardcodea el prompt completo. El nodo Code **Armar SPrompt** resuelve tokens de las columnas `sprompt.*` del objetivo activo y expone secciones al AI Agent.
+
+Orden vigente del `systemMessage`:
+
+```text
+rol
+limites
+tools
+interpretar_fecha
+data_collect
+links
+custom_sprompt
+```
+
+`custom_sprompt` es texto libre **admin-only** por tenant (`tenant_settings.custom_sprompt`). En n8n se referencia así:
+
+```text
+{{ $('Armar SPrompt').item.json.custom_sprompt }}
+```
+
+Reglas:
+
+- Vacío o solo whitespace → no altera el prompt armado por objetivo.
+- Solo Admin (View tenant → Custom SPrompt) puede editarlo; el cliente del tenant no.
+- Los mismos tokens neutros que el resto del prompt (`{{tenant_display_name}}`, `{{url}}`, `{{today}}`, etc.) se resuelven en **Armar SPrompt**.
+- Endpoints Admin: `GET/PUT /api/admin/tenants/:id/custom-sprompt`.
+- Runtime: incluido en `GET /api/runtime/tenant-config`.
+
+Detalle del módulo de columnas por objetivo: [docs/systemprompt-configurable/README.md](docs/systemprompt-configurable/README.md). Operativa n8n: [docs/n8n/README.md](docs/n8n/README.md).
 
 El modelo de workflow por tenant queda reservado como alternativa futura solo si existe una necesidad explícita de aislamiento, personalización fuerte o lógica conversacional distinta por cliente.
 
@@ -632,6 +667,7 @@ PostgreSQL de FAQ Inn no debe exponer puerto público. La aplicación debe conec
 | `agent_id` | id interno del agente | Identificar configuración, memoria, FAQ y herramientas del agente. | PostgreSQL |
 | `agent_name` | Nombre del agente | Identidad visible usada por el system prompt. | PostgreSQL |
 | `initial_greeting` | Mensaje de bienvenida | Saludo inicial configurable por tenant/agente. | Onboarding / tenant_settings |
+| `custom_sprompt` | Texto libre (puede vacío) | Bloque admin-only al final del system prompt; vacío = sin cambio. Tokens neutros se resuelven en n8n **Armar SPrompt**. | `tenant_settings` / Admin API / runtime tenant-config |
 | `welcome_message` | Mensaje de bienvenida ampliado | Variante funcional para UI o primer contacto. | Onboarding |
 | `chatInput` | Texto recibido | Entrada normalizada que procesa el agente. | Parse Evolution / Chat Trigger |
 | `Texto` | Texto recibido | Alias heredado/operativo usado en nodos n8n. | Nodo Datos |
@@ -661,6 +697,19 @@ Regla del agente:
 ```text
 Si no existe respuesta útil desde FAQ aprobada, el agente debe ejecutar obligatoriamente SemResposta antes de responder al cliente y no debe inventar información.
 ```
+
+#### 14.5.1 Acciones del dashboard FAQ (UI HTTP)
+
+En la vista **Preguntas y respuestas** el cliente tiene:
+
+| Acción UI | Comportamiento | Notas |
+|---|---|---|
+| **Importar Excel** | Sube `.xlsx` / `.xls` / `.csv` a `POST /api/faqs/import` | Opción “Reemplazar todas las FAQs al importar”. |
+| **Descargar Excel** | Export client-side a CSV UTF-8 con BOM | Columnas: `id,question,answer,category,keywords,active`. Nombre: `faqs-<tenant_slug>-YYYY-MM-DD.csv`. No llama a la API ni a n8n. |
+| **Sincronizar respuestas** | Reindexa FAQs del tenant en Qdrant | Recuperación tras import/bulk o índice fallido. |
+| **Nueva FAQ** | Alta + indexación atómica | Si falla el índice, se revierte el guardado en PostgreSQL. |
+
+**Descargar Excel** existe para respaldar o editar fuera de la app el mismo conjunto que se ve en pantalla; no reemplaza el flujo conversacional n8n.
 
 ### 14.6 Módulo pausa humana
 
@@ -900,6 +949,8 @@ Vertical inicial definida: Hotel v1.
 Arquitectura SaaS/multivertical definida a nivel conceptual.
 Módulo documental `motor-reservas` creado para descubrir, validar y guardar `booking_url_template` por tenant.
 MVP Evolution onboarding validado en inn.at-once.cl (V1.3.x): registro, QR, conexión, webhook MESSAGES_UPSERT. Ver docs/evolution-api/ESTADO-MODULO.md.
+System prompt por objetivo (`system_prompt_objective_templates`) + `custom_sprompt` admin-only documentados; n8n FAQ Productivo usa Armar SPrompt + append de custom_sprompt.
+Dashboard FAQ: Importar Excel, Descargar Excel (CSV), Sincronizar respuestas, Nueva FAQ.
 Siguiente etapa: 02-n8n-multitenant-runtime (payload webhook + resolución tenant por evolution_instance_name).
 Pendiente arquitecto: cleanup al desvincular WhatsApp desde teléfono; persistencia instance_token_encrypted.
 ```

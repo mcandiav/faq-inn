@@ -54,6 +54,13 @@ const MESSAGES = {
     'signup.password': 'Contraseña',
     'signup.submit': 'Crear cuenta y vincular WhatsApp',
     'provision.qrTitle': 'Escanea el QR',
+    'provision.qrLead':
+      'Abre WhatsApp en tu teléfono → Dispositivos vinculados → Vincular un dispositivo.',
+    'provision.qrHelpSummary': 'Cómo escanear en el iPhone (5 pasos)',
+    'provision.qrHelpCaption':
+      'Sigue la animación en el teléfono: WhatsApp → Configuración → Dispositivos vinculados → Vincular un dispositivo → apunta al QR de esta pantalla.',
+    'provision.qrHelpAlt':
+      'Animación de ayuda: abrir WhatsApp en iPhone, ir a Configuración, Dispositivos vinculados y escanear el QR',
     'provision.successTitle': 'WhatsApp conectado',
     'provision.successLead':
       'Tu número quedó vinculado. Completa tu negocio en Mi cuenta y prueba enviando un mensaje desde otro teléfono.',
@@ -536,6 +543,13 @@ const MESSAGES = {
     'signup.password': 'Senha',
     'signup.submit': 'Criar conta e vincular WhatsApp',
     'provision.qrTitle': 'Escaneie o QR',
+    'provision.qrLead':
+      'Abra o WhatsApp no telefone → Aparelhos conectados → Conectar um aparelho.',
+    'provision.qrHelpSummary': 'Como escanear no iPhone (5 passos)',
+    'provision.qrHelpCaption':
+      'Siga a animação no telefone: WhatsApp → Configurações → Aparelhos conectados → Conectar um aparelho → aponte para o QR desta tela.',
+    'provision.qrHelpAlt':
+      'Animação de ajuda: abrir WhatsApp no iPhone, ir a Configurações, Aparelhos conectados e escanear o QR',
     'dashboard.title': 'Perguntas e respostas',
     'dashboard.hint':
       'Coluna A: pergunta, B: resposta. Opcional: keywords e categoria (colunas C/D ou cabeçalhos na linha 1). Formatos: .xlsx, .xls, .csv.',
@@ -1014,6 +1028,13 @@ const MESSAGES = {
     'signup.password': 'Password',
     'signup.submit': 'Create account and link WhatsApp',
     'provision.qrTitle': 'Scan the QR code',
+    'provision.qrLead':
+      'Open WhatsApp on your phone → Linked devices → Link a device.',
+    'provision.qrHelpSummary': 'How to scan on iPhone (5 steps)',
+    'provision.qrHelpCaption':
+      'Follow the animation on your phone: WhatsApp → Settings → Linked devices → Link a device → point at the QR on this screen.',
+    'provision.qrHelpAlt':
+      'Help animation: open WhatsApp on iPhone, go to Settings, Linked devices, and scan the QR',
     'dashboard.title': 'Questions and answers',
     'dashboard.hint':
       'Column A: question, B: answer. Optional: keywords and category (columns C/D or headers in row 1). Formats: .xlsx, .xls, .csv.',

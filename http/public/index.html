@@ -284,6 +284,25 @@
                   <img id="profile-whatsapp-qr-image" alt="Código QR de WhatsApp" class="qr-image hidden" />
                   <p class="hint" id="profile-whatsapp-qr-waiting" data-i18n="msg.creatingWhatsapp">Generando código QR…</p>
                 </div>
+                <details class="qr-scan-help" open>
+                  <summary data-i18n="provision.qrHelpSummary">Cómo escanear en el iPhone (5 pasos)</summary>
+                  <figure class="qr-scan-help-figure">
+                    <img
+                      class="qr-scan-help-gif"
+                      src="/help/whatsapp-qr-iphone.gif"
+                      width="360"
+                      height="640"
+                      loading="lazy"
+                      decoding="async"
+                      alt=""
+                      data-i18n="provision.qrHelpAlt"
+                      data-i18n-attr="alt"
+                    />
+                    <figcaption class="hint" data-i18n="provision.qrHelpCaption">
+                      Sigue la animación en el teléfono: WhatsApp → Configuración → Dispositivos vinculados → Vincular un dispositivo → apunta al QR de esta pantalla.
+                    </figcaption>
+                  </figure>
+                </details>
                 <p class="form-msg" id="profile-whatsapp-qr-msg"></p>
                 <button type="button" class="btn ghost" id="btn-profile-whatsapp-refresh-qr" data-i18n="profile.whatsappRefreshQr">
                   Actualizar QR
@@ -747,7 +766,7 @@
 
       <section id="provision-qr-panel" class="card login-card landing-panel hidden">
         <h1 data-i18n="provision.qrTitle">Escanea el QR</h1>
-        <p class="lead" id="provision-qr-lead">
+        <p class="lead" id="provision-qr-lead" data-i18n="provision.qrLead">
           Abre WhatsApp en tu teléfono → Dispositivos vinculados → Vincular un dispositivo.
         </p>
         <p class="hint hidden" id="provision-instance-label" hidden aria-hidden="true"></p>
@@ -755,8 +774,29 @@
           <img id="provision-qr-image" alt="Código QR de WhatsApp" class="qr-image hidden" />
           <p class="hint" id="provision-qr-waiting">Generando código QR…</p>
         </div>
+        <details class="qr-scan-help" open>
+          <summary data-i18n="provision.qrHelpSummary">Cómo escanear en el iPhone (5 pasos)</summary>
+          <figure class="qr-scan-help-figure">
+            <img
+              class="qr-scan-help-gif"
+              src="/help/whatsapp-qr-iphone.gif"
+              width="360"
+              height="640"
+              loading="lazy"
+              decoding="async"
+              alt=""
+              data-i18n="provision.qrHelpAlt"
+              data-i18n-attr="alt"
+            />
+            <figcaption class="hint" data-i18n="provision.qrHelpCaption">
+              Sigue la animación en el teléfono: WhatsApp → Configuración → Dispositivos vinculados → Vincular un dispositivo → apunta al QR de esta pantalla.
+            </figcaption>
+          </figure>
+        </details>
         <p class="form-msg" id="provision-qr-msg"></p>
-        <button type="button" class="btn ghost block" id="provision-qr-refresh">Actualizar QR</button>
+        <button type="button" class="btn ghost block" id="provision-qr-refresh" data-i18n="profile.whatsappRefreshQr">
+          Actualizar QR
+        </button>
       </section>
 
       <section id="provision-success-panel" class="card login-card landing-panel hidden" hidden aria-hidden="true">
@@ -950,7 +990,7 @@
       </form>
     </dialog>
 
-    <script src="/i18n.js?v=1.7.53"></script>
-    <script src="/app.js?v=1.7.53"></script>
+    <script src="/i18n.js?v=1.7.54"></script>
+    <script src="/app.js?v=1.7.54"></script>
   </body>
 </html>
