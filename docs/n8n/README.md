@@ -10,15 +10,25 @@
 | Evolution API | `n8n_evolution-api` | 8080 |
 | n8n | `n8n_n8n` | 5678 |
 
-Los nodos HTTP del workflow **FAQ prototipo** deben apuntar a:
+Los nodos HTTP del workflow **FAQ Productivo** deben apuntar a:
 
 ```text
 http://n8n_inn-api:3000/api/runtime/tenant-config
 http://n8n_inn-api:3000/api/search
 http://n8n_inn-api:3000/api/unanswered
+http://n8n_inn-api:3000/api/runtime/booking-link
+http://n8n_inn-api:3000/api/runtime/agenda-link
 ```
 
 Solo resuelven desde contenedores en la red `easypanel-n8n`.
+
+## Backups del workflow productivo
+
+Backup versionado en repo:
+
+```text
+docs/n8n/workflows/backups/FAQ-Productivo.rt5MZuQBonSFwS7J.2026-07-08.json
+```
 
 ## Rol de n8n
 
