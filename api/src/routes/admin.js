@@ -1,9 +1,11 @@
 import { createAdminTenant } from '../lib/tenantService.js';
 import {
   deleteAdminTenant,
+  getAdminTenantCustomSprompt,
   getAdminTenantDetail,
   listAdminTenants,
   resetAdminTenantPassword,
+  updateAdminTenantCustomSprompt,
 } from '../lib/adminService.js';
 import {
   getObjectiveTemplate,
@@ -36,6 +38,46 @@ export async function adminRoutes(app, config) {
         return {
           status: 'error',
           error: error.message || 'No se pudo cargar el tenant',
+        };
+      }
+    }
+  );
+
+  app.get(
+    '/api/admin/tenants/:id/custom-sprompt',
+    { preHandler: [app.requireAdmin] },
+    async (request, reply) => {
+      try {
+        const tenantId = Number(request.params.id);
+        const result = await getAdminTenantCustomSprompt(pool, tenantId);
+        return { status: 'ok', ...result };
+      } catch (error) {
+        reply.code(error.statusCode || 500);
+        return {
+          status: 'error',
+          error: error.message || 'No se pudo cargar custom_sprompt',
+        };
+      }
+    }
+  );
+
+  app.put(
+    '/api/admin/tenants/:id/custom-sprompt',
+    { preHandler: [app.requireAdmin] },
+    async (request, reply) => {
+      try {
+        const tenantId = Number(request.params.id);
+        const result = await updateAdminTenantCustomSprompt(
+          pool,
+          tenantId,
+          request.body || {}
+        );
+        return { status: 'ok', ...result };
+      } catch (error) {
+        reply.code(error.statusCode || 500);
+        return {
+          status: 'error',
+          error: error.message || 'No se pudo guardar custom_sprompt',
         };
       }
     }

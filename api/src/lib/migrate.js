@@ -357,6 +357,9 @@ async function applySchemaPatches(pool) {
     // URL única del tenant (lo que el agente entrega en la respuesta). El modo
     // (plantilla vs link fijo) lo decide el system prompt según el objetivo.
     ['tenant_url', "TEXT NOT NULL DEFAULT ''"],
+    // Texto admin-only concatenado al final del system prompt del agente.
+    // Si está vacío, no altera el prompt armado por objetivo.
+    ['custom_sprompt', "TEXT NOT NULL DEFAULT ''"],
   ];
 
   for (const [columnName, columnDef] of onboardingSettingsColumns) {

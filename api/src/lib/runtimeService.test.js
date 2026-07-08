@@ -82,6 +82,7 @@ test('buildRuntimeWorkflowItem flattens tenant only (no webhook message fields)'
   assert.equal(item.evolution_api_url, 'https://evo.example');
   assert.equal(item.placeholder_map_json, JSON.stringify({ checkin: '{{checkin}}' }));
   assert.equal(item.required_fields_json, JSON.stringify(['checkin']));
+  assert.equal(item.custom_sprompt, '');
   assert.equal('chatInput' in item, false);
   assert.equal('sessionId' in item, false);
   assert.equal('pause_key' in item, false);

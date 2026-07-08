@@ -59,11 +59,59 @@ export async function getAdminTenantDetail(pool, tenantId) {
     [tenantId]
   );
 
+  const [settingsRows] = await pool.query(
+    `SELECT custom_sprompt FROM tenant_settings WHERE tenant_id = ? LIMIT 1`,
+    [tenantId]
+  );
+  const customSprompt = String(settingsRows[0]?.custom_sprompt || '');
+
   return {
     ...tenant,
     faq_count: Number(faqCount[0]?.total || 0),
     unanswered_count: Number(unansweredCount[0]?.total || 0),
+    custom_sprompt: customSprompt,
+    custom_sprompt_configured: Boolean(customSprompt.trim()),
   };
+}
+
+export async function getAdminTenantCustomSprompt(pool, tenantId) {
+  const tenant = await getAdminTenantDetail(pool, tenantId);
+  return {
+    tenant_id: tenant.id,
+    slug: tenant.slug,
+    custom_sprompt: tenant.custom_sprompt || '',
+    custom_sprompt_configured: Boolean(tenant.custom_sprompt_configured),
+  };
+}
+
+export async function updateAdminTenantCustomSprompt(pool, tenantId, input = {}) {
+  const tenant = await getAdminTenantDetail(pool, tenantId);
+  const customSprompt =
+    input.custom_sprompt === undefined || input.custom_sprompt === null
+      ? ''
+      : String(input.custom_sprompt);
+
+  const [settings] = await pool.query(
+    `SELECT tenant_id FROM tenant_settings WHERE tenant_id = ?`,
+    [tenantId]
+  );
+  if (!settings.length) {
+    await pool.query(
+      `INSERT INTO tenant_settings
+       (tenant_id, vertical_slug, primary_language, postgres_database, custom_sprompt)
+       VALUES (?, 'hotel', 'es', ?, ?)`,
+      [tenantId, tenant.slug, customSprompt]
+    );
+  } else {
+    await pool.query(
+      `UPDATE tenant_settings
+       SET custom_sprompt = ?, updated_at = NOW()
+       WHERE tenant_id = ?`,
+      [customSprompt, tenantId]
+    );
+  }
+
+  return getAdminTenantCustomSprompt(pool, tenantId);
 }
 
 async function teardownEvolutionInstances(config, instanceNames, logger) {
