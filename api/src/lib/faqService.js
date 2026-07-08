@@ -58,49 +58,62 @@ export async function createFaqRecord(pool, config, user, faqInput) {
 
   const faqUid = newFaqUid();
 
-  const [result] = await pool.query(
-    `INSERT INTO faq_items
-     (tenant_id, agent_id, faq_uid, question, answer, category, keywords, language, active)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-    [
-      tenantId,
-      agent.id,
-      faqUid,
+  // Mantener consistente DB + Qdrant: si indexar falla, no guardar la edición/creación.
+  const conn = await pool.getConnection();
+  try {
+    await conn.beginTransaction();
+
+    const [result] = await conn.query(
+      `INSERT INTO faq_items
+       (tenant_id, agent_id, faq_uid, question, answer, category, keywords, language, active)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [
+        tenantId,
+        agent.id,
+        faqUid,
+        question,
+        answer,
+        category,
+        keywords,
+        language,
+        active,
+      ]
+    );
+
+    const faqRow = {
+      id: result.insertId,
+      faq_uid: faqUid,
       question,
       answer,
       category,
       keywords,
-      language,
       active,
-    ]
-  );
+      agent_slug: agent.slug,
+    };
 
-  const faqRow = {
-    id: result.insertId,
-    faq_uid: faqUid,
-    question,
-    answer,
-    category,
-    keywords,
-    active,
-    agent_slug: agent.slug,
-  };
+    const indexed = await indexFaqItem(config, faqRow, tenantSlug);
 
-  const indexed = await indexFaqItem(config, faqRow, tenantSlug);
+    await conn.query(
+      `UPDATE faq_items
+       SET qdrant_point_id = ?, embedding_hash = ?, indexed_at = ?
+       WHERE id = ?`,
+      [indexed.point_id, indexed.embedding_hash, indexed.indexed_at, result.insertId]
+    );
 
-  await pool.query(
-    `UPDATE faq_items
-     SET qdrant_point_id = ?, embedding_hash = ?, indexed_at = ?
-     WHERE id = ?`,
-    [indexed.point_id, indexed.embedding_hash, indexed.indexed_at, result.insertId]
-  );
+    await conn.commit();
 
-  return {
-    id: result.insertId,
-    faq_uid: faqUid,
-    indexed: true,
-    collection: indexed.collection,
-  };
+    return {
+      id: result.insertId,
+      faq_uid: faqUid,
+      indexed: true,
+      collection: indexed.collection,
+    };
+  } catch (error) {
+    await conn.rollback();
+    throw error;
+  } finally {
+    conn.release();
+  }
 }
 
 export async function reindexFaqRecord(pool, config, faq) {

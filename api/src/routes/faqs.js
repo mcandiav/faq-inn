@@ -231,43 +231,49 @@ export async function faqRoutes(app, config) {
         category !== faq.category ||
         keywords !== faq.keywords);
 
-    await pool.query(
-      `UPDATE faq_items
-       SET question = ?, answer = ?, category = ?, keywords = ?, active = ?,
-           is_starter_template = ?
-       WHERE id = ?`,
-      [
+    // Mantener consistente DB + Qdrant: si indexar falla, no guardar la edición.
+    const conn = await pool.getConnection();
+    try {
+      await conn.beginTransaction();
+
+      await conn.query(
+        `UPDATE faq_items
+         SET question = ?, answer = ?, category = ?, keywords = ?, active = ?,
+             is_starter_template = ?
+         WHERE id = ?`,
+        [
+          question,
+          answer,
+          category,
+          keywords,
+          active,
+          clearStarterTemplate ? false : Boolean(faq.is_starter_template),
+          faq.id,
+        ]
+      );
+
+      const faqRow = {
+        id: faq.id,
+        faq_uid: faq.faq_uid,
+        qdrant_point_id: faq.qdrant_point_id,
         question,
         answer,
         category,
         keywords,
         active,
-        clearStarterTemplate ? false : Boolean(faq.is_starter_template),
-        faq.id,
-      ]
-    );
+        agent_slug: faq.agent_slug,
+      };
 
-    const faqRow = {
-      id: faq.id,
-      faq_uid: faq.faq_uid,
-      qdrant_point_id: faq.qdrant_point_id,
-      question,
-      answer,
-      category,
-      keywords,
-      active,
-      agent_slug: faq.agent_slug,
-    };
-
-    try {
       const indexed = await indexFaqItem(config, faqRow, faq.tenant_slug);
 
-      await pool.query(
+      await conn.query(
         `UPDATE faq_items
          SET qdrant_point_id = ?, embedding_hash = ?, indexed_at = ?
          WHERE id = ?`,
         [indexed.point_id, indexed.embedding_hash, indexed.indexed_at, faq.id]
       );
+
+      await conn.commit();
 
       return {
         status: 'ok',
@@ -279,13 +285,16 @@ export async function faqRoutes(app, config) {
         },
       };
     } catch (error) {
+      await conn.rollback();
       app.log.error({ err: error }, 'Reindexación fallida');
       reply.code(502);
       return {
         status: 'error',
-        error: 'Cambios guardados pero falló la sincronización con el asistente',
+        error: 'No se guardó la FAQ porque falló la sincronización con el asistente',
         detail: error.message,
       };
+    } finally {
+      conn.release();
     }
   });
 
