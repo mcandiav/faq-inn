@@ -92,6 +92,7 @@ const appMeta = {
   productName: APP_PRODUCT_NAME,
   title: APP_PRODUCT_NAME,
   version: APP_VERSION,
+  uiVersion: APP_VERSION,
 };
 
 const $ = (sel) => document.querySelector(sel);
@@ -121,13 +122,33 @@ function mtk(key, kind = activeMotorKind()) {
   return t(`${motorDef(kind).tk}.${key}`);
 }
 
-function versionLabel(gitCommit) {
-  const base = `${appMeta.productName} v${appMeta.version}`;
-  const hash = gitCommit?.trim();
-  if (hash && hash !== 'unknown') {
-    return `${base} @${hash}`;
+function readUiVersionFromDom() {
+  const meta = document.querySelector('meta[name="faq-inn-ui-version"]');
+  const fromMeta = meta?.getAttribute('content')?.trim();
+  if (fromMeta) {
+    return fromMeta;
   }
-  return base;
+  const asset = document.querySelector('script[src*="app.js?v="], link[href*="styles.css?v="]');
+  const href = asset?.getAttribute('src') || asset?.getAttribute('href') || '';
+  const match = href.match(/[?&]v=([0-9.]+)/);
+  return match?.[1] || APP_VERSION;
+}
+
+function versionLabel(gitCommit, apiVersion) {
+  const uiVersion = appMeta.uiVersion || readUiVersionFromDom();
+  const api = (apiVersion || appMeta.version || '').trim();
+  const hash = gitCommit?.trim();
+  // Badge operable: UI = rama http; API = health de rama api (pueden diferir).
+  let label = `${appMeta.productName} UI ${uiVersion}`;
+  if (api && api !== uiVersion) {
+    label += ` · API ${api}`;
+  } else if (api) {
+    label += ` · API ${api}`;
+  }
+  if (hash && hash !== 'unknown') {
+    label += ` @${hash}`;
+  }
+  return label;
 }
 
 function applyAppBranding() {
@@ -137,8 +158,8 @@ function applyAppBranding() {
   }
 }
 
-function applyAppVersion(gitCommit) {
-  const label = versionLabel(gitCommit);
+function applyAppVersion(gitCommit, apiVersion) {
+  const label = versionLabel(gitCommit, apiVersion);
   document.title = label;
   $$('[data-app-version]').forEach((el) => {
     el.textContent = label;
@@ -146,6 +167,7 @@ function applyAppVersion(gitCommit) {
 }
 
 async function loadDeployVersion() {
+  appMeta.uiVersion = readUiVersionFromDom();
   try {
     const response = await fetch(`${apiBase}/health`, {
       credentials: 'same-origin',
@@ -167,7 +189,7 @@ async function loadDeployVersion() {
       appMeta.title = data.app.title;
     }
     applyAppBranding();
-    applyAppVersion(data.git?.commit);
+    applyAppVersion(data.git?.commit, data.app?.version);
   } catch {
     applyAppBranding();
     applyAppVersion();
