@@ -2496,6 +2496,49 @@ function escapeAttr(text) {
   return escapeHtml(text).replaceAll("'", '&#39;');
 }
 
+function escapeCsvCell(value) {
+  const raw = String(value ?? '');
+  const escaped = raw.replaceAll('"', '""');
+  // Excel-safe: always quote
+  return `"${escaped}"`;
+}
+
+function buildFaqsCsv(faqs) {
+  const header = ['id', 'question', 'answer', 'category', 'keywords', 'active'];
+  const lines = [header.map(escapeCsvCell).join(',')];
+  (faqs || []).forEach((faq) => {
+    lines.push(
+      [
+        faq.id,
+        faq.question,
+        faq.answer,
+        faq.category || '',
+        faq.keywords || '',
+        faq.active ? 'true' : 'false',
+      ]
+        .map(escapeCsvCell)
+        .join(',')
+    );
+  });
+  // Add BOM for Excel UTF-8 compatibility
+  return `\uFEFF${lines.join('\r\n')}\r\n`;
+}
+
+function downloadTextFile(filename, content, mimeType) {
+  const blob = new Blob([content], { type: mimeType || 'text/plain;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  try {
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+  } finally {
+    URL.revokeObjectURL(url);
+  }
+}
+
 function fieldLabelWithHelp(labelText, helpKey) {
   if (!helpKey) {
     return `<span>${escapeHtml(labelText)}</span>`;
@@ -3550,6 +3593,21 @@ window.addEventListener('popstate', () => {
 $('#btn-new-faq').addEventListener('click', () => openFaqDialog(null));
 
 $('#btn-reindex-faqs').addEventListener('click', () => reindexFaqs());
+
+$('#btn-export-faqs')?.addEventListener('click', () => {
+  const faqs = state.faqs || [];
+  const msg = $('#import-msg');
+  if (!faqs.length) {
+    msg.textContent = t('dashboard.none');
+    msg.className = 'form-msg warn';
+    return;
+  }
+  const slug = state.user?.tenant_slug || state.user?.tenant_id || 'tenant';
+  const stamp = new Date().toISOString().slice(0, 10);
+  const filename = `faqs-${slug}-${stamp}.csv`;
+  const csv = buildFaqsCsv(faqs);
+  downloadTextFile(filename, csv, 'text/csv;charset=utf-8');
+});
 
 $('#faq-import-file').addEventListener('change', async (event) => {
   const file = event.target.files?.[0];

@@ -63,6 +63,7 @@ const MESSAGES = {
     'dashboard.hintAdmin':
       'Como administrador, crea posadas en Admin. Los clientes editan sus FAQs.',
     'dashboard.import': 'Importar Excel',
+    'dashboard.export': 'Descargar Excel',
     'dashboard.reindex': 'Sincronizar respuestas',
     'dashboard.newFaq': 'Nueva FAQ',
     'dashboard.replaceAll': 'Reemplazar todas las FAQs al importar',
@@ -541,6 +542,7 @@ const MESSAGES = {
     'dashboard.hintAdmin':
       'Como administrador, crie pousadas em Admin. Os clientes editam suas FAQs.',
     'dashboard.import': 'Importar Excel',
+    'dashboard.export': 'Baixar Excel',
     'dashboard.reindex': 'Sincronizar respostas',
     'dashboard.newFaq': 'Nova FAQ',
     'dashboard.replaceAll': 'Substituir todas as FAQs ao importar',
@@ -1018,6 +1020,7 @@ const MESSAGES = {
     'dashboard.hintAdmin':
       'As administrator, create lodgings in Admin. Clients edit their FAQs.',
     'dashboard.import': 'Import Excel',
+    'dashboard.export': 'Download Excel',
     'dashboard.reindex': 'Sync answers',
     'dashboard.newFaq': 'New FAQ',
     'dashboard.replaceAll': 'Replace all FAQs on import',
