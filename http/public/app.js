@@ -56,6 +56,7 @@ const state = {
   promptTemplates: [],
   faqs: [],
   unanswered: [],
+  faqSort: 'id',
   currentView: 'dashboard',
   bookingReturnView: 'profile',
   bookingEngine: {
@@ -719,6 +720,48 @@ async function openView(name) {
 function formatDate(value) {
   if (!value) return '—';
   return new Date(value).toLocaleString(getLocale());
+}
+
+function sortFaqs(list, sortKey) {
+  const faqs = Array.isArray(list) ? [...list] : [];
+  const mode = sortKey || state.faqSort || 'id';
+  if (mode === 'updated_at_desc') {
+    faqs.sort((a, b) => {
+      const ta = a?.updated_at ? new Date(a.updated_at).getTime() : 0;
+      const tb = b?.updated_at ? new Date(b.updated_at).getTime() : 0;
+      if (tb !== ta) return tb - ta;
+      return Number(a?.id || 0) - Number(b?.id || 0);
+    });
+    return faqs;
+  }
+  faqs.sort((a, b) => Number(a?.id || 0) - Number(b?.id || 0));
+  return faqs;
+}
+
+function ensureFaqSortUi() {
+  const actions = $('#faq-client-actions');
+  if (!actions || actions.querySelector('#faq-sort')) {
+    return;
+  }
+  const wrap = document.createElement('label');
+  wrap.id = 'faq-sort';
+  wrap.innerHTML = `
+    <span class="sr-only">Orden</span>
+    <select class="select-inline" id="faq-sort-select" aria-label="Orden">
+      <option value="id">#</option>
+      <option value="updated_at_desc">${escapeHtml(t('table.modified'))}</option>
+    </select>
+  `;
+  actions.insertBefore(wrap, actions.querySelector('#btn-new-faq'));
+
+  const select = wrap.querySelector('#faq-sort-select');
+  if (select) {
+    select.value = state.faqSort || 'id';
+    select.addEventListener('change', () => {
+      state.faqSort = select.value || 'id';
+      renderFaqs();
+    });
+  }
 }
 
 function statusPillActive(active) {
@@ -1675,6 +1718,7 @@ function faqCardHtml(faq, index) {
       <div class="faq-card-head">
         <span class="faq-card-num">#${index + 1}</span>
         <div class="faq-card-badges">
+          <span class="pill off">${escapeHtml(t('table.modified'))}: ${escapeHtml(formatDate(faq.updated_at))}</span>
           ${statusPillTemplate(faq.is_starter_template)}
           ${statusPillActive(faq.active)}
           ${statusPillIndexed(faq.indexed_at)}
@@ -1719,7 +1763,10 @@ function renderFaqs() {
   replaceWrap.classList.remove('hidden');
   $('#dashboard-hint').textContent = t('dashboard.hint');
 
-  const total = state.faqs.length;
+  ensureFaqSortUi();
+
+  const faqs = sortFaqs(state.faqs, state.faqSort);
+  const total = faqs.length;
   $('#faq-count').textContent = total
     ? total === 1
       ? t('dashboard.countOne')
@@ -1728,14 +1775,14 @@ function renderFaqs() {
 
   if (total === 0) {
     const emptyText = escapeHtml(t('dashboard.empty'));
-    tbody.innerHTML = `<tr><td colspan="6" class="empty">${emptyText}</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="7" class="empty">${emptyText}</td></tr>`;
     if (cards) {
       cards.innerHTML = `<p class="empty-block">${emptyText}</p>`;
     }
     return;
   }
 
-  state.faqs.forEach((faq, index) => {
+  faqs.forEach((faq, index) => {
     const tr = document.createElement('tr');
     tr.innerHTML = `
       <td class="num">${index + 1}</td>
@@ -1743,6 +1790,7 @@ function renderFaqs() {
       <td class="cell-text" title="${escapeAttr(faq.answer)}">${escapeHtml(faq.answer)}</td>
       <td>${statusPillTemplate(faq.is_starter_template)} ${statusPillActive(faq.active)}</td>
       <td>${statusPillIndexed(faq.indexed_at)}</td>
+      <td class="cell-text">${escapeHtml(formatDate(faq.updated_at))}</td>
       <td class="row-actions">
         <button type="button" class="btn small" data-edit="${faq.id}">${escapeHtml(t('btn.edit'))}</button>
         <button type="button" class="btn small danger" data-delete="${faq.id}">${escapeHtml(t('btn.delete'))}</button>
