@@ -48,23 +48,7 @@ async function loadStarterFaqs(pool, tenantId) {
   return rows.slice(0, 3);
 }
 
-async function reactivateTransversalStarterFaqs(pool, tenantId) {
-  const templates = getStarterFaqs();
-  const uids = templates.map((t) => t.faq_uid).filter(Boolean);
-  if (!uids.length) {
-    return;
-  }
-  const placeholders = uids.map(() => '?').join(', ');
-  await pool.query(
-    `UPDATE faq_items
-     SET is_starter_template = TRUE, updated_at = NOW()
-     WHERE tenant_id = ? AND faq_uid IN (${placeholders})`,
-    [tenantId, ...uids]
-  );
-}
-
 async function ensureStarterFaqs(pool, config, tenantId, tenantSlug, primaryLanguage, logger = null) {
-  await reactivateTransversalStarterFaqs(pool, tenantId);
   let starterFaqs = await loadStarterFaqs(pool, tenantId);
   if (starterFaqs.length >= 3 || !tenantSlug) {
     return starterFaqs;
@@ -84,7 +68,6 @@ async function ensureStarterFaqs(pool, config, tenantId, tenantSlug, primaryLang
     if (result.errors?.length) {
       logger?.warn({ tenantId, errors: result.errors }, 'Errores al sembrar FAQs plantilla');
     }
-    await reactivateTransversalStarterFaqs(pool, tenantId);
     starterFaqs = await loadStarterFaqs(pool, tenantId);
   } catch (error) {
     logger?.warn({ err: error, tenantId }, 'No se pudieron sembrar FAQs plantilla');
