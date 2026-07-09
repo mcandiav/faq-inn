@@ -56,7 +56,7 @@ const state = {
   promptTemplates: [],
   faqs: [],
   unanswered: [],
-  faqSort: 'id',
+  faqSort: { key: 'id', dir: 'asc' },
   currentView: 'dashboard',
   bookingReturnView: 'profile',
   bookingEngine: {
@@ -722,46 +722,50 @@ function formatDate(value) {
   return new Date(value).toLocaleString(getLocale());
 }
 
-function sortFaqs(list, sortKey) {
+function sortFaqs(list, sortState = state.faqSort) {
   const faqs = Array.isArray(list) ? [...list] : [];
-  const mode = sortKey || state.faqSort || 'id';
-  if (mode === 'updated_at_desc') {
-    faqs.sort((a, b) => {
+  const key = sortState?.key || 'id';
+  const dir = sortState?.dir === 'desc' ? -1 : 1;
+
+  faqs.sort((a, b) => {
+    if (key === 'updated_at') {
       const ta = a?.updated_at ? new Date(a.updated_at).getTime() : 0;
       const tb = b?.updated_at ? new Date(b.updated_at).getTime() : 0;
-      if (tb !== ta) return tb - ta;
-      return Number(a?.id || 0) - Number(b?.id || 0);
-    });
-    return faqs;
-  }
-  faqs.sort((a, b) => Number(a?.id || 0) - Number(b?.id || 0));
+      if (ta !== tb) return (ta - tb) * dir;
+      return (Number(a?.id || 0) - Number(b?.id || 0)) * dir;
+    }
+    // default: id
+    return (Number(a?.id || 0) - Number(b?.id || 0)) * dir;
+  });
+
   return faqs;
 }
 
-function ensureFaqSortUi() {
-  const actions = $('#faq-client-actions');
-  if (!actions || actions.querySelector('#faq-sort')) {
-    return;
-  }
-  const wrap = document.createElement('label');
-  wrap.id = 'faq-sort';
-  wrap.innerHTML = `
-    <span class="sr-only">Orden</span>
-    <select class="select-inline" id="faq-sort-select" aria-label="Orden">
-      <option value="id">#</option>
-      <option value="updated_at_desc">${escapeHtml(t('table.modified'))}</option>
-    </select>
-  `;
-  actions.insertBefore(wrap, actions.querySelector('#btn-new-faq'));
+function setFaqSort(nextKey) {
+  const currentKey = state.faqSort?.key || 'id';
+  const currentDir = state.faqSort?.dir || 'asc';
+  const dir = nextKey === currentKey ? (currentDir === 'asc' ? 'desc' : 'asc') : 'asc';
+  state.faqSort = { key: nextKey, dir };
+}
 
-  const select = wrap.querySelector('#faq-sort-select');
-  if (select) {
-    select.value = state.faqSort || 'id';
-    select.addEventListener('change', () => {
-      state.faqSort = select.value || 'id';
-      renderFaqs();
-    });
-  }
+function sortArrow(sortState, forKey) {
+  const key = sortState?.key || 'id';
+  if (key !== forKey) return '';
+  return sortState?.dir === 'desc' ? ' ↓' : ' ↑';
+}
+
+function applyFaqHeaderSortUi() {
+  const thead = document.querySelector('#view-dashboard thead');
+  if (!thead) return;
+  thead.querySelectorAll('th[data-sort-key]').forEach((th) => {
+    const key = th.dataset.sortKey || '';
+    if (!key) return;
+    const base =
+      th.dataset.i18n ? t(th.dataset.i18n) : th.textContent?.trim() || '';
+    th.textContent = `${base}${sortArrow(state.faqSort, key)}`;
+    th.classList.toggle('is-sortable', true);
+    th.classList.toggle('is-sorted', (state.faqSort?.key || 'id') === key);
+  });
 }
 
 function statusPillActive(active) {
@@ -1763,9 +1767,8 @@ function renderFaqs() {
   replaceWrap.classList.remove('hidden');
   $('#dashboard-hint').textContent = t('dashboard.hint');
 
-  ensureFaqSortUi();
-
   const faqs = sortFaqs(state.faqs, state.faqSort);
+  applyFaqHeaderSortUi();
   const total = faqs.length;
   $('#faq-count').textContent = total
     ? total === 1
@@ -1809,6 +1812,21 @@ function renderFaqs() {
   if (cards) {
     attachFaqActions(cards);
   }
+}
+
+function attachFaqHeaderSort() {
+  const thead = document.querySelector('#view-dashboard thead');
+  if (!thead || thead.dataset.sortBound === 'true') {
+    return;
+  }
+  thead.dataset.sortBound = 'true';
+  thead.addEventListener('click', (event) => {
+    const th = event.target?.closest?.('th[data-sort-key]');
+    const key = th?.dataset?.sortKey;
+    if (!key) return;
+    setFaqSort(key);
+    renderFaqs();
+  });
 }
 
 function statusLabel(status) {
@@ -3028,6 +3046,7 @@ async function refreshFaqs() {
 
   const data = await api('/faqs');
   state.faqs = data.faqs;
+  attachFaqHeaderSort();
   renderFaqs();
 }
 
