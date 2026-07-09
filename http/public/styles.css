@@ -971,8 +971,13 @@ body.onboarding-wizard .bottomnav {
   gap: 0.5rem;
 }
 
-.onboarding-faq-item .pill.template {
+.onboarding-faq-item .pill.template,
+.onboarding-faq-template-pill .pill.template {
   align-self: flex-start;
+}
+
+.onboarding-faq-template-pill.hidden {
+  display: none;
 }
 
 .onboarding-actions {

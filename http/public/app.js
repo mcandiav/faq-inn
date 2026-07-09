@@ -2863,6 +2863,38 @@ async function ensureOnboardingFaqsReady() {
   return ready;
 }
 
+function onboardingFaqFieldsDiffer(faq, article) {
+  const q = article.querySelector('.onboarding-faq-q')?.value?.trim() ?? '';
+  const a = article.querySelector('.onboarding-faq-a')?.value?.trim() ?? '';
+  const c = article.querySelector('.onboarding-faq-c')?.value?.trim() ?? '';
+  const k = article.querySelector('.onboarding-faq-k')?.value?.trim() ?? '';
+  return (
+    q !== String(faq.question || '').trim() ||
+    a !== String(faq.answer || '').trim() ||
+    c !== String(faq.category || '').trim() ||
+    k !== String(faq.keywords || '').trim()
+  );
+}
+
+function syncOnboardingFaqTemplatePill(article, faq) {
+  const pill = article.querySelector('.onboarding-faq-template-pill');
+  if (!pill) return;
+  const show = Boolean(faq.is_starter_template) && !onboardingFaqFieldsDiffer(faq, article);
+  pill.classList.toggle('hidden', !show);
+}
+
+function attachOnboardingFaqEditors(list, faqs) {
+  list.querySelectorAll('.onboarding-faq-item').forEach((article, index) => {
+    const faq = faqs[index];
+    if (!faq) return;
+    const onChange = () => syncOnboardingFaqTemplatePill(article, faq);
+    article.querySelectorAll('input, textarea').forEach((field) => {
+      field.addEventListener('input', onChange);
+    });
+    syncOnboardingFaqTemplatePill(article, faq);
+  });
+}
+
 function renderOnboardingFaqs() {
   const list = $('#onboarding-faqs-list');
   const faqs = state.onboardingData?.starter_faqs || [];
@@ -2882,7 +2914,11 @@ function renderOnboardingFaqs() {
     .map(
       (faq) => `
       <article class="onboarding-faq-item" data-faq-id="${faq.id}">
-        ${statusPillTemplate(true)}
+        ${
+          faq.is_starter_template
+            ? `<span class="onboarding-faq-template-pill">${statusPillTemplate(true)}</span>`
+            : ''
+        }
         <label>
           <span>${escapeHtml(t('table.question'))}</span>
           <input type="text" class="onboarding-faq-q" value="${escapeAttr(faq.question)}" />
@@ -2891,9 +2927,18 @@ function renderOnboardingFaqs() {
           <span>${escapeHtml(t('table.answer'))}</span>
           <textarea class="onboarding-faq-a" rows="3">${escapeHtml(faq.answer)}</textarea>
         </label>
+        <label>
+          <span>${escapeHtml(t('faq.category'))}</span>
+          <input type="text" class="onboarding-faq-c" value="${escapeAttr(faq.category || '')}" />
+        </label>
+        <label>
+          <span>${escapeHtml(t('faq.keywords'))}</span>
+          <input type="text" class="onboarding-faq-k" value="${escapeAttr(faq.keywords || '')}" />
+        </label>
       </article>`
     )
     .join('');
+  attachOnboardingFaqEditors(list, faqs);
 }
 
 function collectOnboardingStarterFaqs() {
@@ -2901,6 +2946,8 @@ function collectOnboardingStarterFaqs() {
     id: Number(el.dataset.faqId),
     question: el.querySelector('.onboarding-faq-q')?.value?.trim(),
     answer: el.querySelector('.onboarding-faq-a')?.value?.trim(),
+    category: el.querySelector('.onboarding-faq-c')?.value?.trim(),
+    keywords: el.querySelector('.onboarding-faq-k')?.value?.trim(),
   }));
 }
 
@@ -2990,6 +3037,9 @@ async function saveOnboardingStep(step) {
     if (state.account?.settings) {
       state.account.settings.objetivo_slug = data.onboarding.objetivo_slug;
       state.account.settings.tenant_url = data.onboarding.tenant_url;
+    }
+    if (step === 4) {
+      renderOnboardingFaqs();
     }
     renderHeader();
     return true;
