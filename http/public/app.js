@@ -722,22 +722,49 @@ function formatDate(value) {
   return new Date(value).toLocaleString(getLocale());
 }
 
+function compareText(a, b) {
+  return String(a || '').localeCompare(String(b || ''), undefined, { sensitivity: 'base' });
+}
+
+function compareFaqRows(a, b, key) {
+  switch (key) {
+    case 'question':
+      return compareText(a.question, b.question);
+    case 'answer':
+      return compareText(a.answer, b.answer);
+    case 'status': {
+      const rank = (faq) =>
+        (faq.is_starter_template ? 0 : 1) * 2 + (faq.active ? 0 : 1);
+      const diff = rank(a) - rank(b);
+      if (diff !== 0) return diff;
+      return compareText(a.question, b.question);
+    }
+    case 'indexed': {
+      const rank = (faq) => (faq.indexed_at ? 0 : 1);
+      const diff = rank(a) - rank(b);
+      if (diff !== 0) return diff;
+      const ta = a?.indexed_at ? new Date(a.indexed_at).getTime() : 0;
+      const tb = b?.indexed_at ? new Date(b.indexed_at).getTime() : 0;
+      if (ta !== tb) return ta - tb;
+      return Number(a?.id || 0) - Number(b?.id || 0);
+    }
+    case 'updated_at': {
+      const ta = a?.updated_at ? new Date(a.updated_at).getTime() : 0;
+      const tb = b?.updated_at ? new Date(b.updated_at).getTime() : 0;
+      if (ta !== tb) return ta - tb;
+      return Number(a?.id || 0) - Number(b?.id || 0);
+    }
+    default:
+      return Number(a?.id || 0) - Number(b?.id || 0);
+  }
+}
+
 function sortFaqs(list, sortState = state.faqSort) {
   const faqs = Array.isArray(list) ? [...list] : [];
   const key = sortState?.key || 'id';
   const dir = sortState?.dir === 'desc' ? -1 : 1;
 
-  faqs.sort((a, b) => {
-    if (key === 'updated_at') {
-      const ta = a?.updated_at ? new Date(a.updated_at).getTime() : 0;
-      const tb = b?.updated_at ? new Date(b.updated_at).getTime() : 0;
-      if (ta !== tb) return (ta - tb) * dir;
-      return (Number(a?.id || 0) - Number(b?.id || 0)) * dir;
-    }
-    // default: id
-    return (Number(a?.id || 0) - Number(b?.id || 0)) * dir;
-  });
-
+  faqs.sort((a, b) => compareFaqRows(a, b, key) * dir);
   return faqs;
 }
 
@@ -748,10 +775,10 @@ function setFaqSort(nextKey) {
   state.faqSort = { key: nextKey, dir };
 }
 
-function sortArrow(sortState, forKey) {
+function faqSortArrow(sortState, forKey) {
   const key = sortState?.key || 'id';
   if (key !== forKey) return '';
-  return sortState?.dir === 'desc' ? ' ↓' : ' ↑';
+  return sortState?.dir === 'desc' ? '↓' : '↑';
 }
 
 function applyFaqHeaderSortUi() {
@@ -760,10 +787,12 @@ function applyFaqHeaderSortUi() {
   thead.querySelectorAll('th[data-sort-key]').forEach((th) => {
     const key = th.dataset.sortKey || '';
     if (!key) return;
-    const base =
-      th.dataset.i18n ? t(th.dataset.i18n) : th.textContent?.trim() || '';
-    th.textContent = `${base}${sortArrow(state.faqSort, key)}`;
-    th.classList.toggle('is-sortable', true);
+    const label = th.dataset.i18n ? t(th.dataset.i18n) : key;
+    const arrow = faqSortArrow(state.faqSort, key);
+    th.innerHTML = arrow
+      ? `<span class="th-label">${escapeHtml(label)}</span><span class="sort-arrow" aria-hidden="true">${arrow}</span>`
+      : `<span class="th-label">${escapeHtml(label)}</span>`;
+    th.classList.add('is-sortable');
     th.classList.toggle('is-sorted', (state.faqSort?.key || 'id') === key);
   });
 }
@@ -1756,7 +1785,7 @@ function renderFaqs() {
     $('#faq-count').textContent = '';
     $('#dashboard-hint').textContent = t('dashboard.hintAdmin');
     tbody.innerHTML =
-      `<tr><td colspan="6" class="empty">${escapeHtml(t('dashboard.emptyAdmin'))}</td></tr>`;
+      `<tr><td colspan="7" class="empty">${escapeHtml(t('dashboard.emptyAdmin'))}</td></tr>`;
     if (cards) {
       cards.innerHTML = `<p class="empty-block">${escapeHtml(t('dashboard.emptyAdmin'))}</p>`;
     }

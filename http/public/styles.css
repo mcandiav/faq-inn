@@ -805,10 +805,23 @@ th.is-sortable {
   cursor: pointer;
   -webkit-user-select: none;
   user-select: none;
+  white-space: nowrap;
 }
 
 th.is-sortable:hover {
   color: #cbd5e1;
+}
+
+th.is-sortable .sort-arrow {
+  display: inline-block;
+  margin-left: 0.2rem;
+  font-size: 0.78em;
+  opacity: 0.9;
+}
+
+th.col-num {
+  width: 2.5rem;
+  white-space: nowrap;
 }
 
 .empty {
