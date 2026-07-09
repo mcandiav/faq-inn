@@ -302,61 +302,78 @@ export async function convertUnansweredToFaq(pool, config, id, user, input = {})
 
   const faqUid = newFaqUid();
   const tenantSlug = row.tenant_slug_resolved || row.tenant_slug;
+  // Mantener consistente DB + Qdrant: si indexar falla, no dejar una FAQ "sin indexar".
+  const conn = await pool.getConnection();
+  try {
+    await conn.beginTransaction();
 
-  const [result] = await pool.query(
-    `INSERT INTO faq_items
-     (tenant_id, agent_id, faq_uid, question, answer, category, keywords, language, active)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-    [
-      row.tenant_id,
-      row.agent_id,
-      faqUid,
+    const [result] = await conn.query(
+      `INSERT INTO faq_items
+       (tenant_id, agent_id, faq_uid, question, answer, category, keywords, language, active)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [
+        row.tenant_id,
+        row.agent_id,
+        faqUid,
+        question,
+        answer,
+        category,
+        keywords,
+        language,
+        active,
+      ]
+    );
+
+    const faqRow = {
+      id: result.insertId,
+      faq_uid: faqUid,
       question,
       answer,
       category,
       keywords,
-      language,
       active,
-    ]
-  );
+      agent_slug: row.agent_slug,
+    };
 
-  const faqRow = {
-    id: result.insertId,
-    faq_uid: faqUid,
-    question,
-    answer,
-    category,
-    keywords,
-    active,
-    agent_slug: row.agent_slug,
-  };
+    const indexed = await indexFaqItem(config, faqRow, tenantSlug);
 
-  const indexed = await indexFaqItem(config, faqRow, tenantSlug);
+    await conn.query(
+      `UPDATE faq_items
+       SET qdrant_point_id = ?, embedding_hash = ?, indexed_at = ?
+       WHERE id = ?`,
+      [indexed.point_id, indexed.embedding_hash, indexed.indexed_at, result.insertId]
+    );
 
-  await pool.query(
-    `UPDATE faq_items
-     SET qdrant_point_id = ?, embedding_hash = ?, indexed_at = ?
-     WHERE id = ?`,
-    [indexed.point_id, indexed.embedding_hash, indexed.indexed_at, result.insertId]
-  );
+    await conn.query(
+      `UPDATE unanswered_questions
+       SET status = 'converted_to_faq',
+           converted_faq_id = ?,
+           resolved_by = ?,
+           resolved_at = ?
+       WHERE id = ?`,
+      [result.insertId, user.id, new Date(), id]
+    );
 
-  await pool.query(
-    `UPDATE unanswered_questions
-     SET status = 'converted_to_faq',
-         converted_faq_id = ?,
-         resolved_by = ?,
-         resolved_at = ?
-     WHERE id = ?`,
-    [result.insertId, user.id, new Date(), id]
-  );
+    await conn.commit();
 
-  return {
-    unanswered_id: Number(id),
-    faq: {
-      id: result.insertId,
-      faq_uid: faqUid,
-      indexed: true,
-      collection: indexed.collection,
-    },
-  };
+    return {
+      unanswered_id: Number(id),
+      faq: {
+        id: result.insertId,
+        faq_uid: faqUid,
+        indexed: true,
+        collection: indexed.collection,
+      },
+    };
+  } catch (error) {
+    await conn.rollback();
+    const wrapped = new Error(
+      'No se guardó la FAQ porque falló la sincronización con el asistente'
+    );
+    wrapped.statusCode = error.statusCode || 502;
+    wrapped.detail = error.detail || error.message;
+    throw wrapped;
+  } finally {
+    conn.release();
+  }
 }
