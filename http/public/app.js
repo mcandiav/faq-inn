@@ -559,6 +559,11 @@ async function loadOnboardingState() {
   if (state.user?.role !== 'client') {
     return;
   }
+  // Tras completar onboarding no hace falta /onboarding/status en cada refresh.
+  // En API <1.7.54 esa ruta reactivaba is_starter_template en FAQs ya editadas.
+  if (state.account?.settings?.onboarding_completed) {
+    return;
+  }
   try {
     const data = await api('/onboarding/status');
     state.onboardingData = data.onboarding;
