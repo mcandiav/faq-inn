@@ -11,8 +11,8 @@
     <link rel="icon" type="image/png" sizes="512x512" href="/favicon.png" />
     <link rel="apple-touch-icon" href="/favicon.png" />
     <title>FAQ Inn</title>
-    <meta name="faq-inn-ui-version" content="1.7.65" />
-    <link rel="stylesheet" href="/styles.css?v=1.7.65" />
+    <meta name="faq-inn-ui-version" content="1.7.66" />
+    <link rel="stylesheet" href="/styles.css?v=1.7.66" />
     <!-- CSS crítico QR help: evita layout roto si Cloudflare cachea styles.css?v= antiguo -->
     <style id="qr-scan-help-critical">
       .qr-scan-layout {
@@ -438,6 +438,29 @@
                 </div>
               </div>
               <p class="form-msg" id="profile-objective-msg"></p>
+            </fieldset>
+            <fieldset id="profile-categories-fieldset" class="profile-categories-fieldset hidden">
+              <legend data-i18n="profile.sectionCategories">Categorías administrativas</legend>
+              <p class="hint" data-i18n="profile.categoriesHint">
+                Úsalas para ordenar internamente tus FAQs. No influyen en la búsqueda semántica.
+              </p>
+              <div class="profile-category-add">
+                <label>
+                  <span data-i18n="profile.categoryName">Nueva categoría</span>
+                  <input
+                    type="text"
+                    id="profile-category-name"
+                    data-i18n-placeholder="profile.categoryPlaceholder"
+                    placeholder="Ej. pagos"
+                    maxlength="128"
+                  />
+                </label>
+                <button type="button" class="btn primary" id="btn-profile-category-add" data-i18n="profile.categoryAdd">
+                  Agregar categoría
+                </button>
+              </div>
+              <div id="profile-categories-list" class="profile-categories-list"></div>
+              <p class="form-msg" id="profile-categories-msg"></p>
             </fieldset>
             <fieldset>
               <legend data-i18n="profile.sectionAgent">Agente WhatsApp</legend>
@@ -1077,7 +1100,7 @@
       </form>
     </dialog>
 
-    <script src="/i18n.js?v=1.7.65"></script>
-    <script src="/app.js?v=1.7.65"></script>
+    <script src="/i18n.js?v=1.7.66"></script>
+    <script src="/app.js?v=1.7.66"></script>
   </body>
 </html>

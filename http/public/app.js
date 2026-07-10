@@ -1009,8 +1009,10 @@ function renderProfile() {
 
   if (user.role === 'client') {
     void ensureObjectivesCatalog().then(() => renderProfileObjective());
+    void refreshProfileCategories();
   } else {
     $('#profile-objective-fieldset')?.classList.add('hidden');
+    $('#profile-categories-fieldset')?.classList.add('hidden');
   }
 
   renderProfileWhatsapp();
@@ -1866,6 +1868,11 @@ function attachFaqHeaderSort() {
 
 const DEFAULT_FAQ_CATEGORY = 'Sin categoría';
 
+function isPersistedCategoryId(id) {
+  const numeric = Number(id);
+  return Number.isInteger(numeric) && numeric > 0;
+}
+
 async function loadFaqCategories() {
   if (state.user?.role !== 'client') {
     state.faqCategories = [];
@@ -1913,6 +1920,196 @@ function renderFaqCategorySelect(selectEl, selected = '') {
   }
 
   selectEl.innerHTML = options.join('');
+}
+
+async function refreshProfileCategories() {
+  const fieldset = $('#profile-categories-fieldset');
+  if (!fieldset || state.user?.role !== 'client') {
+    fieldset?.classList.add('hidden');
+    return;
+  }
+
+  fieldset.classList.remove('hidden');
+  await loadFaqCategories();
+  renderProfileCategories();
+}
+
+function renderProfileCategories() {
+  const fieldset = $('#profile-categories-fieldset');
+  const list = $('#profile-categories-list');
+  const msg = $('#profile-categories-msg');
+  if (!fieldset || !list || state.user?.role !== 'client') {
+    fieldset?.classList.add('hidden');
+    return;
+  }
+
+  fieldset.classList.remove('hidden');
+  const categories = (state.faqCategories || []).filter((item) =>
+    isPersistedCategoryId(item.id)
+  );
+
+  if (!categories.length) {
+    list.innerHTML = `<p class="empty-block">${escapeHtml(t('profile.categoriesLoading'))}</p>`;
+    return;
+  }
+
+  list.innerHTML = categories
+    .map((category) => {
+      const id = String(category.id);
+      const isDefault = category.name === DEFAULT_FAQ_CATEGORY;
+      const inactive = category.active === false;
+      return `
+      <article class="profile-category-item${inactive ? ' is-inactive' : ''}" data-category-id="${escapeAttr(id)}">
+        <label>
+          <span>${escapeHtml(t('profile.categoryName'))}</span>
+          <input type="text" class="profile-category-name-input" value="${escapeAttr(category.name || '')}" maxlength="128" ${isDefault ? 'readonly' : ''} />
+        </label>
+        <label class="checkbox profile-category-active">
+          <input type="checkbox" class="profile-category-active-input" ${inactive ? '' : 'checked'} ${isDefault ? 'disabled' : ''} />
+          <span>${escapeHtml(t('profile.categoryActive'))}</span>
+        </label>
+        <div class="dialog-actions profile-category-actions">
+          <button type="button" class="btn small" data-category-save="${escapeAttr(id)}">${escapeHtml(t('btn.save'))}</button>
+          ${
+            isDefault
+              ? ''
+              : `<button type="button" class="btn small danger" data-category-toggle="${escapeAttr(id)}">
+            ${escapeHtml(inactive ? t('profile.categoryActive') : t('profile.categoryInactive'))}
+          </button>`
+          }
+        </div>
+      </article>`;
+    })
+    .join('');
+
+  if (msg && !msg.classList.contains('error') && !msg.classList.contains('ok')) {
+    msg.textContent = '';
+    msg.className = 'form-msg';
+  }
+}
+
+async function addProfileCategory() {
+  const input = $('#profile-category-name');
+  const msg = $('#profile-categories-msg');
+  const name = input?.value.trim() || '';
+  if (!name) {
+    if (msg) {
+      msg.textContent = t('profile.categoryRequired');
+      msg.className = 'form-msg error';
+    }
+    input?.focus();
+    return;
+  }
+
+  if (msg) {
+    msg.textContent = t('msg.savingIndexing');
+    msg.className = 'form-msg';
+  }
+
+  try {
+    await api('/faq-categories', {
+      method: 'POST',
+      body: JSON.stringify({ name }),
+    });
+    if (input) input.value = '';
+    await loadFaqCategories();
+    renderProfileCategories();
+    if (msg) {
+      msg.textContent = t('profile.categorySaved');
+      msg.className = 'form-msg ok';
+    }
+  } catch (error) {
+    if (msg) {
+      msg.textContent = error.message;
+      msg.className = 'form-msg error';
+    }
+  }
+}
+
+async function saveProfileCategory(categoryId) {
+  if (!isPersistedCategoryId(categoryId)) {
+    const msg = $('#profile-categories-msg');
+    if (msg) {
+      msg.textContent = t('profile.categoriesReload');
+      msg.className = 'form-msg error';
+    }
+    await refreshProfileCategories();
+    return;
+  }
+
+  const row = document.querySelector(`[data-category-id="${CSS.escape(String(categoryId))}"]`);
+  const name = row?.querySelector('.profile-category-name-input')?.value.trim() || '';
+  const active = row?.querySelector('.profile-category-active-input')?.checked !== false;
+  const msg = $('#profile-categories-msg');
+
+  if (!name) {
+    if (msg) {
+      msg.textContent = t('profile.categoryRequired');
+      msg.className = 'form-msg error';
+    }
+    return;
+  }
+
+  if (msg) {
+    msg.textContent = t('msg.savingIndexing');
+    msg.className = 'form-msg';
+  }
+
+  try {
+    await api(`/faq-categories/${encodeURIComponent(categoryId)}`, {
+      method: 'PATCH',
+      body: JSON.stringify({ name, active }),
+    });
+    await loadFaqCategories();
+    renderProfileCategories();
+    if (msg) {
+      msg.textContent = t('profile.categorySaved');
+      msg.className = 'form-msg ok';
+    }
+  } catch (error) {
+    if (msg) {
+      msg.textContent = error.message;
+      msg.className = 'form-msg error';
+    }
+  }
+}
+
+async function toggleProfileCategory(categoryId) {
+  if (!isPersistedCategoryId(categoryId)) {
+    const msg = $('#profile-categories-msg');
+    if (msg) {
+      msg.textContent = t('profile.categoriesReload');
+      msg.className = 'form-msg error';
+    }
+    await refreshProfileCategories();
+    return;
+  }
+
+  const row = document.querySelector(`[data-category-id="${CSS.escape(String(categoryId))}"]`);
+  const currentlyActive = row?.querySelector('.profile-category-active-input')?.checked !== false;
+  const msg = $('#profile-categories-msg');
+  if (msg) {
+    msg.textContent = t('msg.savingIndexing');
+    msg.className = 'form-msg';
+  }
+
+  try {
+    await api(`/faq-categories/${encodeURIComponent(categoryId)}`, {
+      method: 'PATCH',
+      body: JSON.stringify({ active: !currentlyActive }),
+    });
+    await loadFaqCategories();
+    renderProfileCategories();
+    if (msg) {
+      msg.textContent = t('profile.categorySaved');
+      msg.className = 'form-msg ok';
+    }
+  } catch (error) {
+    if (msg) {
+      msg.textContent = error.message;
+      msg.className = 'form-msg error';
+    }
+  }
 }
 
 function statusLabel(status) {
@@ -3538,6 +3735,29 @@ $('#btn-profile-objective-cancel')?.addEventListener('click', () => {
 
 $('#btn-profile-objective-save')?.addEventListener('click', () => {
   void saveProfileObjective();
+});
+
+$('#btn-profile-category-add')?.addEventListener('click', () => {
+  void addProfileCategory();
+});
+
+$('#profile-category-name')?.addEventListener('keydown', (event) => {
+  if (event.key === 'Enter') {
+    event.preventDefault();
+    void addProfileCategory();
+  }
+});
+
+$('#profile-categories-list')?.addEventListener('click', (event) => {
+  const saveBtn = event.target.closest?.('[data-category-save]');
+  if (saveBtn) {
+    void saveProfileCategory(saveBtn.dataset.categorySave);
+    return;
+  }
+  const toggleBtn = event.target.closest?.('[data-category-toggle]');
+  if (toggleBtn) {
+    void toggleProfileCategory(toggleBtn.dataset.categoryToggle);
+  }
 });
 
 async function logout() {
