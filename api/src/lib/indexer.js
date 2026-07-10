@@ -170,7 +170,6 @@ export async function indexFaqItem(config, faq, tenantSlug) {
   const text = buildVectorizableText({
     question: faq.question,
     answer: faq.answer,
-    category: faq.category,
     keywords: faq.keywords,
   });
   const hash = embeddingHash(text);

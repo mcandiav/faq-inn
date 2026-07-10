@@ -4,6 +4,7 @@
 
 | Fecha | Versión | Cambio realizado | Motivo | Impacto | Sección afectada |
 |---|---|---|---|---|---|
+| 2026-07-10 | V1.19 | Se documenta categoría administrativa vs keywords y se excluye la categoría de la vectorización FAQ (`buildVectorizableText`). Export Excel pasa a `category_id`. | La categoría es metadato interno del tenant; no debe influir en la búsqueda semántica. Las keywords sí. | Tras deploy API, reindexar FAQs para que Qdrant deje de indexar `Categoria:`. | 14.5.1, 14.5.2 |
 | 2026-07-08 | V1.18 | Se agrega `tenant_settings.custom_sprompt` (admin-only) concatenado al final del system prompt. UI: Admin → Ver tenant → Custom SPrompt. Documentada matriz 6×4 de bloques por objetivo. | Permitir system prompts hiper-personalizados por tenant sin alterar las plantillas globales por objetivo; si está vacío no altera el prompt. | Runtime entrega `custom_sprompt`; `Armar SPrompt` lo resuelve; el agente lo appende; admin edita solo desde View. | System Prompt Configurable, Admin, n8n FAQ Productivo, Variables |
 | 2026-07-08 | V1.17 | Se consolida el workflow multitenant `FAQ Productivo` (webhook Evolution) y se documenta la customización del agente por objetivo vía System Prompt Configurable (tokens neutros + composición en n8n). Se agrega tool de agenda (`/api/runtime/agenda-link`) y se define pauta anti-loop bot-a-bot (rol/límites). | Era necesario pasar de flujo de prueba a producción sin hardcodeos, permitir prompts editables por objetivo y evitar loops entre agentes al probar con dos WhatsApp. | n8n opera con `FAQ Productivo` como flujo productivo; el system prompt se arma en el nodo Code `Armar SPrompt` a partir de `sprompt.*` (DB) + runtime; URLs se consumen desde `tenant_url`; agenda-link usa `date` + `time` y retorna `short_url`. | n8n como motor de conversaciones, Variables obligatorias, System Prompt Configurable, Motor agenda/runtime |
 | 2026-07-07 | V1.16 | Se crea y registra el módulo documental `calcom` como proveedor opcional de agenda para tenants sin calendario propio. | FAQ Inn necesita soportar el objetivo `reservar_horarios` cuando el tenant no usa Google Calendar, Microsoft Calendar ni otro sistema externo. | Cal.com queda definido como servicio opcional levantado en EasyPanel; el Programador debe tratarlo como proveedor parametrizado por tenant y no hardcodear links ni asumirlo para todos los tenants. | docs/calcom, Modelo por objetivos, Variables obligatorias, n8n, Estado actual |
@@ -872,6 +873,34 @@ Regla del agente:
 ```text
 Si no existe respuesta útil desde FAQ aprobada, el agente debe ejecutar obligatoriamente SemResposta antes de responder al cliente y no debe inventar información.
 ```
+
+#### 14.5.1 Acciones del dashboard FAQ (UI HTTP)
+
+| Acción UI | Comportamiento | Notas |
+|---|---|---|
+| **Importar Excel** | Sube `.xlsx` / `.xls` / `.csv` a `POST /api/faqs/import` | Pregunta + respuesta; keywords opcionales. La categoría **no** se importa (queda «Sin categoría»). |
+| **Descargar Excel** | Export client-side a CSV UTF-8 con BOM | Columnas: `id,question,answer,category_id,keywords,active`. |
+| **Sincronizar respuestas** | Reindexa FAQs del tenant en Qdrant | Recuperación tras import/bulk o índice fallido. |
+| **Nueva FAQ** | Alta + indexación atómica | Si falla el índice, se revierte el guardado en PostgreSQL. |
+
+#### 14.5.2 Categoría y palabras clave (keywords)
+
+| Campo | Rol | ¿Entra en vectorización? |
+|---|---|---|
+| **Categoría** | Metadato **administrativo** por tenant (ordenar / filtrar en el panel). Catálogo en **Mi cuenta**. En formularios FAQ: combobox, no texto libre. | **No** |
+| **Palabras clave** | Sinónimos, traducciones y variantes de la pregunta del cliente. Separadas por comas. **No usar `#`.** | **Sí** |
+
+Texto que se indexa en Qdrant (`buildVectorizableText`):
+
+```text
+Pregunta: <question>
+Respuesta: <answer>
+Keywords: <keywords>
+```
+
+Catálogo inicial: `Sin categoría`, `Pregunta sin respuesta`, `Respuesta interna`, `Responsable 1`, `Responsable 2`. «Sin categoría» es el default al crear/importar FAQ y no se desactiva ni renombra.
+
+Formularios con categoría + keywords + ayuda contextual (`?`): Nueva/Editar FAQ, onboarding paso 4 (FAQs plantilla), Sin respuesta → Responder.
 
 ### 14.6 Módulo pausa humana
 

@@ -48,11 +48,10 @@ export function resolvePointId(faq) {
   return faqPointId(faq?.faq_uid || faq?.faq_id);
 }
 
-export function buildVectorizableText({ question, answer, category, keywords }) {
+export function buildVectorizableText({ question, answer, keywords }) {
   return [
     `Pregunta: ${question}`,
     `Respuesta: ${answer}`,
-    `Categoria: ${category}`,
     `Keywords: ${keywords}`,
   ].join('\n');
 }
