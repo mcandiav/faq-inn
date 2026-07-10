@@ -522,6 +522,8 @@ async function applySchemaPatches(pool) {
   const defaultCategories = [
     'Sin categoría',
     'Pregunta sin respuesta',
+  ];
+  const retiredDefaultCategories = [
     'Respuesta interna',
     'Responsable 1',
     'Responsable 2',
@@ -541,6 +543,20 @@ async function applySchemaPatches(pool) {
            SELECT 1 FROM faq_categories WHERE tenant_id = ? AND name = ?
          )`,
         [row.id, name, i + 1, row.id, name]
+      );
+    }
+
+    for (const name of retiredDefaultCategories) {
+      await pool.query(
+        `UPDATE faq_items
+         SET category = 'Sin categoría', updated_at = NOW()
+         WHERE tenant_id = ? AND category = ?`,
+        [row.id, name]
+      );
+      await pool.query(
+        `DELETE FROM faq_categories
+         WHERE tenant_id = ? AND name = ?`,
+        [row.id, name]
       );
     }
 

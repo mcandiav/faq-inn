@@ -1,9 +1,6 @@
 export const DEFAULT_FAQ_CATEGORIES = [
   'Sin categoría',
   'Pregunta sin respuesta',
-  'Respuesta interna',
-  'Responsable 1',
-  'Responsable 2',
 ];
 
 export const DEFAULT_FAQ_CATEGORY_NAME = DEFAULT_FAQ_CATEGORIES[0];
