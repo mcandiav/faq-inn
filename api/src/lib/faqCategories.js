@@ -93,3 +93,109 @@ export async function ensureFaqCategory(pool, tenantId, name) {
 
   return normalized;
 }
+
+function validationError(message, statusCode = 400) {
+  const error = new Error(message);
+  error.statusCode = statusCode;
+  return error;
+}
+
+function parseCategoryId(raw) {
+  const categoryId = Number(raw);
+  if (!Number.isInteger(categoryId) || categoryId <= 0) {
+    return null;
+  }
+  return categoryId;
+}
+
+export async function updateFaqCategoryName(pool, tenantId, categoryId, nextName) {
+  const id = parseCategoryId(categoryId);
+  if (!id) {
+    throw validationError('id inválido');
+  }
+
+  const normalized = normalizeCategoryName(nextName);
+  if (!normalized) {
+    throw validationError('El nombre de la categoría no puede quedar vacío');
+  }
+
+  const [rows] = await pool.query(
+    `SELECT id, name
+     FROM faq_categories
+     WHERE id = ? AND tenant_id = ?
+     LIMIT 1`,
+    [id, tenantId]
+  );
+
+  const current = rows[0];
+  if (!current) {
+    throw validationError('Categoría no encontrada', 404);
+  }
+
+  if (current.name === normalized) {
+    return { id, name: normalized };
+  }
+
+  const [taken] = await pool.query(
+    `SELECT id
+     FROM faq_categories
+     WHERE tenant_id = ? AND name = ? AND id != ?
+     LIMIT 1`,
+    [tenantId, normalized, id]
+  );
+  if (taken.length > 0) {
+    throw validationError('Ya existe una categoría con ese nombre', 409);
+  }
+
+  await pool.query(
+    `UPDATE faq_categories
+     SET name = ?, updated_at = NOW()
+     WHERE id = ?`,
+    [normalized, id]
+  );
+
+  await pool.query(
+    `UPDATE faq_items
+     SET category = ?, updated_at = NOW()
+     WHERE tenant_id = ? AND category = ?`,
+    [normalized, tenantId, current.name]
+  );
+
+  return { id, name: normalized };
+}
+
+export async function setFaqCategoryActive(pool, tenantId, categoryId, active) {
+  const id = parseCategoryId(categoryId);
+  if (!id) {
+    throw validationError('id inválido');
+  }
+
+  const [rows] = await pool.query(
+    `SELECT id, name
+     FROM faq_categories
+     WHERE id = ? AND tenant_id = ?
+     LIMIT 1`,
+    [id, tenantId]
+  );
+
+  if (!rows[0]) {
+    throw validationError('Categoría no encontrada', 404);
+  }
+
+  if (rows[0].name === DEFAULT_FAQ_CATEGORY_NAME && active === false) {
+    throw validationError('No se puede desactivar «Sin categoría»');
+  }
+
+  await pool.query(
+    `UPDATE faq_categories
+     SET active = ?, updated_at = NOW()
+     WHERE id = ?`,
+    [Boolean(active), id]
+  );
+
+  return { id, name: rows[0].name, active: Boolean(active) };
+}
+
+export async function deactivateFaqCategory(pool, tenantId, categoryId) {
+  return setFaqCategoryActive(pool, tenantId, categoryId, false);
+}
