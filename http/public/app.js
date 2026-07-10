@@ -88,6 +88,7 @@ const state = {
   objectivesCatalog: [],
   profileObjectiveDraft: '',
   profileObjectivePickerOpen: false,
+  faqCategories: [],
 };
 const appMeta = {
   productName: APP_PRODUCT_NAME,
@@ -1742,7 +1743,7 @@ async function refreshProfile() {
 
 function attachFaqActions(root) {
   root.querySelectorAll('[data-edit]').forEach((btn) => {
-    btn.addEventListener('click', () => openFaqDialog(Number(btn.dataset.edit)));
+    btn.addEventListener('click', () => void openFaqDialog(Number(btn.dataset.edit)));
   });
 
   root.querySelectorAll('[data-delete]').forEach((btn) => {
@@ -1861,6 +1862,57 @@ function attachFaqHeaderSort() {
     setFaqSort(key);
     renderFaqs();
   });
+}
+
+const DEFAULT_FAQ_CATEGORY = 'Sin categoría';
+
+async function loadFaqCategories() {
+  if (state.user?.role !== 'client') {
+    state.faqCategories = [];
+    return [];
+  }
+  try {
+    const data = await api('/faq-categories?include_inactive=true');
+    state.faqCategories = Array.isArray(data.categories) ? data.categories : [];
+  } catch {
+    state.faqCategories = [];
+  }
+  return state.faqCategories;
+}
+
+function renderFaqCategorySelect(selectEl, selected = '') {
+  if (!selectEl) return;
+
+  const categories = Array.isArray(state.faqCategories) ? state.faqCategories : [];
+  const normalized = String(selected || '').trim() || DEFAULT_FAQ_CATEGORY;
+  const seen = new Set();
+  const options = [];
+
+  const pushOption = (name, active = true) => {
+    const value = String(name || '').trim();
+    if (!value || seen.has(value)) return;
+    seen.add(value);
+    const label =
+      active === false ? `${value} (${t('faq.categoryInactive')})` : value;
+    const selectedAttr = value === normalized ? ' selected' : '';
+    options.push(
+      `<option value="${escapeAttr(value)}"${selectedAttr}>${escapeHtml(label)}</option>`
+    );
+  };
+
+  pushOption(DEFAULT_FAQ_CATEGORY, true);
+
+  for (const category of categories) {
+    if (category.active === false) continue;
+    pushOption(category.name, true);
+  }
+
+  if (normalized && !seen.has(normalized)) {
+    const found = categories.find((item) => item.name === normalized);
+    pushOption(normalized, found ? found.active !== false : true);
+  }
+
+  selectEl.innerHTML = options.join('');
 }
 
 function statusLabel(status) {
@@ -3281,7 +3333,7 @@ async function savePromptTemplate() {
   }
 }
 
-function openFaqDialog(id) {
+async function openFaqDialog(id) {
   const dialog = $('#faq-dialog');
   const faqId = id == null || id === '' ? null : Number(id);
   const faq =
@@ -3293,11 +3345,17 @@ function openFaqDialog(id) {
   $('#faq-id').value = faqId != null && !Number.isNaN(faqId) ? String(faqId) : '';
   $('#faq-question').value = faq?.question || '';
   $('#faq-answer').value = faq?.answer || '';
-  $('#faq-category').value = faq?.category || '';
   $('#faq-keywords').value = faq?.keywords || '';
   $('#faq-active').checked = faq ? Boolean(faq.active) : true;
   $('#faq-msg').textContent = '';
   $('#faq-delete').classList.toggle('hidden', !id);
+
+  await loadFaqCategories();
+  renderFaqCategorySelect(
+    $('#faq-category'),
+    faq?.category || DEFAULT_FAQ_CATEGORY
+  );
+
   dialog.showModal();
 }
 
@@ -3763,7 +3821,7 @@ window.addEventListener('popstate', () => {
   refreshViewData(view);
 });
 
-$('#btn-new-faq').addEventListener('click', () => openFaqDialog(null));
+$('#btn-new-faq').addEventListener('click', () => void openFaqDialog(null));
 
 $('#btn-reindex-faqs').addEventListener('click', () => reindexFaqs());
 
@@ -3812,7 +3870,7 @@ $('#faq-form').addEventListener('submit', async (event) => {
   const payload = {
     question: $('#faq-question').value.trim(),
     answer: $('#faq-answer').value.trim(),
-    category: $('#faq-category').value.trim(),
+    category: $('#faq-category').value.trim() || DEFAULT_FAQ_CATEGORY,
     keywords: $('#faq-keywords').value.trim(),
     active: $('#faq-active').checked,
   };
