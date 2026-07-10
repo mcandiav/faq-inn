@@ -2875,7 +2875,7 @@ function escapeCsvCell(value) {
 }
 
 function buildFaqsCsv(faqs) {
-  const header = ['id', 'question', 'answer', 'category', 'keywords', 'active'];
+  const header = ['id', 'question', 'answer', 'category_id', 'keywords', 'active'];
   const lines = [header.map(escapeCsvCell).join(',')];
   (faqs || []).forEach((faq) => {
     lines.push(
@@ -2883,7 +2883,7 @@ function buildFaqsCsv(faqs) {
         faq.id,
         faq.question,
         faq.answer,
-        faq.category || '',
+        faq.category_id ?? '',
         faq.keywords || '',
         faq.active ? 'true' : 'false',
       ]

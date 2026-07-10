@@ -66,7 +66,7 @@ const MESSAGES = {
       'Tu número quedó vinculado. Completa tu negocio en Mi cuenta y prueba enviando un mensaje desde otro teléfono.',
     'dashboard.title': 'Preguntas y respuestas',
     'dashboard.hint':
-      'Columna A: pregunta, B: respuesta. Opcional: keywords y categoría (columnas C/D o encabezados en fila 1). Formatos: .xlsx, .xls, .csv.',
+      'Columna A: pregunta, B: respuesta. Opcional: palabras clave (columna C o encabezados en fila 1). La categoría se asigna en la app (importación usa «Sin categoría»). Formatos: .xlsx, .xls, .csv.',
     'dashboard.hintAdmin':
       'Como administrador, crea posadas en Admin. Los clientes editan sus FAQs.',
     'dashboard.import': 'Importar Excel',
@@ -566,7 +566,7 @@ const MESSAGES = {
       'Animação de ajuda: abrir WhatsApp no iPhone, ir a Configurações, Aparelhos conectados e escanear o QR',
     'dashboard.title': 'Perguntas e respostas',
     'dashboard.hint':
-      'Coluna A: pergunta, B: resposta. Opcional: keywords e categoria (colunas C/D ou cabeçalhos na linha 1). Formatos: .xlsx, .xls, .csv.',
+      'Coluna A: pergunta, B: resposta. Opcional: palavras-chave (coluna C ou cabeçalhos na linha 1). A categoria se define no app (importação usa «Sin categoría»). Formatos: .xlsx, .xls, .csv.',
     'dashboard.hintAdmin':
       'Como administrador, crie pousadas em Admin. Os clientes editam suas FAQs.',
     'dashboard.import': 'Importar Excel',
@@ -1065,7 +1065,7 @@ const MESSAGES = {
       'Help animation: open WhatsApp on iPhone, go to Settings, Linked devices, and scan the QR',
     'dashboard.title': 'Questions and answers',
     'dashboard.hint':
-      'Column A: question, B: answer. Optional: keywords and category (columns C/D or headers in row 1). Formats: .xlsx, .xls, .csv.',
+      'Column A: question, B: answer. Optional: keywords (column C or headers in row 1). Category is set in the app (import uses «Sin categoría»). Formats: .xlsx, .xls, .csv.',
     'dashboard.hintAdmin':
       'As administrator, create lodgings in Admin. Clients edit their FAQs.',
     'dashboard.import': 'Import Excel',
