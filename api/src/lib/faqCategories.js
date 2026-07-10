@@ -199,3 +199,43 @@ export async function setFaqCategoryActive(pool, tenantId, categoryId, active) {
 export async function deactivateFaqCategory(pool, tenantId, categoryId) {
   return setFaqCategoryActive(pool, tenantId, categoryId, false);
 }
+
+/** Borra la categoría del catálogo. FAQs con ese nombre pasan a «Sin categoría». */
+export async function deleteFaqCategory(pool, tenantId, categoryId) {
+  const id = parseCategoryId(categoryId);
+  if (!id) {
+    throw validationError('id inválido');
+  }
+
+  const [rows] = await pool.query(
+    `SELECT id, name
+     FROM faq_categories
+     WHERE id = ? AND tenant_id = ?
+     LIMIT 1`,
+    [id, tenantId]
+  );
+
+  const current = rows[0];
+  if (!current) {
+    throw validationError('Categoría no encontrada', 404);
+  }
+
+  if (current.name === DEFAULT_FAQ_CATEGORY_NAME) {
+    throw validationError('No se puede eliminar «Sin categoría»');
+  }
+
+  await pool.query(
+    `UPDATE faq_items
+     SET category = ?, updated_at = NOW()
+     WHERE tenant_id = ? AND category = ?`,
+    [DEFAULT_FAQ_CATEGORY_NAME, tenantId, current.name]
+  );
+
+  await pool.query(
+    `DELETE FROM faq_categories
+     WHERE id = ? AND tenant_id = ?`,
+    [id, tenantId]
+  );
+
+  return { id, name: current.name, deleted: true };
+}

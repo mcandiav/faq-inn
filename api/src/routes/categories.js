@@ -1,5 +1,5 @@
 import {
-  deactivateFaqCategory,
+  deleteFaqCategory,
   ensureFaqCategory,
   listFaqCategories,
   seedDefaultFaqCategories,
@@ -129,7 +129,7 @@ export async function categoryRoutes(app) {
     }
 
     try {
-      const category = await deactivateFaqCategory(
+      const category = await deleteFaqCategory(
         pool,
         request.user.tenant_id,
         categoryId
