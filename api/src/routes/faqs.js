@@ -55,9 +55,16 @@ export async function faqRoutes(app, config) {
       SELECT f.id, f.faq_uid, f.question, f.answer, f.category, f.keywords,
              f.language, f.active, f.indexed_at, f.updated_at,
              f.is_starter_template, f.starter_key,
+             fc.id AS category_id,
              a.slug AS agent_slug, a.name AS agent_name
       FROM faq_items f
       JOIN agents a ON a.id = f.agent_id
+      LEFT JOIN faq_categories fc
+        ON fc.tenant_id = f.tenant_id
+       AND fc.name = CASE
+         WHEN TRIM(COALESCE(f.category, '')) = '' THEN 'Sin categoría'
+         ELSE TRIM(f.category)
+       END
     `;
 
     if (tenantId) {

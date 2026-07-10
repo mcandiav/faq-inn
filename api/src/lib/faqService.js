@@ -246,7 +246,6 @@ export async function importFaqRows(pool, config, user, rows, options = {}) {
         question: row.question,
         answer: row.answer,
         keywords: row.keywords,
-        category: row.category,
       });
       created.push({ id: faq.id, row: row.row });
     } catch (error) {

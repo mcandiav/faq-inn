@@ -3,7 +3,6 @@ import * as XLSX from 'xlsx';
 const QUESTION_HEADER = /^(pregunta|question|q|pergunta)$/i;
 const ANSWER_HEADER = /^(respuesta|answer|a|resposta)$/i;
 const KEYWORDS_HEADER = /^(keywords|keyword|palabras clave|palavras-chave|tags)$/i;
-const CATEGORY_HEADER = /^(categor[ií]a|category)$/i;
 
 function cellText(value) {
   if (value === null || value === undefined) {
@@ -26,14 +25,11 @@ function headerKind(text) {
   if (KEYWORDS_HEADER.test(value)) {
     return 'keywords';
   }
-  if (CATEGORY_HEADER.test(value)) {
-    return 'category';
-  }
   return null;
 }
 
 function detectColumnMap(rows) {
-  const fallback = { question: 0, answer: 1, keywords: 2, category: 3 };
+  const fallback = { question: 0, answer: 1, keywords: 2 };
 
   for (let i = 0; i < Math.min(rows.length, 5); i++) {
     const row = rows[i];
@@ -54,7 +50,6 @@ function detectColumnMap(rows) {
         question: detected.question,
         answer: detected.answer,
         keywords: detected.keywords ?? fallback.keywords,
-        category: detected.category ?? fallback.category,
         startIndex: i + 1,
       };
     }
@@ -68,7 +63,6 @@ function readMappedRow(row, colMap) {
     question: cellText(row[colMap.question]),
     answer: cellText(row[colMap.answer]),
     keywords: cellText(row[colMap.keywords]),
-    category: cellText(row[colMap.category]),
   };
 }
 
@@ -100,9 +94,9 @@ export function parseSpreadsheetBuffer(buffer, filename = '') {
       continue;
     }
 
-    const { question, answer, keywords, category } = readMappedRow(row, colMap);
+    const { question, answer, keywords } = readMappedRow(row, colMap);
 
-    if (!question && !answer && !keywords && !category) {
+    if (!question && !answer && !keywords) {
       continue;
     }
 
@@ -114,7 +108,8 @@ export function parseSpreadsheetBuffer(buffer, filename = '') {
       throw error;
     }
 
-    items.push({ question, answer, keywords, category, row: i + 1 });
+    // Categoría no se importa: queda «Sin categoría» vía createFaqRecord.
+    items.push({ question, answer, keywords, row: i + 1 });
   }
 
   return items;
