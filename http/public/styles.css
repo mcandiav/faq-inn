@@ -1693,30 +1693,95 @@ code {
   margin-top: 0.5rem;
 }
 
-.profile-category-add {
-  display: grid;
-  gap: 0.75rem;
+.profile-categories-list {
   margin-bottom: 1rem;
 }
 
-.profile-categories-list {
-  display: grid;
-  gap: 0.75rem;
+.profile-categories-table-wrap {
+  overflow: auto;
+  border: 1px solid color-mix(in srgb, currentColor 16%, transparent);
+  border-radius: 8px;
+  background: color-mix(in srgb, Canvas 92%, transparent);
 }
 
-.profile-category-item {
-  display: grid;
-  gap: 0.5rem;
-  padding: 0.75rem 0;
-  border-top: 1px solid color-mix(in srgb, currentColor 12%, transparent);
+.profile-categories-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.92rem;
 }
 
-.profile-category-item.is-inactive {
+.profile-categories-table th,
+.profile-categories-table td {
+  padding: 0.55rem 0.65rem;
+  border-bottom: 1px solid color-mix(in srgb, currentColor 12%, transparent);
+  border-right: 1px solid color-mix(in srgb, currentColor 8%, transparent);
+  text-align: left;
+  vertical-align: middle;
+}
+
+.profile-categories-table th:last-child,
+.profile-categories-table td:last-child {
+  border-right: none;
+}
+
+.profile-categories-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.profile-categories-table thead th {
+  font-weight: 600;
+  font-size: 0.82rem;
+  letter-spacing: 0.02em;
+  background: color-mix(in srgb, currentColor 6%, transparent);
+  white-space: nowrap;
+}
+
+.profile-categories-table .col-id {
+  width: 3.5rem;
+  color: color-mix(in srgb, currentColor 55%, transparent);
+  font-variant-numeric: tabular-nums;
+}
+
+.profile-categories-table .col-active {
+  width: 4.5rem;
+  text-align: center;
+}
+
+.profile-categories-table .col-actions {
+  width: 11rem;
+  white-space: nowrap;
+}
+
+.profile-categories-table .profile-category-name-input {
+  width: 100%;
+  min-width: 8rem;
+  margin: 0;
+}
+
+.profile-categories-table .profile-category-active-input {
+  width: 1.1rem;
+  height: 1.1rem;
+  margin: 0;
+  cursor: pointer;
+}
+
+.profile-categories-table .profile-category-active-input:disabled {
+  cursor: not-allowed;
+}
+
+.profile-categories-table tr.is-inactive {
   opacity: 0.72;
 }
 
-.profile-category-actions {
-  justify-content: flex-start;
+.profile-category-row-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+}
+
+.profile-category-add {
+  display: grid;
+  gap: 0.75rem;
 }
 
 .profile-objective-picker-actions {

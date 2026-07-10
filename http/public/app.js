@@ -1873,6 +1873,10 @@ function isPersistedCategoryId(id) {
   return Number.isInteger(numeric) && numeric > 0;
 }
 
+function isDefaultFaqCategory(category) {
+  return String(category?.name || '').trim() === DEFAULT_FAQ_CATEGORY;
+}
+
 async function loadFaqCategories() {
   if (state.user?.role !== 'client') {
     state.faqCategories = [];
@@ -1953,34 +1957,61 @@ function renderProfileCategories() {
     return;
   }
 
-  list.innerHTML = categories
+  const rows = categories
     .map((category) => {
       const id = String(category.id);
-      const isDefault = category.name === DEFAULT_FAQ_CATEGORY;
+      const isDefault = isDefaultFaqCategory(category);
       const inactive = category.active === false;
+      const deleteBtn = isDefault
+        ? `<button type="button" class="btn small danger" disabled title="${escapeAttr(t('profile.categoryDeleteBlocked'))}">${escapeHtml(t('btn.delete'))}</button>`
+        : `<button type="button" class="btn small danger" data-category-delete="${escapeAttr(id)}">${escapeHtml(t('btn.delete'))}</button>`;
       return `
-      <article class="profile-category-item${inactive ? ' is-inactive' : ''}" data-category-id="${escapeAttr(id)}">
-        <label>
-          <span>${escapeHtml(t('profile.categoryName'))}</span>
-          <input type="text" class="profile-category-name-input" value="${escapeAttr(category.name || '')}" maxlength="128" ${isDefault ? 'readonly' : ''} />
-        </label>
-        <label class="checkbox profile-category-active">
-          <input type="checkbox" class="profile-category-active-input" ${inactive ? '' : 'checked'} ${isDefault ? 'disabled' : ''} />
-          <span>${escapeHtml(t('profile.categoryActive'))}</span>
-        </label>
-        <div class="dialog-actions profile-category-actions">
-          <button type="button" class="btn small" data-category-save="${escapeAttr(id)}">${escapeHtml(t('btn.save'))}</button>
-          ${
-            isDefault
-              ? ''
-              : `<button type="button" class="btn small danger" data-category-toggle="${escapeAttr(id)}">
-            ${escapeHtml(inactive ? t('profile.categoryActive') : t('profile.categoryInactive'))}
-          </button>`
-          }
-        </div>
-      </article>`;
+      <tr class="${inactive ? 'is-inactive' : ''}" data-category-id="${escapeAttr(id)}">
+        <td class="col-id">${escapeHtml(id)}</td>
+        <td>
+          <input
+            type="text"
+            class="profile-category-name-input"
+            value="${escapeAttr(category.name || '')}"
+            maxlength="128"
+            ${isDefault ? 'readonly' : ''}
+            aria-label="${escapeAttr(t('profile.categoryColName'))}"
+          />
+        </td>
+        <td class="col-active">
+          <input
+            type="checkbox"
+            class="profile-category-active-input"
+            ${inactive ? '' : 'checked'}
+            ${isDefault ? 'disabled' : ''}
+            data-category-active="${escapeAttr(id)}"
+            aria-label="${escapeAttr(t('profile.categoryColActive'))}"
+          />
+        </td>
+        <td class="col-actions">
+          <div class="profile-category-row-actions">
+            <button type="button" class="btn small" data-category-save="${escapeAttr(id)}">${escapeHtml(t('btn.edit'))}</button>
+            ${deleteBtn}
+          </div>
+        </td>
+      </tr>`;
     })
     .join('');
+
+  list.innerHTML = `
+    <div class="profile-categories-table-wrap">
+      <table class="profile-categories-table">
+        <thead>
+          <tr>
+            <th class="col-id" scope="col">${escapeHtml(t('profile.categoryColId'))}</th>
+            <th scope="col">${escapeHtml(t('profile.categoryColName'))}</th>
+            <th class="col-active" scope="col">${escapeHtml(t('profile.categoryColActive'))}</th>
+            <th class="col-actions" scope="col">${escapeHtml(t('profile.categoryColActions'))}</th>
+          </tr>
+        </thead>
+        <tbody>${rows}</tbody>
+      </table>
+    </div>`;
 
   if (msg && !msg.classList.contains('error') && !msg.classList.contains('ok')) {
     msg.textContent = '';
@@ -2074,7 +2105,7 @@ async function saveProfileCategory(categoryId) {
   }
 }
 
-async function toggleProfileCategory(categoryId) {
+async function deleteProfileCategory(categoryId) {
   if (!isPersistedCategoryId(categoryId)) {
     const msg = $('#profile-categories-msg');
     if (msg) {
@@ -2085,8 +2116,61 @@ async function toggleProfileCategory(categoryId) {
     return;
   }
 
-  const row = document.querySelector(`[data-category-id="${CSS.escape(String(categoryId))}"]`);
-  const currentlyActive = row?.querySelector('.profile-category-active-input')?.checked !== false;
+  const category = (state.faqCategories || []).find(
+    (item) => String(item.id) === String(categoryId)
+  );
+  if (isDefaultFaqCategory(category)) {
+    const msg = $('#profile-categories-msg');
+    if (msg) {
+      msg.textContent = t('profile.categoryDeleteBlocked');
+      msg.className = 'form-msg error';
+    }
+    return;
+  }
+
+  const msg = $('#profile-categories-msg');
+  if (msg) {
+    msg.textContent = t('msg.savingIndexing');
+    msg.className = 'form-msg';
+  }
+
+  try {
+    await api(`/faq-categories/${encodeURIComponent(categoryId)}`, {
+      method: 'DELETE',
+    });
+    await loadFaqCategories();
+    renderProfileCategories();
+    if (msg) {
+      msg.textContent = t('profile.categoryDeleted');
+      msg.className = 'form-msg ok';
+    }
+  } catch (error) {
+    if (msg) {
+      msg.textContent = error.message;
+      msg.className = 'form-msg error';
+    }
+  }
+}
+
+async function setProfileCategoryActive(categoryId, active) {
+  if (!isPersistedCategoryId(categoryId)) {
+    const msg = $('#profile-categories-msg');
+    if (msg) {
+      msg.textContent = t('profile.categoriesReload');
+      msg.className = 'form-msg error';
+    }
+    await refreshProfileCategories();
+    return;
+  }
+
+  const category = (state.faqCategories || []).find(
+    (item) => String(item.id) === String(categoryId)
+  );
+  if (isDefaultFaqCategory(category)) {
+    await refreshProfileCategories();
+    return;
+  }
+
   const msg = $('#profile-categories-msg');
   if (msg) {
     msg.textContent = t('msg.savingIndexing');
@@ -2096,7 +2180,7 @@ async function toggleProfileCategory(categoryId) {
   try {
     await api(`/faq-categories/${encodeURIComponent(categoryId)}`, {
       method: 'PATCH',
-      body: JSON.stringify({ active: !currentlyActive }),
+      body: JSON.stringify({ active: Boolean(active) }),
     });
     await loadFaqCategories();
     renderProfileCategories();
@@ -2109,6 +2193,7 @@ async function toggleProfileCategory(categoryId) {
       msg.textContent = error.message;
       msg.className = 'form-msg error';
     }
+    await refreshProfileCategories();
   }
 }
 
@@ -3754,10 +3839,19 @@ $('#profile-categories-list')?.addEventListener('click', (event) => {
     void saveProfileCategory(saveBtn.dataset.categorySave);
     return;
   }
-  const toggleBtn = event.target.closest?.('[data-category-toggle]');
-  if (toggleBtn) {
-    void toggleProfileCategory(toggleBtn.dataset.categoryToggle);
+  const deleteBtn = event.target.closest?.('[data-category-delete]');
+  if (deleteBtn) {
+    void deleteProfileCategory(deleteBtn.dataset.categoryDelete);
   }
+});
+
+$('#profile-categories-list')?.addEventListener('change', (event) => {
+  const activeInput = event.target.closest?.('[data-category-active]');
+  if (!activeInput || activeInput.disabled) return;
+  void setProfileCategoryActive(
+    activeInput.dataset.categoryActive,
+    activeInput.checked
+  );
 });
 
 async function logout() {
