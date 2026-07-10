@@ -1,4 +1,5 @@
 import { indexFaqItem, newFaqUid } from './indexer.js';
+import { ensureFaqCategory, resolveFaqCategoryInput } from './faqCategories.js';
 
 export async function resolveTenantAndAgent(pool, tenantRef, agentRef) {
   const tenantKey = String(tenantRef || '').trim();
@@ -289,7 +290,6 @@ export async function convertUnansweredToFaq(pool, config, id, user, input = {})
 
   const question = input.question?.trim() || row.question.trim();
   const answer = input.answer?.trim();
-  const category = input.category?.trim() || '';
   const keywords = input.keywords?.trim() || '';
   const language = input.language?.trim() || row.language || 'es';
   const active = input.active !== false;
@@ -300,6 +300,11 @@ export async function convertUnansweredToFaq(pool, config, id, user, input = {})
     throw error;
   }
 
+  const category = await ensureFaqCategory(
+    pool,
+    row.tenant_id,
+    resolveFaqCategoryInput(input.category)
+  );
   const faqUid = newFaqUid();
   const tenantSlug = row.tenant_slug_resolved || row.tenant_slug;
   // Mantener consistente DB + Qdrant: si indexar falla, no dejar una FAQ "sin indexar".

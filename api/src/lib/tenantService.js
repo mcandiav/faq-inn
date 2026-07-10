@@ -2,6 +2,7 @@ import { hashPassword } from './password.js';
 import { ensureTenantCollection } from './indexer.js';
 import { seedStarterFaqs } from './seedStarterFaqs.js';
 import { isValidTenantSlug, normalizeTenantSlug } from './tenantSlug.js';
+import { seedDefaultFaqCategories } from './faqCategories.js';
 
 function validationError(message, statusCode = 400) {
   const error = new Error(message);
@@ -96,6 +97,12 @@ export async function registerQuickSignup(pool, config, input, { logger } = {}) 
     );
 
     await connection.commit();
+
+    try {
+      await seedDefaultFaqCategories(pool, tenantId);
+    } catch (error) {
+      logger?.warn({ err: error, tenantSlug: slug }, 'Categorías FAQ no sembradas al signup');
+    }
 
     try {
       await ensureTenantCollection(config, slug);
@@ -243,6 +250,12 @@ export async function createHotelTenant(pool, config, input, { logger } = {}) {
 
     await connection.commit();
 
+    try {
+      await seedDefaultFaqCategories(pool, tenantId);
+    } catch (error) {
+      logger?.warn({ err: error, tenantSlug: slug }, 'Categorías FAQ no sembradas al onboarding');
+    }
+
     let qdrantCollection = config.qdrantCollectionTemplate.replace(
       '<tenant_slug>',
       slug
@@ -363,6 +376,12 @@ export async function createAdminTenant(pool, config, input, { logger } = {}) {
     );
 
     await connection.commit();
+
+    try {
+      await seedDefaultFaqCategories(pool, tenantId);
+    } catch (error) {
+      logger?.warn({ err: error, tenantSlug: slug }, 'Categorías FAQ no sembradas al alta');
+    }
 
     try {
       await ensureTenantCollection(config, slug);

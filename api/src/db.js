@@ -13,6 +13,7 @@ const TABLES_WITH_ID = [
   'users',
   'agents',
   'faq_items',
+  'faq_categories',
   'unanswered_questions',
   'evolution_instances',
   'booking_discovery_sessions',

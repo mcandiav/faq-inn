@@ -4,6 +4,7 @@ import {
   newFaqUid,
   removeFaqFromQdrant,
 } from './indexer.js';
+import { ensureFaqCategory, resolveFaqCategoryInput } from './faqCategories.js';
 
 export async function getDefaultAgent(pool, tenantId) {
   const [rows] = await pool.query(
@@ -27,7 +28,6 @@ export async function createFaqRecord(pool, config, user, faqInput) {
 
   const question = faqInput.question?.trim();
   const answer = faqInput.answer?.trim();
-  const category = faqInput.category?.trim() || '';
   const keywords = faqInput.keywords?.trim() || '';
   const language = faqInput.language?.trim() || 'es';
   const active = faqInput.active !== false;
@@ -56,6 +56,11 @@ export async function createFaqRecord(pool, config, user, faqInput) {
     throw error;
   }
 
+  const category = await ensureFaqCategory(
+    pool,
+    tenantId,
+    resolveFaqCategoryInput(faqInput.category)
+  );
   const faqUid = newFaqUid();
 
   // Mantener consistente DB + Qdrant: si indexar falla, no guardar la edición/creación.

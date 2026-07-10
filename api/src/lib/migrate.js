@@ -48,6 +48,17 @@ CREATE TABLE IF NOT EXISTS agents (
   UNIQUE (tenant_id, slug)
 );
 
+CREATE TABLE IF NOT EXISTS faq_categories (
+  id BIGSERIAL PRIMARY KEY,
+  tenant_id BIGINT NOT NULL REFERENCES tenants (id) ON DELETE CASCADE,
+  name VARCHAR(128) NOT NULL,
+  active BOOLEAN NOT NULL DEFAULT TRUE,
+  sort_order INTEGER NOT NULL DEFAULT 0,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  UNIQUE (tenant_id, name)
+);
+
 CREATE TABLE IF NOT EXISTS faq_items (
   id BIGSERIAL PRIMARY KEY,
   tenant_id BIGINT NOT NULL REFERENCES tenants (id) ON DELETE CASCADE,
@@ -493,6 +504,76 @@ async function applySchemaPatches(pool) {
   }
   for (const col of legacyUrlColumns) {
     await pool.query(`ALTER TABLE tenant_settings DROP COLUMN IF EXISTS ${col}`);
+  }
+
+  await pool.query(
+    `CREATE TABLE IF NOT EXISTS faq_categories (
+      id BIGSERIAL PRIMARY KEY,
+      tenant_id BIGINT NOT NULL REFERENCES tenants (id) ON DELETE CASCADE,
+      name VARCHAR(128) NOT NULL,
+      active BOOLEAN NOT NULL DEFAULT TRUE,
+      sort_order INTEGER NOT NULL DEFAULT 0,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      UNIQUE (tenant_id, name)
+    )`
+  );
+
+  const defaultCategories = [
+    'Sin categoría',
+    'Pregunta sin respuesta',
+    'Respuesta interna',
+    'Responsable 1',
+    'Responsable 2',
+  ];
+
+  const [tenantRows] = await pool.query(
+    `SELECT id FROM tenants ORDER BY id ASC`
+  );
+
+  for (const row of tenantRows || []) {
+    for (let i = 0; i < defaultCategories.length; i += 1) {
+      const name = defaultCategories[i];
+      await pool.query(
+        `INSERT INTO faq_categories (tenant_id, name, active, sort_order)
+         SELECT ?, ?, TRUE, ?
+         WHERE NOT EXISTS (
+           SELECT 1 FROM faq_categories WHERE tenant_id = ? AND name = ?
+         )`,
+        [row.id, name, i + 1, row.id, name]
+      );
+    }
+
+    await pool.query(
+      `UPDATE faq_items
+       SET category = 'Sin categoría', updated_at = NOW()
+       WHERE tenant_id = ? AND TRIM(COALESCE(category, '')) = ''`,
+      [row.id]
+    );
+
+    const [faqCats] = await pool.query(
+      `SELECT DISTINCT TRIM(category) AS category
+       FROM faq_items
+       WHERE tenant_id = ? AND TRIM(COALESCE(category, '')) <> ''`,
+      [row.id]
+    );
+
+    for (const faqRow of faqCats || []) {
+      const name = String(faqRow.category || '').trim();
+      if (!name) continue;
+      await pool.query(
+        `INSERT INTO faq_categories (tenant_id, name, active, sort_order)
+         SELECT ?, ?, TRUE, (
+           SELECT COALESCE(MAX(sort_order), 0) + 1
+           FROM faq_categories
+           WHERE tenant_id = ?
+         )
+         WHERE NOT EXISTS (
+           SELECT 1 FROM faq_categories WHERE tenant_id = ? AND name = ?
+         )`,
+        [row.id, name, row.id, row.id, name]
+      );
+    }
   }
 }
 

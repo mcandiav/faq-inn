@@ -1,6 +1,7 @@
 import { indexFaqItem, removeFaqFromQdrant } from '../lib/indexer.js';
 import { createFaqRecord, importFaqRows, reindexTenantFaqs } from '../lib/faqService.js';
 import { parseSpreadsheetBuffer } from '../lib/parseSpreadsheet.js';
+import { ensureFaqCategory, resolveFaqCategoryInput } from '../lib/faqCategories.js';
 
 const ALLOWED_EXTENSIONS = new Set(['.xlsx', '.xls', '.csv']);
 
@@ -224,11 +225,17 @@ export async function faqRoutes(app, config) {
       return { status: 'error', error: 'question y answer no pueden quedar vacíos' };
     }
 
+    const normalizedCategory = await ensureFaqCategory(
+      pool,
+      faq.tenant_id,
+      resolveFaqCategoryInput(category)
+    );
+
     const clearStarterTemplate =
       Boolean(faq.is_starter_template) &&
       (question !== faq.question ||
         answer !== faq.answer ||
-        category !== faq.category ||
+        normalizedCategory !== faq.category ||
         keywords !== faq.keywords);
 
     // Mantener consistente DB + Qdrant: si indexar falla, no guardar la edición.
@@ -244,7 +251,7 @@ export async function faqRoutes(app, config) {
         [
           question,
           answer,
-          category,
+          normalizedCategory,
           keywords,
           active,
           clearStarterTemplate ? false : Boolean(faq.is_starter_template),
@@ -258,7 +265,7 @@ export async function faqRoutes(app, config) {
         qdrant_point_id: faq.qdrant_point_id,
         question,
         answer,
-        category,
+        category: normalizedCategory,
         keywords,
         active,
         agent_slug: faq.agent_slug,
