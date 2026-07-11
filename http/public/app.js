@@ -3,7 +3,7 @@ const APP_PRODUCT_NAME = 'FAQ Inn';
 const apiBase = window.FAQ_INN_API_URL || window.DFAQ_API_URL || '/api';
 const VIEW_STORAGE_KEY = 'faq-inn-current-view';
 const VALID_VIEWS = ['dashboard', 'unanswered', 'profile', 'onboarding', 'booking-engine', 'agenda-engine', 'admin'];
-/* Marcador estéril: prueba auto-deploy http + versión/hash en UI. */
+/* Marcador estéril: redeploy http 1.7.74 (recuperación contraseña + i18n pt). */
 
 const PRIMARY_OBJECTIVE_SLUGS = new Set([
   'reservar_noches',
