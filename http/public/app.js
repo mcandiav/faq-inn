@@ -739,6 +739,13 @@ function compareFaqRows(a, b, key) {
       return compareText(a.question, b.question);
     case 'answer':
       return compareText(a.answer, b.answer);
+    case 'category': {
+      const ca = String(a?.category || '').trim() || 'Sin categoría';
+      const cb = String(b?.category || '').trim() || 'Sin categoría';
+      const diff = compareText(ca, cb);
+      if (diff !== 0) return diff;
+      return compareText(a.question, b.question);
+    }
     case 'status': {
       const rank = (faq) =>
         (faq.is_starter_template ? 0 : 1) * 2 + (faq.active ? 0 : 1);
@@ -1755,6 +1762,7 @@ function attachFaqActions(root) {
 }
 
 function faqCardHtml(faq, index) {
+  const category = String(faq.category || '').trim() || 'Sin categoría';
   return `
     <article class="faq-card" data-faq-id="${faq.id}">
       <div class="faq-card-head">
@@ -1770,6 +1778,8 @@ function faqCardHtml(faq, index) {
       <p class="faq-card-text">${escapeHtml(faq.question)}</p>
       <p class="faq-card-label">${escapeHtml(t('table.answer'))}</p>
       <p class="faq-card-text">${escapeHtml(faq.answer)}</p>
+      <p class="faq-card-label">${escapeHtml(t('table.category'))}</p>
+      <p class="faq-card-text">${escapeHtml(category)}</p>
       <div class="faq-card-actions row-actions">
         <button type="button" class="btn" data-edit="${faq.id}">${escapeHtml(t('btn.edit'))}</button>
         <button type="button" class="btn danger" data-delete="${faq.id}">${escapeHtml(t('btn.delete'))}</button>
@@ -1794,7 +1804,7 @@ function renderFaqs() {
     $('#faq-count').textContent = '';
     $('#dashboard-hint').textContent = t('dashboard.hintAdmin');
     tbody.innerHTML =
-      `<tr><td colspan="7" class="empty">${escapeHtml(t('dashboard.emptyAdmin'))}</td></tr>`;
+      `<tr><td colspan="8" class="empty">${escapeHtml(t('dashboard.emptyAdmin'))}</td></tr>`;
     if (cards) {
       cards.innerHTML = `<p class="empty-block">${escapeHtml(t('dashboard.emptyAdmin'))}</p>`;
     }
@@ -1816,7 +1826,7 @@ function renderFaqs() {
 
   if (total === 0) {
     const emptyText = escapeHtml(t('dashboard.empty'));
-    tbody.innerHTML = `<tr><td colspan="7" class="empty">${emptyText}</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="8" class="empty">${emptyText}</td></tr>`;
     if (cards) {
       cards.innerHTML = `<p class="empty-block">${emptyText}</p>`;
     }
@@ -1824,11 +1834,13 @@ function renderFaqs() {
   }
 
   faqs.forEach((faq, index) => {
+    const category = String(faq.category || '').trim() || 'Sin categoría';
     const tr = document.createElement('tr');
     tr.innerHTML = `
       <td class="num">${index + 1}</td>
       <td class="cell-text" title="${escapeAttr(faq.question)}">${escapeHtml(faq.question)}</td>
       <td class="cell-text" title="${escapeAttr(faq.answer)}">${escapeHtml(faq.answer)}</td>
+      <td class="cell-text" title="${escapeAttr(category)}">${escapeHtml(category)}</td>
       <td>${statusPillTemplate(faq.is_starter_template)} ${statusPillActive(faq.active)}</td>
       <td>${statusPillIndexed(faq.indexed_at)}</td>
       <td class="cell-text">${escapeHtml(formatDate(faq.updated_at))}</td>
