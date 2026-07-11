@@ -297,23 +297,46 @@ function clearWhatsappPoll() {
 
 function hideLandingPanels() {
   $('#signup-form')?.classList.add('hidden');
+  $('#login-form')?.classList.add('hidden');
+  $('#forgot-password-form')?.classList.add('hidden');
+  $('#reset-password-form')?.classList.add('hidden');
   $('#provision-qr-panel')?.classList.add('hidden');
   $('#provision-success-panel')?.classList.add('hidden');
 }
 
 function setLandingTab(tab) {
-  const signup = tab === 'signup';
-  $('#login-form')?.classList.toggle('hidden', signup);
+  clearWhatsappPoll();
   setWhatsappFocus(false);
-  document.querySelector('.landing-hero')?.classList.toggle('hidden', !signup);
-  if (signup) {
-    hideLandingPanels();
+  hideLandingPanels();
+
+  const showHero = tab === 'signup';
+  document.querySelector('.landing-hero')?.classList.toggle('hidden', !showHero);
+
+  if (tab === 'signup') {
     $('#signup-form')?.classList.remove('hidden');
+  } else if (tab === 'forgot') {
+    $('#forgot-password-form')?.classList.remove('hidden');
+  } else if (tab === 'reset') {
+    $('#reset-password-form')?.classList.remove('hidden');
   } else {
-    clearWhatsappPoll();
-    hideLandingPanels();
-    $('#signup-form')?.classList.add('hidden');
+    $('#login-form')?.classList.remove('hidden');
   }
+}
+
+function isResetPasswordPath() {
+  const path = (location.pathname || '/').replace(/\/+$/, '') || '/';
+  return path === '/reset-password' || path.endsWith('/reset-password');
+}
+
+function readResetTokenFromUrl() {
+  if (isResetPasswordPath()) {
+    return new URLSearchParams(location.search).get('token') || '';
+  }
+  if ((location.hash || '').startsWith('#reset-password')) {
+    const query = location.hash.includes('?') ? location.hash.slice(location.hash.indexOf('?') + 1) : '';
+    return new URLSearchParams(query).get('token') || '';
+  }
+  return null;
 }
 
 function setWhatsappFocus(active) {
@@ -3764,6 +3787,98 @@ $('#login-form').addEventListener('submit', async (event) => {
 
 $('#link-show-login')?.addEventListener('click', () => setLandingTab('login'));
 $('#link-show-signup')?.addEventListener('click', () => setLandingTab('signup'));
+$('#link-forgot-password')?.addEventListener('click', () => {
+  $('#forgot-msg').textContent = '';
+  $('#forgot-msg').className = 'form-msg';
+  setLandingTab('forgot');
+});
+$('#link-forgot-back-login')?.addEventListener('click', () => setLandingTab('login'));
+$('#link-reset-back-login')?.addEventListener('click', () => {
+  history.replaceState(null, '', '/');
+  setLandingTab('login');
+});
+
+$('#forgot-password-form')?.addEventListener('submit', async (event) => {
+  event.preventDefault();
+  const msg = $('#forgot-msg');
+  msg.textContent = '';
+  msg.className = 'form-msg';
+  try {
+    const data = await api('/auth/forgot-password', {
+      method: 'POST',
+      body: JSON.stringify({
+        email: $('#forgot-email').value.trim(),
+      }),
+    });
+    msg.textContent = data.message || t('forgot.sent');
+    msg.classList.add('ok');
+  } catch (error) {
+    msg.textContent = error.message;
+    msg.classList.add('error');
+  }
+});
+
+$('#reset-password-form')?.addEventListener('submit', async (event) => {
+  event.preventDefault();
+  const msg = $('#reset-msg');
+  msg.textContent = '';
+  msg.className = 'form-msg';
+  const password = $('#reset-password')?.value || '';
+  const password2 = $('#reset-password2')?.value || '';
+  const token = $('#reset-token')?.value || '';
+
+  if (!token) {
+    msg.textContent = t('reset.missingToken');
+    msg.classList.add('error');
+    return;
+  }
+  if (password !== password2) {
+    msg.textContent = t('reset.mismatch');
+    msg.classList.add('error');
+    return;
+  }
+
+  try {
+    const data = await api('/auth/reset-password', {
+      method: 'POST',
+      body: JSON.stringify({ token, password }),
+    });
+    msg.textContent = data.message || t('reset.ok');
+    msg.classList.add('ok');
+    $('#reset-password').value = '';
+    $('#reset-password2').value = '';
+    setTimeout(() => {
+      history.replaceState(null, '', '/');
+      setLandingTab('login');
+      const loginMsg = $('#login-msg');
+      if (loginMsg) {
+        loginMsg.textContent = t('reset.ok');
+        loginMsg.className = 'form-msg ok';
+      }
+    }, 1200);
+  } catch (error) {
+    msg.textContent = error.message;
+    msg.classList.add('error');
+  }
+});
+
+async function bootApp() {
+  const resetToken = readResetTokenFromUrl();
+  if (resetToken !== null) {
+    showLanding('reset');
+    const tokenInput = $('#reset-token');
+    if (tokenInput) {
+      tokenInput.value = resetToken;
+    }
+    const msg = $('#reset-msg');
+    if (!resetToken && msg) {
+      msg.textContent = t('reset.missingToken');
+      msg.className = 'form-msg error';
+    }
+    return;
+  }
+  await loadSession();
+}
 
 $('#signup-form')?.addEventListener('submit', async (event) => {
   event.preventDefault();
@@ -4404,4 +4519,4 @@ window.onLangChange = () => {
   }
 };
 
-loadSession();
+void bootApp();
