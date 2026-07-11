@@ -7,6 +7,8 @@ import {
   updateFaqCategoryName,
 } from '../lib/faqCategories.js';
 
+/** Marcador estéril para probar auto-deploy EasyPanel vía webhook GitHub. */
+
 function requireClient(request, reply) {
   if (request.user.role !== 'client' || !request.user.tenant_id) {
     reply.code(403);
