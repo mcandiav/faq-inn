@@ -57,6 +57,27 @@ test('buildApprovedBookingRecord only on approve payload shape', () => {
   assert.equal(record.booking_config.placeholder_map.checkin, '{{checkin}}');
 });
 
+test('buildPlaceholderMap ignores malformed brace tokens', () => {
+  const map = buildPlaceholderMap({
+    ok: '{{checkin}}',
+    halfOpen: '{{checkout',
+    halfClose: 'adults}}',
+    plain: 'rooms',
+  });
+  assert.equal(map.checkin, '{{checkin}}');
+  assert.equal(map.checkout, undefined);
+  assert.equal(map.adults, undefined);
+  assert.equal(map.rooms, '{{rooms}}');
+});
+
+test('buildRequiredFields accepts plain canonical names without braces', () => {
+  const fields = buildRequiredFields({
+    required_fields: ['checkin', 'checkout', 'adults'],
+    variable_params: {},
+  });
+  assert.deepEqual(fields, ['checkin', 'checkout', 'adults']);
+});
+
 test('buildRequiredFields deduplicates canonical names', () => {
   const fields = buildRequiredFields({
     required_fields: ['checkin', 'checkout', 'adults', 'rooms'],

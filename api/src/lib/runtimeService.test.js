@@ -87,6 +87,7 @@ test('buildRuntimeWorkflowItem flattens tenant only (no webhook message fields)'
   assert.equal('sessionId' in item, false);
   assert.equal('pause_key' in item, false);
   assert.equal(item.search_limit, 5);
+  assert.equal(item.unanswered_limit, 3);
   assert.equal(item.faq_search_endpoint, '/api/search');
 });
 

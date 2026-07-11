@@ -31,9 +31,11 @@ const PLACEHOLDER_TO_CANONICAL = {
 };
 
 function extractPlaceholderName(token) {
-  return String(token || '')
-    .replace(/^\{\{|\}\}$/g, '')
-    .trim();
+  const raw = String(token || '').trim();
+  if (raw.startsWith('{{') && raw.endsWith('}}')) {
+    return raw.slice(2, -2).trim();
+  }
+  return raw;
 }
 
 export function buildPlaceholderMap(variableParams = {}) {

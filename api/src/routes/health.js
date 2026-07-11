@@ -25,7 +25,10 @@ export async function healthRoutes(app, config) {
         version: config.appVersion,
       },
       git: { commit: readGitCommit() },
-      database,
+      database: {
+        ...database,
+        name: config.dbName || config.postgresDatabase || null,
+      },
       timestamp: new Date().toISOString(),
     };
   };

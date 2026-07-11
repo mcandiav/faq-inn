@@ -18,11 +18,14 @@ function parseCookies(header) {
     return {};
   }
 
+  const parts = header.split(';').map((part) => part.trim()).filter(Boolean);
   return Object.fromEntries(
-    header.split(';').map((part) => {
-      const [key, ...rest] = part.trim().split('=');
-      return [key, decodeURIComponent(rest.join('='))];
-    })
+    parts
+      .map((part) => {
+        const [key, ...rest] = part.split('=');
+        return [key, decodeURIComponent(rest.join('='))];
+      })
+      .filter(([key]) => Boolean(key))
   );
 }
 
