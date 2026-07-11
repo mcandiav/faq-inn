@@ -555,6 +555,23 @@ const MESSAGES = {
     'login.submit': 'Entrar',
     'login.showPassword': 'Mostrar senha',
     'login.hidePassword': 'Ocultar senha',
+    'login.forgot': 'Esqueci minha senha',
+    'forgot.title': 'Recuperar senha',
+    'forgot.lead':
+      'Informe o e-mail da sua conta. Se existir, enviaremos um link para redefini-la.',
+    'forgot.email': 'E-mail',
+    'forgot.submit': 'Enviar link',
+    'forgot.backLogin': 'Voltar ao login',
+    'forgot.sent':
+      'Se existir uma conta associada a este e-mail, você receberá instruções para redefinir a senha.',
+    'reset.title': 'Nova senha',
+    'reset.lead': 'Escolha uma nova senha para a sua conta.',
+    'reset.password': 'Nova senha',
+    'reset.password2': 'Repetir senha',
+    'reset.submit': 'Salvar senha',
+    'reset.mismatch': 'As senhas não coincidem.',
+    'reset.ok': 'Senha atualizada. Já pode iniciar sessão.',
+    'reset.missingToken': 'Falta o link de recuperação. Solicite um novo.',
     'landing.hasAccount': 'Já tem conta? Entrar',
     'landing.newBusiness': 'Registrar um negócio novo',
     'landing.welcome':
