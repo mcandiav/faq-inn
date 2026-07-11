@@ -4,6 +4,7 @@
 
 | Fecha | Versión | Cambio realizado | Motivo | Impacto | Sección afectada |
 |---|---|---|---|---|---|
+| 2026-07-11 | V1.21 | Se define el módulo de recuperación de contraseña con envío por Zoho reutilizando la cuenta corporativa ya operativa en Trudesk. | FAQ Inn requiere recuperación autónoma de acceso sin crear una infraestructura de correo separada. | El Programador debe implementar un `MailProvider` SMTP desacoplado, tokens de un solo uso, expiración, rate limiting e invalidación de sesiones. | 14.13, 16.2, 18 |
 | 2026-07-10 | V1.20 | Catálogo default de categorías FAQ reducido a 2: «Sin categoría» y «Pregunta sin respuesta». | Simplificar el seed administrativo; el resto se crea a demanda. | Migración retira defaults viejos (`Respuesta interna`, `Responsable 1/2`) y reasigna FAQs a «Sin categoría». | 14.5.2 |
 | 2026-07-10 | V1.19 | Se documenta categoría administrativa vs keywords y se excluye la categoría de la vectorización FAQ (`buildVectorizableText`). Export Excel pasa a `category_id`. | La categoría es metadato interno del tenant; no debe influir en la búsqueda semántica. Las keywords sí. | Tras deploy API, reindexar FAQs para que Qdrant deje de indexar `Categoria:`. | 14.5.1, 14.5.2 |
 | 2026-07-08 | V1.18 | Se agrega `tenant_settings.custom_sprompt` (admin-only) concatenado al final del system prompt. UI: Admin → Ver tenant → Custom SPrompt. Documentada matriz 6×4 de bloques por objetivo. | Permitir system prompts hiper-personalizados por tenant sin alterar las plantillas globales por objetivo; si está vacío no altera el prompt. | Runtime entrega `custom_sprompt`; `Armar SPrompt` lo resuelve; el agente lo appende; admin edita solo desde View. | System Prompt Configurable, Admin, n8n FAQ Productivo, Variables |
@@ -1126,6 +1127,120 @@ El Programador debe revisar y reconstruir con variables de tenant, como mínimo:
 10. Construcción de `final_system_prompt` desde el módulo System Prompt Configurable, usando secciones activas, versionadas y variables de tenant, agente, objetivo operativo y cliente.
 11. Registro de versión/hash/snapshot del system prompt usado por conversación o ejecución.
 12. Registro de preguntas sin respuesta asociado a tenant, agente, canal, teléfono y chat.
+13. Recuperación de contraseña con `MailProvider`, tokens seguros, integración Zoho y controles antiabuso.
+
+### 14.13 Módulo recuperación de contraseña / correo Zoho
+
+FAQ Inn debe permitir que un usuario recupere su acceso mediante un enlace temporal enviado a su correo. El envío reutilizará la cuenta corporativa Zoho que ya opera correctamente en Trudesk, pero FAQ Inn debe mantener su propia credencial de aplicación o secreto revocable cuando Zoho lo permita, de modo que una rotación o incidente no interrumpa simultáneamente ambos sistemas.
+
+Decisión arquitectónica:
+
+```text
+La recuperación de contraseña pertenece al backend Fastify de FAQ Inn.
+n8n no participa en este flujo.
+Zoho se consume mediante una abstracción MailProvider.
+La implementación inicial prevista es SMTP con Nodemailer o librería equivalente.
+Los parámetros exactos de host, puerto, TLS y autenticación deben obtenerse de la configuración ya validada en Trudesk; no deben hardcodearse ni inferirse.
+```
+
+Flujo funcional obligatorio:
+
+```text
+Login → "Olvidé mi contraseña"
+→ usuario informa correo
+→ POST /api/auth/forgot-password
+→ backend responde siempre con mensaje neutro
+→ si el usuario existe, genera token criptográficamente seguro
+→ guarda solo SHA-256 del token con expiración y estado no utilizado
+→ envía enlace https://inn.at-once.cl/reset-password?token=<token>
+→ usuario define contraseña nueva
+→ POST /api/auth/reset-password
+→ backend valida hash, expiración y uso
+→ actualiza contraseña con el algoritmo vigente del proyecto
+→ marca token como utilizado
+→ invalida otros tokens y sesiones activas del usuario
+→ envía confirmación de cambio de contraseña
+```
+
+Endpoints mínimos:
+
+```text
+POST /api/auth/forgot-password
+POST /api/auth/reset-password
+```
+
+Contrato de respuesta de `forgot-password`:
+
+```text
+La respuesta HTTP y el mensaje visible deben ser iguales exista o no el correo.
+Mensaje sugerido: "Si existe una cuenta asociada a este correo, recibirás instrucciones para restablecer tu contraseña."
+```
+
+Tabla mínima:
+
+```text
+password_reset_tokens
+- id
+- user_id
+- token_hash
+- created_at
+- expires_at
+- used_at
+- requested_ip
+- user_agent
+```
+
+Reglas de seguridad:
+
+1. El token original nunca se guarda en PostgreSQL ni se registra completo en logs.
+2. El token debe generarse con un CSPRNG, por ejemplo `crypto.randomBytes`.
+3. El token debe ser de un solo uso y expirar inicialmente en 30 minutos.
+4. Al emitir un token nuevo deben invalidarse los anteriores del mismo usuario o mantenerse solo uno vigente.
+5. Debe existir rate limiting por IP y por correo normalizado.
+6. El sistema no debe revelar si una dirección está registrada.
+7. La contraseña Zoho, token OAuth o contraseña de aplicación solo vive en secretos de EasyPanel.
+8. Las sesiones activas deben invalidarse al cambiar la contraseña, salvo decisión posterior documentada.
+9. Los enlaces deben usar exclusivamente HTTPS y el dominio público aprobado de FAQ Inn.
+10. Un error de envío debe quedar trazado sin exponer credenciales ni el token.
+
+Interfaz lógica sugerida:
+
+```text
+MailProvider
+- verifyConnection()
+- sendPasswordReset({ to, resetUrl, expiresAt })
+- sendPasswordChanged({ to, changedAt })
+```
+
+El módulo de autenticación no debe importar Zoho ni Nodemailer directamente. Debe depender de `MailProvider`, permitiendo cambiar en el futuro a Zoho API, ZeptoMail u otro proveedor sin reescribir la recuperación de contraseña.
+
+Variables de entorno obligatorias:
+
+| Variable | Uso | Regla |
+|---|---|---|
+| `MAIL_PROVIDER` | Proveedor activo; inicialmente `zoho_smtp`. | No hardcodear en lógica de autenticación. |
+| `ZOHO_SMTP_HOST` | Host SMTP validado. | Copiar de la configuración operativa de Trudesk. |
+| `ZOHO_SMTP_PORT` | Puerto SMTP validado. | No asumir valor hasta verificar Trudesk. |
+| `ZOHO_SMTP_SECURE` | Uso de TLS implícito o STARTTLS según configuración real. | Debe coincidir con puerto y política Zoho. |
+| `ZOHO_SMTP_USER` | Cuenta corporativa o usuario SMTP. | Secreto de EasyPanel. |
+| `ZOHO_SMTP_PASSWORD` | Contraseña de aplicación o credencial autorizada. | Nunca documentar ni versionar. |
+| `MAIL_FROM_ADDRESS` | Remitente visible autorizado. | Preferible alias `no-reply` si Zoho lo permite. |
+| `MAIL_FROM_NAME` | Nombre visible, por ejemplo `FAQ Inn`. | Configurable. |
+| `APP_PUBLIC_URL` | Base para construir el enlace de recuperación. | Producción: `https://inn.at-once.cl`. |
+| `PASSWORD_RESET_TTL_MINUTES` | Vigencia del token. | Default inicial: `30`. |
+
+Criterios de aceptación para el Programador:
+
+1. Solicitar recuperación con correo existente produce un único correo válido.
+2. Solicitarla con correo inexistente entrega exactamente la misma respuesta pública.
+3. El enlace funciona una sola vez y deja de funcionar al vencer.
+4. Un segundo token invalida el anterior según la política implementada.
+5. La contraseña nueva permite iniciar sesión y la anterior deja de funcionar.
+6. Las sesiones anteriores quedan revocadas.
+7. Los secretos no aparecen en Git, respuestas API, logs ni base de datos.
+8. El envío puede probarse con `MailProvider.verifyConnection()` sin ejecutar un cambio de contraseña.
+9. La caída de Zoho no altera la contraseña ni marca como consumido el token.
+10. Las plantillas se entregan en HTML y texto plano.
 
 ---
 
@@ -1190,6 +1305,7 @@ La base técnica inicial en PostgreSQL se crea como faq-inn para mantener compat
 8. Validar contrato real con Evolution API v2.3.7.
 9. Crear primer tenant demo por objetivo sin tocar MorroReservas.
 10. Recién después de validar WhatsApp conectado, avanzar a n8n multitenant, FAQs, prompts y conversación.
+11. Implementar el módulo de recuperación de contraseña definido en 14.13: validar primero la configuración Zoho ya operativa en Trudesk, crear `MailProvider`, migración `password_reset_tokens`, endpoints, UI, rate limiting, revocación de sesiones y pruebas de aceptación.
 
 ---
 
@@ -1232,4 +1348,5 @@ Subproyecto `prompts` renombrado a `systemprompt-configurable`; el Programador d
 MVP Evolution onboarding validado en inn.at-once.cl (V1.3.x): registro, QR, conexión, webhook MESSAGES_UPSERT. Ver docs/evolution-api/ESTADO-MODULO.md.
 Siguiente etapa: 02-n8n-multitenant-runtime (payload webhook + resolución tenant por evolution_instance_name).
 Pendiente arquitecto: cleanup al desvincular WhatsApp desde teléfono; persistencia instance_token_encrypted.
+Módulo de recuperación de contraseña definido para implementación: backend Fastify, `MailProvider` desacoplado, Zoho SMTP reutilizando la cuenta corporativa operativa en Trudesk, tokens de un solo uso, expiración de 30 minutos, rate limiting e invalidación de sesiones.
 ```

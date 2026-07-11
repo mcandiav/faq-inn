@@ -17,6 +17,7 @@ const TABLES_WITH_ID = [
   'unanswered_questions',
   'evolution_instances',
   'booking_discovery_sessions',
+  'password_reset_tokens',
 ].join('|');
 
 function withReturningId(sql) {

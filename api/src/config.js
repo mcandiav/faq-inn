@@ -167,5 +167,22 @@ export function loadConfig() {
     evolutionCleanupIntervalMinutes: Number(
       process.env.EVOLUTION_CLEANUP_INTERVAL_MINUTES || 5
     ),
+
+    // Recuperación de contraseña / Zoho SMTP
+    mailProvider: (process.env.MAIL_PROVIDER || '').toLowerCase(),
+    zohoSmtpHost: process.env.ZOHO_SMTP_HOST || '',
+    zohoSmtpPort: Number(process.env.ZOHO_SMTP_PORT || 465),
+    zohoSmtpSecure: process.env.ZOHO_SMTP_SECURE,
+    zohoSmtpUser: process.env.ZOHO_SMTP_USER || '',
+    zohoSmtpPassword: process.env.ZOHO_SMTP_PASSWORD || '',
+    mailFromAddress: process.env.MAIL_FROM_ADDRESS || '',
+    mailFromName: process.env.MAIL_FROM_NAME || 'FAQ Inn',
+    appPublicUrl:
+      process.env.APP_PUBLIC_URL ||
+      process.env.APP_URL ||
+      'http://localhost:3000',
+    passwordResetTtlMinutes: Number(
+      process.env.PASSWORD_RESET_TTL_MINUTES || 30
+    ),
   };
 }

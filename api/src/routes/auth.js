@@ -1,5 +1,9 @@
 import { hashPassword, verifyPassword } from '../lib/password.js';
 import { registerQuickSignup } from '../lib/tenantService.js';
+import {
+  requestPasswordReset,
+  resetPasswordWithToken,
+} from '../lib/passwordResetService.js';
 
 async function fetchUserByEmail(pool, email) {
   const [rows] = await pool.query(
@@ -109,6 +113,43 @@ export async function authRoutes(app, config) {
     return { status: 'ok' };
   });
 
+  app.post('/api/auth/forgot-password', async (request, reply) => {
+    const email = request.body?.email;
+    try {
+      const result = await requestPasswordReset(pool, config, request, email);
+      return result;
+    } catch (error) {
+      if (error.statusCode === 429 || error.statusCode === 400) {
+        reply.code(error.statusCode);
+        return { status: 'error', error: error.message };
+      }
+      reply.code(500);
+      return {
+        status: 'error',
+        error: 'No se pudo procesar la solicitud',
+      };
+    }
+  });
+
+  app.post('/api/auth/reset-password', async (request, reply) => {
+    const token = request.body?.token;
+    const password = request.body?.password || request.body?.new_password || '';
+    try {
+      await resetPasswordWithToken(pool, config, token, password);
+      app.clearAuthCookie(reply);
+      return {
+        status: 'ok',
+        message: 'Contraseña actualizada. Ya podés iniciar sesión.',
+      };
+    } catch (error) {
+      reply.code(error.statusCode || 500);
+      return {
+        status: 'error',
+        error: error.message || 'No se pudo restablecer la contraseña',
+      };
+    }
+  });
+
   app.get('/api/auth/me', { preHandler: [app.authenticate] }, async (request) => {
     const refreshed = await fetchUserByEmail(pool, request.user.email);
     return {
@@ -194,10 +235,12 @@ export async function authRoutes(app, config) {
       }
 
       const passwordHash = await hashPassword(newPassword);
-      await pool.query('UPDATE users SET password_hash = ? WHERE id = ?', [
-        passwordHash,
-        user.id,
-      ]);
+      await pool.query(
+        `UPDATE users
+         SET password_hash = ?, password_changed_at = NOW(), updated_at = NOW()
+         WHERE id = ?`,
+        [passwordHash, user.id]
+      );
     }
 
     const lookupEmail = emailChanging ? newEmail : user.email;

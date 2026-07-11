@@ -1,8 +1,9 @@
 import { getPool } from '../db.js';
+import { isJwtIssuedBeforePasswordChange } from '../lib/passwordResetService.js';
 
 async function loadUser(pool, userId) {
   const [rows] = await pool.query(
-    `SELECT u.id, u.email, u.role, u.status, u.tenant_id,
+    `SELECT u.id, u.email, u.role, u.status, u.tenant_id, u.password_changed_at,
             t.slug AS tenant_slug, t.name AS tenant_name
      FROM users u
      LEFT JOIN tenants t ON t.id = u.tenant_id
@@ -46,6 +47,12 @@ export async function registerAuth(app, config) {
 
       if (!user || user.status !== 'active') {
         return reply.code(401).send({ status: 'error', error: 'Usuario no válido' });
+      }
+
+      if (isJwtIssuedBeforePasswordChange(payload, user.password_changed_at)) {
+        return reply
+          .code(401)
+          .send({ status: 'error', error: 'Sesión invalidada. Iniciá sesión de nuevo.' });
       }
 
       request.user = user;
