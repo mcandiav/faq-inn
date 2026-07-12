@@ -1678,17 +1678,14 @@ function applyI18n() {
 }
 
 function langPickerHtml() {
-  return SUPPORTED_LANGS.map(
-    (lang) =>
-      `<button type="button" class="lang-flag" data-lang="${lang}" title="${FLAG_LABELS[lang]}" aria-label="${FLAG_LABELS[lang]}">${lang === 'es' ? '🇪🇸' : lang === 'pt' ? '🇧🇷' : '🇺🇸'}</button>`
-  ).join('');
+  return langPickerHtmlAtOnce();
 }
 
 function mountLangPickers() {
   document.querySelectorAll('[data-lang-picker]').forEach((container) => {
     container.setAttribute('role', 'group');
     container.setAttribute('aria-label', t('lang.label'));
-    container.innerHTML = langPickerHtml();
+    container.innerHTML = langPickerHtmlAtOnce();
     container.querySelectorAll('[data-lang]').forEach((btn) => {
       btn.addEventListener('click', () => setLang(btn.dataset.lang));
     });
@@ -1703,4 +1700,22 @@ function updateLangPickerUI() {
   });
 }
 
+function langPickerHtmlAtOnce() {
+  const flagAsset = {
+    es: '/flags/es.svg',
+    pt: '/flags/br.svg',
+    en: '/flags/us.svg',
+  };
+
+  return SUPPORTED_LANGS.map(
+    (lang) => `
+      <button type="button" class="lang-flag" data-lang="${lang}" title="${FLAG_LABELS[lang]}" aria-label="${FLAG_LABELS[lang]}">
+        <img class="lang-flag__img" src="${flagAsset[lang]}" alt="" />
+        <span class="lang-flag__code">${lang.toUpperCase()}</span>
+      </button>
+    `
+  ).join('');
+}
+
 initLang();
+
