@@ -2,6 +2,7 @@ import { randomBytes } from 'node:crypto';
 import { createEvolutionClient } from './evolutionClient.js';
 import { isFaqInnInstance } from './evolutionCleanup.js';
 import { deleteTenantCollection, ensureTenantCollection } from './indexer.js';
+import { normalizeObjectiveSlug } from './objectives/index.js';
 import { hashPassword } from './password.js';
 
 function validationError(message, statusCode = 400) {
@@ -60,13 +61,15 @@ export async function getAdminTenantDetail(pool, tenantId) {
   );
 
   const [settingsRows] = await pool.query(
-    `SELECT custom_sprompt FROM tenant_settings WHERE tenant_id = ? LIMIT 1`,
+    `SELECT custom_sprompt, objetivo_slug FROM tenant_settings WHERE tenant_id = ? LIMIT 1`,
     [tenantId]
   );
   const customSprompt = String(settingsRows[0]?.custom_sprompt || '');
+  const objetivoSlug = normalizeObjectiveSlug(settingsRows[0]?.objetivo_slug);
 
   return {
     ...tenant,
+    objetivo_slug: objetivoSlug,
     faq_count: Number(faqCount[0]?.total || 0),
     unanswered_count: Number(unansweredCount[0]?.total || 0),
     custom_sprompt: customSprompt,
