@@ -4,6 +4,8 @@
 
 | Fecha | Versión | Cambio realizado | Motivo | Impacto | Sección afectada |
 |---|---|---|---|---|---|
+| 2026-07-12 | V1.16 | Se documenta `objetivo_slug` en Admin detalle tenant, la separación Admin vs `tenant-config`, y la regla de cache-bust al versionar la UI. | El detalle Admin mostraba `—` aunque Postgres tenía el objetivo: la API admin no lo exponía y la UI cacheada leía `objective_slug` con `?v=` repetido. | `GET /api/admin/tenants/:id` devuelve `objetivo_slug`; la UI lee ese campo; cada release `http` debe subir `VERSION` para invalidar `app.js?v=`. | Admin, Variables por tenant, Deploy, Esquema, Estado actual |
+| 2026-07-12 | V1.15 | Se incorpora el esquema vigente de la base de datos directamente en el README oficial. | Documentar tablas, campos y relaciones sin crear documentos paralelos. | El README identifica las nueve tablas implementadas, sus claves y las brechas pendientes de migración. | Esquema de base de datos |
 | 2026-07-08 | V1.14 | Se documenta el botón **Descargar Excel** del dashboard FAQ (export CSV client-side). | Faltaba inventario operativo simétrico al Importar Excel / Sincronizar respuestas. | El cliente puede bajar `id,question,answer,category,keywords,active` con BOM UTF-8 para Excel; no pasa por n8n. | Variables FAQ, Estado actual, UI dashboard |
 | 2026-07-08 | V1.13 | Se documenta `custom_sprompt` admin-only por tenant y su uso en n8n como `{{ $('Armar SPrompt').item.json.custom_sprompt }}`. | Un tenant puede necesitar instrucciones extra al final del system prompt sin editar la matriz de objetivos. | Campo `tenant_settings.custom_sprompt`; runtime `GET /api/runtime/tenant-config`; Admin `GET/PUT /api/admin/tenants/:id/custom-sprompt`; n8n **FAQ Productivo** lo appendea tras `links`. Vacío = sin cambio. | n8n, Variables agente/prompt, docs/systemprompt-configurable, Estado actual |
 | 2026-07-05 | V1.12 | Se consolida inventario único de variables del proyecto por módulo. | El módulo `motor-reservas` incorporó variables nuevas y el runtime n8n ya consume variables adicionales de tenant, agente, pausa, Evolution API, FAQ y reservas. | El README principal pasa a gobernar las variables canónicas de FAQ Inn y separa responsabilidad por módulo para evitar hardcodeos y duplicación documental. | Variables obligatorias por tenant, motor-reservas, n8n como motor de conversaciones |
@@ -369,6 +371,24 @@ Reglas:
 - Los mismos tokens neutros que el resto del prompt (`{{tenant_display_name}}`, `{{url}}`, `{{today}}`, etc.) se resuelven en **Armar SPrompt**.
 - Endpoints Admin: `GET/PUT /api/admin/tenants/:id/custom-sprompt`.
 - Runtime: incluido en `GET /api/runtime/tenant-config`.
+
+#### 8.2.2 Objetivo del tenant: Admin vs runtime n8n
+
+El campo canónico en PostgreSQL es `tenant_settings.objetivo_slug` (slug técnico: `reservar_noches`, `reservar_horarios`, `enviar_a_sitio_web`, `responder_preguntas`).
+
+Misma tabla, **endpoints distintos**:
+
+| Consumidor | Endpoint | Auth | Campo de objetivo |
+|---|---|---|---|
+| UI Admin → **Ver** tenant | `GET /api/admin/tenants/:id` | sesión admin | `objetivo_slug` |
+| n8n → nodo Resolver Tenant / datos tenant | `GET /api/runtime/tenant-config?instance_name=…` | token n8n | `objetivo_slug` |
+
+Reglas operativas:
+
+- El detalle Admin **no** llama a `tenant-config`; solo a `/api/admin/tenants/:id`.
+- La UI debe leer `tenant.objetivo_slug` (compatibilidad opcional con `objective_slug`).
+- En el diálogo Admin se muestra el **slug técnico**, no el nombre visible del catálogo.
+- Si la UI muestra `—` pero n8n sí ve el objetivo: primero verificar el JSON de `/api/admin/tenants/:id`; si el campo llega y la pantalla no, sospechar `app.js` cacheado con el mismo `?v=` (ver [DEPLOY.md](DEPLOY.md)).
 
 Detalle del módulo de columnas por objetivo: [docs/systemprompt-configurable/README.md](docs/systemprompt-configurable/README.md). Operativa n8n: [docs/n8n/README.md](docs/n8n/README.md).
 
@@ -950,63 +970,46 @@ Arquitectura SaaS/multivertical definida a nivel conceptual.
 Módulo documental `motor-reservas` creado para descubrir, validar y guardar `booking_url_template` por tenant.
 MVP Evolution onboarding validado en inn.at-once.cl (V1.3.x): registro, QR, conexión, webhook MESSAGES_UPSERT. Ver docs/evolution-api/ESTADO-MODULO.md.
 System prompt por objetivo (`system_prompt_objective_templates`) + `custom_sprompt` admin-only documentados; n8n FAQ Productivo usa Armar SPrompt + append de custom_sprompt.
+Admin detalle tenant (`GET /api/admin/tenants/:id`) expone `objetivo_slug` (slug técnico) desde `tenant_settings`; UI Admin lo muestra en **Ver**.
 Dashboard FAQ: Importar Excel, Descargar Excel (CSV), Sincronizar respuestas, Nueva FAQ.
 Siguiente etapa: 02-n8n-multitenant-runtime (payload webhook + resolución tenant por evolution_instance_name).
 Pendiente arquitecto: cleanup al desvincular WhatsApp desde teléfono; persistencia instance_token_encrypted.
 ```
 
-## ApÃ©ndice: esquema PostgreSQL canÃ³nico
+## 19. Esquema de base de datos
 
-Fuente canÃ³nica de este inventario:
+La fuente del esquema vigente es `api/src/lib/migrate.js` (rama `api` en producción). PostgreSQL contiene nueve tablas implementadas: `tenants` como entidad raíz; `users` para acceso y roles; `agents` para agentes por tenant; `faq_items` para preguntas y respuestas indexables; `unanswered_questions` para consultas no resueltas; `tenant_settings` para la configuración única del tenant; `tenant_provisioning` para el estado del onboarding; `evolution_instances` para las conexiones WhatsApp; y `booking_discovery_sessions` para descubrir y validar motores de reserva.
 
-- `api/src/lib/migrate.js`
-- Rutas y servicios que leen/escriben cada tabla en `api/src/lib/*.js`
-- CatÃ¡logo de objetivos del system prompt: `public.system_prompt_objective_templates`
+| Tabla | Campos principales | Relaciones |
+|---|---|---|
+| `tenants` | `id`, `slug`, `name`, `email`, `status`, `created_at`, `updated_at` | Tabla raíz. `slug` es único. |
+| `users` | `id`, `tenant_id`, `email`, `password_hash`, `role`, `status`, `created_at`, `updated_at` | `tenant_id → tenants.id` con `ON DELETE SET NULL`. `email` único. |
+| `agents` | `id`, `tenant_id`, `slug`, `name`, `channel`, `status`, `created_at`, `updated_at` | `tenant_id → tenants.id` con `ON DELETE CASCADE`. Único por `tenant_id + slug`. |
+| `faq_items` | `id`, `tenant_id`, `agent_id`, `faq_uid`, `question`, `answer`, `category`, `keywords`, `language`, `active`, `qdrant_point_id`, `embedding_hash`, `indexed_at`, `created_at`, `updated_at` | `tenant_id → tenants.id`; `agent_id → agents.id`, ambos en cascada. Único por `tenant_id + faq_uid`. |
+| `unanswered_questions` | `id`, `tenant_id`, `agent_id`, `tenant_slug`, `channel`, `remote_id`, `contact_name`, `phone`, `question`, `language`, `score`, `suggested_faq_id`, `suggested_faq_question`, `status`, `converted_faq_id`, `resolved_by`, `resolved_at`, `created_at`, `updated_at` | `tenant_id → tenants.id`; `agent_id → agents.id`; `converted_faq_id → faq_items.id`; `resolved_by → users.id`. |
+| `tenant_settings` | `tenant_id`, `objetivo_slug`, `vertical_slug`, `primary_language`, `booking_url_base`, `booking_url_template`, `booking_url_mode`, `validation_status`, `confidence_score`, `booking_config`, `booking_approved_at`, `lodging_type`, `business_hours`, `policies`, `welcome_message`, `address`, `postgres_database`, `custom_sprompt`, `created_at`, `updated_at` | `tenant_id` es PK y FK a `tenants.id`; existe como máximo una configuración por tenant. Campo canónico de objetivo: `objetivo_slug`. |
+| `tenant_provisioning` | `tenant_id`, `status`, `last_error`, `created_at`, `updated_at` | `tenant_id` es PK y FK a `tenants.id`; existe como máximo un estado de provisionamiento por tenant. |
+| `evolution_instances` | `id`, `tenant_id`, `instance_name`, `status`, `phone_number`, `webhook_url`, `last_qr_base64`, `last_qr_at`, `connected_at`, `last_error`, `created_at`, `updated_at` | `tenant_id → tenants.id` en cascada. `instance_name` único. |
+| `booking_discovery_sessions` | `id`, `tenant_id`, `status`, `scenarios`, `sample_urls`, `candidate_template`, `candidate_config`, `verification_scenario`, `verification_url`, `warnings`, `confidence_score`, `created_at`, `updated_at` | `tenant_id → tenants.id` en cascada. Un tenant puede tener varias sesiones. |
 
-Regla importante:
-
-```text
-El objetivo visible del tenant debe leerse como `objective_name` desde
-public.system_prompt_objective_templates, enlazado por `objective_slug`.
+```mermaid
+erDiagram
+  TENANTS ||--o{ USERS : tiene
+  TENANTS ||--o{ AGENTS : tiene
+  TENANTS ||--o{ FAQ_ITEMS : contiene
+  AGENTS ||--o{ FAQ_ITEMS : utiliza
+  TENANTS ||--o{ UNANSWERED_QUESTIONS : registra
+  AGENTS ||--o{ UNANSWERED_QUESTIONS : genera
+  FAQ_ITEMS ||--o{ UNANSWERED_QUESTIONS : convierte
+  USERS ||--o{ UNANSWERED_QUESTIONS : resuelve
+  TENANTS ||--o| TENANT_SETTINGS : configura
+  TENANTS ||--o| TENANT_PROVISIONING : provisiona
+  TENANTS ||--o{ EVOLUTION_INSTANCES : conecta
+  TENANTS ||--o{ BOOKING_DISCOVERY_SESSIONS : ejecuta
 ```
 
-### Tablas principales
+Brechas / notas:
 
-| Tabla | PropÃ³sito | Campos principales |
-|---|---|---|
-| `tenants` | Entidad principal del negocio/tenant. | `id`, `slug`, `name`, `email`, `status`, `created_at`, `updated_at` |
-| `users` | AutenticaciÃ³n y roles. | `id`, `tenant_id`, `email`, `password_hash`, `role`, `status`, `created_at`, `updated_at` |
-| `agents` | Agentes por tenant. | `id`, `tenant_id`, `slug`, `name`, `channel`, `status`, `created_at`, `updated_at` |
-| `faq_items` | FAQs indexadas del tenant. | `id`, `tenant_id`, `agent_id`, `faq_uid`, `question`, `answer`, `category`, `keywords`, `language`, `active`, `qdrant_point_id`, `embedding_hash`, `indexed_at`, `created_at`, `updated_at` |
-| `unanswered_questions` | Preguntas sin respuesta y auditorÃ­a de resoluciÃ³n. | `id`, `tenant_id`, `agent_id`, `tenant_slug`, `channel`, `remote_id`, `contact_name`, `phone`, `question`, `language`, `score`, `suggested_faq_id`, `suggested_faq_question`, `status`, `converted_faq_id`, `resolved_by`, `resolved_at`, `created_at`, `updated_at` |
-| `tenant_settings` | ConfiguraciÃ³n canÃ³nica del tenant. | `tenant_id`, `objective_slug`, `vertical_slug`, `primary_language`, `booking_url_base`, `booking_url_template`, `booking_url_mode`, `validation_status`, `confidence_score`, `booking_config`, `booking_approved_at`, `lodging_type`, `business_hours`, `policies`, `welcome_message`, `address`, `postgres_database`, `created_at`, `updated_at` |
-| `tenant_provisioning` | Estado de provisionamiento/onboarding. | `tenant_id`, `status`, `last_error`, `created_at`, `updated_at` |
-| `evolution_instances` | Instancias de WhatsApp/Evolution API por tenant. | `id`, `tenant_id`, `instance_name`, `status`, `phone_number`, `webhook_url`, `last_qr_base64`, `last_qr_at`, `connected_at`, `last_error`, `created_at`, `updated_at` |
-| `booking_discovery_sessions` | Descubrimiento y aprobaciÃ³n de plantillas de reserva. | `id`, `tenant_id`, `status`, `scenarios`, `sample_urls`, `candidate_template`, `candidate_config`, `verification_scenario`, `verification_url`, `warnings`, `confidence_score`, `created_at`, `updated_at` |
-| `public.system_prompt_objective_templates` | CatÃ¡logo visible de objetivos para SPrompt. | `objective_slug`, `objective_name` |
-
-### Relaciones clave
-
-- `users.tenant_id` -> `tenants.id`
-- `agents.tenant_id` -> `tenants.id`
-- `faq_items.tenant_id` -> `tenants.id`
-- `faq_items.agent_id` -> `agents.id`
-- `unanswered_questions.tenant_id` -> `tenants.id`
-- `unanswered_questions.agent_id` -> `agents.id`
-- `tenant_settings.tenant_id` -> `tenants.id`
-- `tenant_settings.objective_slug` -> `public.system_prompt_objective_templates.objective_slug`
-- `tenant_provisioning.tenant_id` -> `tenants.id`
-- `evolution_instances.tenant_id` -> `tenants.id`
-- `booking_discovery_sessions.tenant_id` -> `tenants.id`
-
-### Campos de negocio relevantes
-
-- `tenant_settings.objective_slug`
-- `public.system_prompt_objective_templates.objective_name`
-- `tenant_settings.primary_language`
-- `tenant_settings.booking_url_base`
-- `tenant_settings.booking_url_template`
-- `tenant_settings.business_hours`
-- `tenant_settings.policies`
-- `tenant_settings.welcome_message`
-- `tenant_settings.custom_sprompt` si está presente en la versión desplegada
+- El catálogo visible de nombres de objetivo vive en `public.system_prompt_objective_templates` (`objective_slug` / `objective_name`). El tenant guarda el slug técnico en `tenant_settings.objetivo_slug` (sin FK obligatoria al catálogo).
+- Admin y runtime leen `objetivo_slug` desde `tenant_settings`. No confundir con el nombre inglés `objective_slug` del catálogo de plantillas.
+- `custom_sprompt` se crea/asegura en la migración de la rama `api` junto a `objetivo_slug`.

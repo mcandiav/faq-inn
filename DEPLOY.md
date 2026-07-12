@@ -70,6 +70,20 @@ n8n debe consumir `POST /api/search`; no insertar vectores directo en Qdrant.
 
 Verificar en producción: `GET https://inn.at-once.cl/api/health` → `app.title`, `app.version`, `git.commit`.
 
+### Cache-bust de la UI (`app.js?v=`)
+
+`commit-version.ps1` escribe `VERSION` y actualiza `http/public/index.html` (`app.js?v=X.Y.Z`, `i18n.js?v=X.Y.Z`).
+
+**Regla:** cada push a `http` que cambie JS/CSS/HTML servido debe **subir** el número de `VERSION`. Reutilizar el mismo `VERSION` (varios commits `[V1.7.79] …`) deja el query string igual y el navegador/CDN puede seguir sirviendo un `app.js` viejo.
+
+Síntoma típico: la API ya devuelve un campo nuevo pero la UI Admin sigue mostrando `—` o comportamiento anterior. Comprobar:
+
+1. `GET /api/admin/tenants/:id` → ¿viene el campo?
+2. Título de la UI / `index.html` → ¿`app.js?v=` coincide con el `VERSION` del último deploy `http`?
+3. Contenido de `https://inn.at-once.cl/app.js?v=<VERSION>` → ¿incluye el cambio?
+
+Ramas: cambios de API solo en `api`; cambios de UI solo en `http`. No mezclar un fix de `api/src` en un commit de la rama `http` (EasyPanel no lo despliega en el servicio API).
+
 ---
 
 ## Estructura del repositorio

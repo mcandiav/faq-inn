@@ -6,3 +6,5 @@ alwaysApply: true
 # Versionado de producto y deploy
 
 Versión de producto: una sola fuente en el archivo `VERSION` (raíz del repo), actualizada solo con `commit-version.ps1` al hacer release; el hash de deploy se inyecta en build (`GIT_SHA` → `/app/.git-commit`) y la UI los muestra vía `/api/health` — nunca hardcodear versión en código ni `APP_VERSION` en `.env`.
+
+Cada release en rama `http` debe incrementar `VERSION`: es el query de cache-bust (`app.js?v=…`). Reutilizar el mismo `VERSION` en varios commits deja la UI con JS potencialmente cacheado.

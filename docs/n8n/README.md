@@ -81,6 +81,8 @@ Webhook Evolution -> Parse Evolution -> Es mensaje entrante? -> Resolver Tenant 
 
 **Llave entre dominios:** `Parse Evolution.evolution_instance` → `GET /api/runtime/tenant-config?instance_name=…`
 
+El campo de objetivo en esa respuesta es `objetivo_slug` (misma columna `tenant_settings.objetivo_slug` que usa Admin en `GET /api/admin/tenants/:id`). Ver README principal §8.2.2.
+
 | Dominio Evolution (webhook → Parse Evolution) | Dominio inn-api (Resolver Tenant) |
 |---|---|
 | `chatInput`, `sessionId`, `remoteJid`, `pushName` | `tenant_id`, `tenant_slug`, `agent_id`, `initial_greeting` |
