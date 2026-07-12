@@ -19,7 +19,7 @@ const TENANT_BASE_SQL = `
          t.created_at, t.updated_at,
          u.email AS client_email,
          a.slug AS agent_slug,
-         COALESCE(ts.objective_slug, 'responder_preguntas') AS objective_slug,
+         COALESCE(ts.objetivo_slug, 'responder_preguntas') AS objetivo_slug,
          tp.status AS provisioning_status,
          ev.instance_name AS whatsapp_instance,
          ev.status AS whatsapp_status,
@@ -63,6 +63,7 @@ export async function getAdminTenantDetail(pool, tenantId) {
 
   return {
     ...tenant,
+    objective_slug: tenant.objetivo_slug,
     faq_count: Number(faqCount[0]?.total || 0),
     unanswered_count: Number(unansweredCount[0]?.total || 0),
   };
