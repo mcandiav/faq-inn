@@ -20,7 +20,6 @@ const TENANT_BASE_SQL = `
          u.email AS client_email,
          a.slug AS agent_slug,
          COALESCE(ts.objective_slug, 'responder_preguntas') AS objective_slug,
-         COALESCE(spt.objective_name, ts.objective_slug, 'responder_preguntas') AS objective_name,
          tp.status AS provisioning_status,
          ev.instance_name AS whatsapp_instance,
          ev.status AS whatsapp_status,
@@ -30,7 +29,6 @@ const TENANT_BASE_SQL = `
   LEFT JOIN users u ON u.tenant_id = t.id AND u.role = 'client'
   LEFT JOIN agents a ON a.tenant_id = t.id
   LEFT JOIN tenant_settings ts ON ts.tenant_id = t.id
-  LEFT JOIN public.system_prompt_objective_templates spt ON spt.objective_slug = ts.objective_slug
   LEFT JOIN tenant_provisioning tp ON tp.tenant_id = t.id
   LEFT JOIN LATERAL (
     SELECT instance_name, status, phone_number, connected_at
@@ -63,8 +61,20 @@ export async function getAdminTenantDetail(pool, tenantId) {
     [tenantId]
   );
 
+  const [objectiveRows] = await pool.query(
+    `SELECT objective_slug
+     FROM tenant_settings
+     WHERE tenant_id = ?
+     LIMIT 1`,
+    [tenantId]
+  );
+  const objectiveSlug = String(
+    objectiveRows[0]?.objective_slug || tenant.objective_slug || 'responder_preguntas'
+  );
+
   return {
     ...tenant,
+    objective_slug: objectiveSlug,
     faq_count: Number(faqCount[0]?.total || 0),
     unanswered_count: Number(unansweredCount[0]?.total || 0),
   };
