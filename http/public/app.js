@@ -2578,6 +2578,17 @@ function adminTenantEmailLabel(tenant) {
   return tenant.client_email || tenant.registration_email || '—';
 }
 
+function adminObjectiveLabel(slug) {
+  const map = {
+    hotel: 'Hotel v1',
+    reservar_noches: 'Reservar noches',
+    reservar_horarios: 'Reservar horarios',
+    enviar_a_sitio_web: 'Llevar a un sitio web',
+    responder_preguntas: 'Preguntas frecuentes',
+  };
+  return map[slug] || slug || '—';
+}
+
 function renderAdminTenantDetail(tenant) {
   const list = $('#admin-tenant-detail');
   if (!list || !tenant) {
@@ -2587,6 +2598,7 @@ function renderAdminTenantDetail(tenant) {
   const rows = [
     [t('table.slug'), `<code>${escapeHtml(tenant.slug)}</code>`],
     [t('table.businessName'), escapeHtml(tenant.name || '—')],
+    [t('profile.sectionObjective'), escapeHtml(adminObjectiveLabel(tenant.objective_slug))],
     [t('table.clientEmail'), escapeHtml(tenant.client_email || '—')],
     [
       t('table.registrationEmail'),
