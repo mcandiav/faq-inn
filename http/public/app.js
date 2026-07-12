@@ -1,5 +1,5 @@
-const APP_VERSION = '1.5.0';
 const APP_PRODUCT_NAME = 'FAQ Inn';
+const DEFAULT_UI_VERSION = '0.0.0';
 const apiBase = window.FAQ_INN_API_URL || window.DFAQ_API_URL || '/api';
 const VIEW_STORAGE_KEY = 'faq-inn-current-view';
 const VALID_VIEWS = ['dashboard', 'unanswered', 'profile', 'onboarding', 'booking-engine', 'agenda-engine', 'admin'];
@@ -94,8 +94,8 @@ const state = {
 const appMeta = {
   productName: APP_PRODUCT_NAME,
   title: APP_PRODUCT_NAME,
-  version: APP_VERSION,
-  uiVersion: APP_VERSION,
+  version: readUiVersionFromDom(),
+  uiVersion: readUiVersionFromDom(),
 };
 
 const $ = (sel) => document.querySelector(sel);
@@ -134,7 +134,7 @@ function readUiVersionFromDom() {
   const asset = document.querySelector('script[src*="app.js?v="], link[href*="styles.css?v="]');
   const href = asset?.getAttribute('src') || asset?.getAttribute('href') || '';
   const match = href.match(/[?&]v=([0-9.]+)/);
-  return match?.[1] || APP_VERSION;
+  return match?.[1] || DEFAULT_UI_VERSION;
 }
 
 function versionLabel(gitCommit, apiVersion) {
