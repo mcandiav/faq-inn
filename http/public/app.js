@@ -2587,7 +2587,7 @@ function renderAdminTenantDetail(tenant) {
   const rows = [
     [t('table.slug'), `<code>${escapeHtml(tenant.slug)}</code>`],
     [t('table.businessName'), escapeHtml(tenant.name || '—')],
-    [t('profile.sectionObjective'), escapeHtml(tenant.objective_name || tenant.objective_slug || '—')],
+    [t('profile.sectionObjective'), escapeHtml(tenant.objective_slug || '—')],
     [t('table.clientEmail'), escapeHtml(tenant.client_email || '—')],
     [
       t('table.registrationEmail'),
