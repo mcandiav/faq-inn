@@ -2584,9 +2584,10 @@ function adminObjectiveLabel(slug) {
     reservar_noches: 'Reservar noches',
     reservar_horarios: 'Reservar horarios',
     enviar_a_sitio_web: 'Llevar a un sitio web',
-    responder_preguntas: 'Preguntas frecuentes',
+    responder_preguntas: 'Solo responder preguntas',
   };
-  return map[slug] || slug || '—';
+  const normalized = slug || 'responder_preguntas';
+  return map[normalized] || normalized || '—';
 }
 
 function renderAdminTenantDetail(tenant) {

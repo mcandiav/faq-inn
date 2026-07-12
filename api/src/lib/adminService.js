@@ -19,7 +19,7 @@ const TENANT_BASE_SQL = `
          t.created_at, t.updated_at,
          u.email AS client_email,
          a.slug AS agent_slug,
-         ts.vertical_slug AS objective_slug,
+         COALESCE(ts.vertical_slug, 'responder_preguntas') AS objective_slug,
          tp.status AS provisioning_status,
          ev.instance_name AS whatsapp_instance,
          ev.status AS whatsapp_status,
