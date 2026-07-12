@@ -74,6 +74,7 @@ export async function getAdminTenantDetail(pool, tenantId) {
 
   return {
     ...tenant,
+    objetivo_slug: objectiveSlug,
     objective_slug: objectiveSlug,
     faq_count: Number(faqCount[0]?.total || 0),
     unanswered_count: Number(unansweredCount[0]?.total || 0),
