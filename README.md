@@ -954,3 +954,59 @@ Dashboard FAQ: Importar Excel, Descargar Excel (CSV), Sincronizar respuestas, Nu
 Siguiente etapa: 02-n8n-multitenant-runtime (payload webhook + resolución tenant por evolution_instance_name).
 Pendiente arquitecto: cleanup al desvincular WhatsApp desde teléfono; persistencia instance_token_encrypted.
 ```
+
+## ApÃ©ndice: esquema PostgreSQL canÃ³nico
+
+Fuente canÃ³nica de este inventario:
+
+- `api/src/lib/migrate.js`
+- Rutas y servicios que leen/escriben cada tabla en `api/src/lib/*.js`
+- CatÃ¡logo de objetivos del system prompt: `public.system_prompt_objective_templates`
+
+Regla importante:
+
+```text
+El objetivo visible del tenant debe leerse como `objective_name` desde
+public.system_prompt_objective_templates, enlazado por `objective_slug`.
+```
+
+### Tablas principales
+
+| Tabla | PropÃ³sito | Campos principales |
+|---|---|---|
+| `tenants` | Entidad principal del negocio/tenant. | `id`, `slug`, `name`, `email`, `status`, `created_at`, `updated_at` |
+| `users` | AutenticaciÃ³n y roles. | `id`, `tenant_id`, `email`, `password_hash`, `role`, `status`, `created_at`, `updated_at` |
+| `agents` | Agentes por tenant. | `id`, `tenant_id`, `slug`, `name`, `channel`, `status`, `created_at`, `updated_at` |
+| `faq_items` | FAQs indexadas del tenant. | `id`, `tenant_id`, `agent_id`, `faq_uid`, `question`, `answer`, `category`, `keywords`, `language`, `active`, `qdrant_point_id`, `embedding_hash`, `indexed_at`, `created_at`, `updated_at` |
+| `unanswered_questions` | Preguntas sin respuesta y auditorÃ­a de resoluciÃ³n. | `id`, `tenant_id`, `agent_id`, `tenant_slug`, `channel`, `remote_id`, `contact_name`, `phone`, `question`, `language`, `score`, `suggested_faq_id`, `suggested_faq_question`, `status`, `converted_faq_id`, `resolved_by`, `resolved_at`, `created_at`, `updated_at` |
+| `tenant_settings` | ConfiguraciÃ³n canÃ³nica del tenant. | `tenant_id`, `objective_slug`, `vertical_slug`, `primary_language`, `booking_url_base`, `booking_url_template`, `booking_url_mode`, `validation_status`, `confidence_score`, `booking_config`, `booking_approved_at`, `lodging_type`, `business_hours`, `policies`, `welcome_message`, `address`, `postgres_database`, `created_at`, `updated_at` |
+| `tenant_provisioning` | Estado de provisionamiento/onboarding. | `tenant_id`, `status`, `last_error`, `created_at`, `updated_at` |
+| `evolution_instances` | Instancias de WhatsApp/Evolution API por tenant. | `id`, `tenant_id`, `instance_name`, `status`, `phone_number`, `webhook_url`, `last_qr_base64`, `last_qr_at`, `connected_at`, `last_error`, `created_at`, `updated_at` |
+| `booking_discovery_sessions` | Descubrimiento y aprobaciÃ³n de plantillas de reserva. | `id`, `tenant_id`, `status`, `scenarios`, `sample_urls`, `candidate_template`, `candidate_config`, `verification_scenario`, `verification_url`, `warnings`, `confidence_score`, `created_at`, `updated_at` |
+| `public.system_prompt_objective_templates` | CatÃ¡logo visible de objetivos para SPrompt. | `objective_slug`, `objective_name` |
+
+### Relaciones clave
+
+- `users.tenant_id` -> `tenants.id`
+- `agents.tenant_id` -> `tenants.id`
+- `faq_items.tenant_id` -> `tenants.id`
+- `faq_items.agent_id` -> `agents.id`
+- `unanswered_questions.tenant_id` -> `tenants.id`
+- `unanswered_questions.agent_id` -> `agents.id`
+- `tenant_settings.tenant_id` -> `tenants.id`
+- `tenant_settings.objective_slug` -> `public.system_prompt_objective_templates.objective_slug`
+- `tenant_provisioning.tenant_id` -> `tenants.id`
+- `evolution_instances.tenant_id` -> `tenants.id`
+- `booking_discovery_sessions.tenant_id` -> `tenants.id`
+
+### Campos de negocio relevantes
+
+- `tenant_settings.objective_slug`
+- `public.system_prompt_objective_templates.objective_name`
+- `tenant_settings.primary_language`
+- `tenant_settings.booking_url_base`
+- `tenant_settings.booking_url_template`
+- `tenant_settings.business_hours`
+- `tenant_settings.policies`
+- `tenant_settings.welcome_message`
+- `tenant_settings.custom_sprompt` si está presente en la versión desplegada
