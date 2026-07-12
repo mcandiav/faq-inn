@@ -70,8 +70,8 @@ export async function registerQuickSignup(pool, config, input, { logger } = {}) 
 
     await connection.query(
       `INSERT INTO tenant_settings
-       (tenant_id, vertical_slug, primary_language, postgres_database)
-       VALUES (?, 'hotel', 'es', ?)`,
+       (tenant_id, objective_slug, vertical_slug, primary_language, postgres_database)
+       VALUES (?, 'responder_preguntas', 'hotel', 'es', ?)`,
       [tenantId, slug]
     );
 
@@ -130,6 +130,8 @@ export async function createHotelTenant(pool, config, input, { logger } = {}) {
   const businessHours = input.business_hours?.trim() || '';
   const policies = input.policies?.trim() || '';
   const welcomeMessage = input.welcome_message?.trim() || '';
+  const objectiveSlug =
+    input.objetivo_slug?.trim() || input.objective_slug?.trim() || 'responder_preguntas';
   const agentSlug = input.agent_slug?.trim().toLowerCase() || 'principal';
   const agentName = input.agent_name?.trim() || 'Agente principal';
 
@@ -184,12 +186,13 @@ export async function createHotelTenant(pool, config, input, { logger } = {}) {
 
     await connection.query(
       `INSERT INTO tenant_settings
-       (tenant_id, vertical_slug, primary_language, booking_url_base,
+       (tenant_id, objective_slug, vertical_slug, primary_language, booking_url_base,
         booking_url_template, lodging_type, business_hours, policies,
         welcome_message, postgres_database)
-       VALUES (?, 'hotel', ?, ?, ?, ?, ?, ?, ?, ?)`,
+       VALUES (?, ?, 'hotel', ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         tenantId,
+        objectiveSlug,
         primaryLanguage,
         bookingUrlBase,
         bookingUrlTemplate,
@@ -256,6 +259,8 @@ export async function createAdminTenant(pool, config, input, { logger } = {}) {
   const slug = normalizeTenantSlug(input.slug);
   const email = input.email?.trim().toLowerCase();
   const password = input.password || '';
+  const objectiveSlug =
+    input.objetivo_slug?.trim() || input.objective_slug?.trim() || 'responder_preguntas';
   const agentSlug = input.agent_slug?.trim().toLowerCase() || 'principal';
   const agentName = input.agent_name?.trim() || 'Agente principal';
   const businessName = input.name?.trim() || '';
@@ -301,9 +306,9 @@ export async function createAdminTenant(pool, config, input, { logger } = {}) {
 
     await connection.query(
       `INSERT INTO tenant_settings
-       (tenant_id, vertical_slug, postgres_database)
-       VALUES (?, 'hotel', ?)`,
-      [tenantId, slug]
+       (tenant_id, objective_slug, vertical_slug, postgres_database)
+       VALUES (?, ?, 'hotel', ?)`,
+      [tenantId, objectiveSlug, slug]
     );
 
     await connection.query(

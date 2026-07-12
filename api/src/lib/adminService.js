@@ -19,7 +19,8 @@ const TENANT_BASE_SQL = `
          t.created_at, t.updated_at,
          u.email AS client_email,
          a.slug AS agent_slug,
-         COALESCE(ts.vertical_slug, 'responder_preguntas') AS objective_slug,
+         COALESCE(ts.objective_slug, 'responder_preguntas') AS objective_slug,
+         COALESCE(spt.objective_name, ts.objective_slug, 'responder_preguntas') AS objective_name,
          tp.status AS provisioning_status,
          ev.instance_name AS whatsapp_instance,
          ev.status AS whatsapp_status,
@@ -29,6 +30,7 @@ const TENANT_BASE_SQL = `
   LEFT JOIN users u ON u.tenant_id = t.id AND u.role = 'client'
   LEFT JOIN agents a ON a.tenant_id = t.id
   LEFT JOIN tenant_settings ts ON ts.tenant_id = t.id
+  LEFT JOIN public.system_prompt_objective_templates spt ON spt.objective_slug = ts.objective_slug
   LEFT JOIN tenant_provisioning tp ON tp.tenant_id = t.id
   LEFT JOIN LATERAL (
     SELECT instance_name, status, phone_number, connected_at
@@ -168,8 +170,8 @@ async function ensureClientTenantBootstrap(pool, config, tenant, logger) {
   if (!settings.length) {
     await pool.query(
       `INSERT INTO tenant_settings
-       (tenant_id, vertical_slug, primary_language, postgres_database)
-       VALUES (?, 'hotel', 'es', ?)`,
+       (tenant_id, objective_slug, vertical_slug, primary_language, postgres_database)
+       VALUES (?, 'responder_preguntas', 'hotel', 'es', ?)`,
       [tenantId, slug]
     );
   }

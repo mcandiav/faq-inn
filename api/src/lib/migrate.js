@@ -102,6 +102,7 @@ CREATE INDEX IF NOT EXISTS idx_unanswered_agent
 
 CREATE TABLE IF NOT EXISTS tenant_settings (
   tenant_id BIGINT PRIMARY KEY REFERENCES tenants (id) ON DELETE CASCADE,
+  objective_slug VARCHAR(64) NOT NULL DEFAULT 'responder_preguntas',
   vertical_slug VARCHAR(64) NOT NULL DEFAULT 'hotel',
   primary_language VARCHAR(16) NOT NULL DEFAULT 'es',
   booking_url_base TEXT NOT NULL DEFAULT '',
@@ -184,6 +185,21 @@ async function applySchemaPatches(pool) {
     await pool.query(
       `ALTER TABLE tenants
        ADD COLUMN email VARCHAR(255) NOT NULL DEFAULT ''`
+    );
+  }
+
+  const [objectiveCol] = await pool.query(
+    `SELECT column_name
+     FROM information_schema.columns
+     WHERE table_schema = current_schema()
+       AND table_name = 'tenant_settings'
+       AND column_name = 'objective_slug'`
+  );
+
+  if (objectiveCol.length === 0) {
+    await pool.query(
+      `ALTER TABLE tenant_settings
+       ADD COLUMN objective_slug VARCHAR(64) NOT NULL DEFAULT 'responder_preguntas'`
     );
   }
 

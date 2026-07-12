@@ -34,7 +34,7 @@ export async function getAccountSettings(pool, config, userId, tenantId) {
   }
 
   const [settingsRows] = await pool.query(
-    `SELECT vertical_slug, primary_language, booking_url_base, booking_url_template,
+    `SELECT objective_slug, vertical_slug, primary_language, booking_url_base, booking_url_template,
             booking_url_mode, validation_status, confidence_score, booking_config,
             booking_approved_at, lodging_type, business_hours, policies, welcome_message, address
      FROM tenant_settings
@@ -72,6 +72,8 @@ export async function getAccountSettings(pool, config, userId, tenantId) {
       status: user.tenant_status,
     },
     settings: {
+      objective_slug: settings.objective_slug || 'responder_preguntas',
+      objetivo_slug: settings.objective_slug || 'responder_preguntas',
       vertical_slug: settings.vertical_slug || 'hotel',
       primary_language: settings.primary_language || 'es',
       booking_url_base: settings.booking_url_base || '',
@@ -119,6 +121,8 @@ export async function updateAccountSettings(pool, config, userId, tenantId, inpu
   const primaryLanguage = input.primary_language?.trim();
   const businessHours = input.business_hours?.trim();
   const policies = input.policies?.trim();
+  const objectiveSlug =
+    input.objetivo_slug?.trim() || input.objective_slug?.trim();
 
   if (businessName !== undefined) {
     if (businessName.length < 2) {
@@ -136,6 +140,10 @@ export async function updateAccountSettings(pool, config, userId, tenantId, inpu
   if (address !== undefined) {
     settingsUpdates.push('address = ?');
     settingsParams.push(address);
+  }
+  if (objectiveSlug !== undefined) {
+    settingsUpdates.push('objective_slug = ?');
+    settingsParams.push(objectiveSlug || 'responder_preguntas');
   }
   if (welcomeMessage !== undefined) {
     settingsUpdates.push('welcome_message = ?');
