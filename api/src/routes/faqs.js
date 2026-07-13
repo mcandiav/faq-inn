@@ -285,12 +285,15 @@ export async function faqRoutes(app, config) {
 
       const indexed = await indexFaqItem(config, faqRow, faq.tenant_slug);
 
-      await conn.query(
+      const [, indexMeta] = await conn.query(
         `UPDATE faq_items
          SET qdrant_point_id = ?, embedding_hash = ?, indexed_at = ?
          WHERE id = ?`,
         [indexed.point_id, indexed.embedding_hash, indexed.indexed_at, faq.id]
       );
+      if (!indexMeta.affectedRows) {
+        throw new Error('No se pudo guardar metadata de indexación');
+      }
 
       await conn.commit();
 

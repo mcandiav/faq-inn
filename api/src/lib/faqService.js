@@ -68,7 +68,7 @@ export async function createFaqRecord(pool, config, user, faqInput) {
   try {
     await conn.beginTransaction();
 
-    const [result] = await conn.query(
+    const [, insertMeta] = await conn.query(
       `INSERT INTO faq_items
        (tenant_id, agent_id, faq_uid, question, answer, category, keywords, language, active)
        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
@@ -85,8 +85,13 @@ export async function createFaqRecord(pool, config, user, faqInput) {
       ]
     );
 
+    const faqId = insertMeta.insertId;
+    if (!faqId) {
+      throw new Error('No se obtuvo id de la FAQ creada');
+    }
+
     const faqRow = {
-      id: result.insertId,
+      id: faqId,
       faq_uid: faqUid,
       question,
       answer,
@@ -98,17 +103,20 @@ export async function createFaqRecord(pool, config, user, faqInput) {
 
     const indexed = await indexFaqItem(config, faqRow, tenantSlug);
 
-    await conn.query(
+    const [, indexMeta] = await conn.query(
       `UPDATE faq_items
        SET qdrant_point_id = ?, embedding_hash = ?, indexed_at = ?
        WHERE id = ?`,
-      [indexed.point_id, indexed.embedding_hash, indexed.indexed_at, result.insertId]
+      [indexed.point_id, indexed.embedding_hash, indexed.indexed_at, faqId]
     );
+    if (!indexMeta.affectedRows) {
+      throw new Error('No se pudo guardar metadata de indexación');
+    }
 
     await conn.commit();
 
     return {
-      id: result.insertId,
+      id: faqId,
       faq_uid: faqUid,
       indexed: true,
       collection: indexed.collection,

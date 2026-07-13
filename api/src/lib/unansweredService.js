@@ -93,7 +93,7 @@ export async function registerUnanswered(pool, body) {
     };
   }
 
-  const [result] = await pool.query(
+  const [, insertMeta] = await pool.query(
     `INSERT INTO unanswered_questions
      (tenant_id, agent_id, tenant_slug, channel, remote_id, contact_name, phone,
       question, language, score, suggested_faq_id, suggested_faq_question, status)
@@ -116,7 +116,7 @@ export async function registerUnanswered(pool, body) {
 
   return {
     ok: true,
-    id: result.insertId,
+    id: insertMeta.insertId,
     status: 'pending',
     duplicate: false,
   };
@@ -339,7 +339,7 @@ export async function convertUnansweredToFaq(pool, config, id, user, input = {})
   try {
     await conn.beginTransaction();
 
-    const [result] = await conn.query(
+    const [, insertMeta] = await conn.query(
       `INSERT INTO faq_items
        (tenant_id, agent_id, faq_uid, question, answer, category, keywords, language, active)
        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
@@ -356,8 +356,13 @@ export async function convertUnansweredToFaq(pool, config, id, user, input = {})
       ]
     );
 
+    const faqId = insertMeta.insertId;
+    if (!faqId) {
+      throw new Error('No se obtuvo id de la FAQ creada');
+    }
+
     const faqRow = {
-      id: result.insertId,
+      id: faqId,
       faq_uid: faqUid,
       question,
       answer,
@@ -369,21 +374,24 @@ export async function convertUnansweredToFaq(pool, config, id, user, input = {})
 
     const indexed = await indexFaqItem(config, faqRow, tenantSlug);
 
-    await conn.query(
+    const [, indexMeta] = await conn.query(
       `UPDATE faq_items
        SET qdrant_point_id = ?, embedding_hash = ?, indexed_at = ?
        WHERE id = ?`,
-      [indexed.point_id, indexed.embedding_hash, indexed.indexed_at, result.insertId]
+      [indexed.point_id, indexed.embedding_hash, indexed.indexed_at, faqId]
     );
+    if (!indexMeta.affectedRows) {
+      throw new Error('No se pudo guardar metadata de indexación');
+    }
 
-    await markUnansweredAsConverted(conn, id, user, result.insertId);
+    await markUnansweredAsConverted(conn, id, user, faqId);
 
     await conn.commit();
 
     return {
       unanswered_id: Number(id),
       faq: {
-        id: result.insertId,
+        id: faqId,
         faq_uid: faqUid,
         indexed: true,
         collection: indexed.collection,

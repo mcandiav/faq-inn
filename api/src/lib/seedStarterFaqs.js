@@ -41,7 +41,7 @@ export async function seedStarterFaqs(
     }
 
     try {
-      const [result] = await pool.query(
+      const [, insertMeta] = await pool.query(
         `INSERT INTO faq_items
          (tenant_id, agent_id, faq_uid, question, answer, category, keywords, language, active, is_starter_template, starter_key)
          VALUES (?, ?, ?, ?, ?, ?, ?, ?, TRUE, TRUE, ?)`,
@@ -58,8 +58,13 @@ export async function seedStarterFaqs(
         ]
       );
 
+      const faqId = insertMeta.insertId;
+      if (!faqId) {
+        throw new Error('No se obtuvo id de la FAQ plantilla creada');
+      }
+
       const faqRow = {
-        id: result.insertId,
+        id: faqId,
         faq_uid: tmpl.faq_uid,
         question: tmpl.question,
         answer: tmpl.answer,
@@ -75,7 +80,7 @@ export async function seedStarterFaqs(
           `UPDATE faq_items
            SET qdrant_point_id = ?, embedding_hash = ?, indexed_at = ?
            WHERE id = ?`,
-          [indexed.point_id, indexed.embedding_hash, indexed.indexed_at, result.insertId]
+          [indexed.point_id, indexed.embedding_hash, indexed.indexed_at, faqId]
         );
       } catch (indexError) {
         logger?.warn(
