@@ -167,5 +167,10 @@ export function loadConfig() {
     evolutionCleanupIntervalMinutes: Number(
       process.env.EVOLUTION_CLEANUP_INTERVAL_MINUTES || 5
     ),
+    turnstileSiteKey: process.env.TURNSTILE_SITE_KEY || '',
+    turnstileSecretKey: process.env.TURNSTILE_SECRET_KEY || '',
+    turnstileEnabled: Boolean(
+      process.env.TURNSTILE_SITE_KEY && process.env.TURNSTILE_SECRET_KEY
+    ),
   };
 }

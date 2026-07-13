@@ -1,6 +1,44 @@
 import { hashPassword, verifyPassword } from '../lib/password.js';
 import { registerQuickSignup } from '../lib/tenantService.js';
 
+async function verifyTurnstileToken(config, token, remoteIp) {
+  if (!config.turnstileEnabled) {
+    return;
+  }
+
+  if (!token) {
+    const error = new Error('Completa la verificación de seguridad');
+    error.statusCode = 400;
+    throw error;
+  }
+
+  const formData = new URLSearchParams({
+    secret: config.turnstileSecretKey,
+    response: token,
+  });
+
+  if (remoteIp) {
+    formData.set('remoteip', remoteIp);
+  }
+
+  const response = await fetch(
+    'https://challenges.cloudflare.com/turnstile/v0/siteverify',
+    {
+      method: 'POST',
+      body: formData,
+    }
+  );
+
+  const result = await response.json().catch(() => null);
+
+  if (!response.ok || !result?.success) {
+    const error = new Error('La verificación de seguridad falló');
+    error.statusCode = 403;
+    error.details = result?.['error-codes'] || [];
+    throw error;
+  }
+}
+
 async function fetchUserByEmail(pool, email) {
   const [rows] = await pool.query(
     `SELECT u.id, u.email, u.password_hash, u.role, u.status, u.tenant_id,
@@ -35,6 +73,7 @@ export async function authRoutes(app, config) {
   app.post('/api/auth/signup', async (request, reply) => {
     const email = request.body?.email?.trim().toLowerCase();
     const password = request.body?.password || '';
+    const turnstileToken = request.body?.turnstile_token || '';
 
     if (!email || !password) {
       reply.code(400);
@@ -42,6 +81,8 @@ export async function authRoutes(app, config) {
     }
 
     try {
+      await verifyTurnstileToken(config, turnstileToken, request.ip);
+
       const result = await registerQuickSignup(
         pool,
         config,

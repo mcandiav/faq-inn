@@ -23,6 +23,10 @@ export async function healthRoutes(app, config) {
         product_name: config.appProductName || 'FAQ Inn',
         title: config.appTitle,
         version: config.appVersion,
+        turnstile_enabled: config.turnstileEnabled,
+        turnstile_site_key: config.turnstileEnabled
+          ? config.turnstileSiteKey
+          : '',
       },
       git: { commit: readGitCommit() },
       database,

@@ -96,6 +96,15 @@ const appMeta = {
   title: APP_PRODUCT_NAME,
   version: readUiVersionFromDom(),
   uiVersion: readUiVersionFromDom(),
+  turnstileSiteKey: '',
+  turnstileEnabled: false,
+};
+
+const turnstileState = {
+  scriptPromise: null,
+  widgetId: null,
+  token: '',
+  rendering: false,
 };
 
 const $ = (sel) => document.querySelector(sel);
@@ -169,6 +178,133 @@ function applyAppVersion(gitCommit, apiVersion) {
   });
 }
 
+function signupTurnstileContainer() {
+  return $('#signup-turnstile');
+}
+
+function signupTurnstilePanel() {
+  return $('#signup-turnstile-panel');
+}
+
+function signupSubmitButton() {
+  return $('#signup-form [type="submit"]');
+}
+
+function setSignupSubmitState() {
+  const btn = signupSubmitButton();
+  if (!btn) {
+    return;
+  }
+  btn.disabled = appMeta.turnstileEnabled && !turnstileState.token;
+}
+
+function clearSignupTurnstileToken() {
+  turnstileState.token = '';
+  setSignupSubmitState();
+}
+
+function resetSignupTurnstile() {
+  clearSignupTurnstileToken();
+  if (window.turnstile && turnstileState.widgetId !== null) {
+    try {
+      window.turnstile.reset(turnstileState.widgetId);
+    } catch {
+      /* ignore */
+    }
+  }
+}
+
+function setSignupTurnstileVisibility(visible) {
+  signupTurnstilePanel()?.classList.toggle('hidden', !visible);
+}
+
+function loadTurnstileScript() {
+  if (window.turnstile) {
+    return Promise.resolve(window.turnstile);
+  }
+  if (!turnstileState.scriptPromise) {
+    turnstileState.scriptPromise = new Promise((resolve, reject) => {
+      const existing = document.querySelector(
+        'script[src^="https://challenges.cloudflare.com/turnstile/v0/api.js"]'
+      );
+      if (existing) {
+        existing.addEventListener('load', () => resolve(window.turnstile));
+        existing.addEventListener('error', () =>
+          reject(new Error('No se pudo cargar Turnstile'))
+        );
+        return;
+      }
+
+      const script = document.createElement('script');
+      script.src = 'https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit';
+      script.async = true;
+      script.defer = true;
+      script.onload = () => resolve(window.turnstile);
+      script.onerror = () => reject(new Error('No se pudo cargar Turnstile'));
+      document.head.appendChild(script);
+    });
+  }
+  return turnstileState.scriptPromise;
+}
+
+async function renderSignupTurnstile() {
+  if (!appMeta.turnstileEnabled) {
+    setSignupTurnstileVisibility(false);
+    clearSignupTurnstileToken();
+    return;
+  }
+
+  const container = signupTurnstileContainer();
+  if (!container || $('#signup-form')?.classList.contains('hidden')) {
+    return;
+  }
+
+  setSignupTurnstileVisibility(true);
+
+  if (turnstileState.widgetId !== null || turnstileState.rendering) {
+    setSignupSubmitState();
+    return;
+  }
+  turnstileState.rendering = true;
+
+  try {
+    const turnstile = await loadTurnstileScript();
+    if (!turnstile || !container.isConnected) {
+      turnstileState.rendering = false;
+      return;
+    }
+
+    turnstileState.widgetId = turnstile.render(container, {
+      sitekey: appMeta.turnstileSiteKey,
+      theme: 'light',
+      callback(token) {
+        turnstileState.token = token;
+        setSignupSubmitState();
+      },
+      'expired-callback'() {
+        clearSignupTurnstileToken();
+      },
+      'error-callback'() {
+        clearSignupTurnstileToken();
+      },
+      'timeout-callback'() {
+        clearSignupTurnstileToken();
+      },
+    });
+    setSignupSubmitState();
+  } catch (error) {
+    turnstileState.scriptPromise = null;
+    const msg = $('#signup-msg');
+    if (msg && !msg.textContent) {
+      msg.textContent = error.message || 'No se pudo cargar la verificación de seguridad';
+      msg.className = 'form-msg error';
+    }
+    setSignupSubmitState();
+  } finally {
+    turnstileState.rendering = false;
+  }
+}
+
 async function loadDeployVersion() {
   appMeta.uiVersion = readUiVersionFromDom();
   try {
@@ -191,9 +327,14 @@ async function loadDeployVersion() {
     if (data.app?.title) {
       appMeta.title = data.app.title;
     }
+    appMeta.turnstileEnabled = Boolean(data.app?.turnstile_enabled);
+    appMeta.turnstileSiteKey = data.app?.turnstile_site_key || '';
     applyAppBranding();
     applyAppVersion(data.git?.commit, data.app?.version);
+    void renderSignupTurnstile();
   } catch {
+    appMeta.turnstileEnabled = false;
+    appMeta.turnstileSiteKey = '';
     applyAppBranding();
     applyAppVersion();
   }
@@ -314,6 +455,7 @@ function setLandingTab(tab) {
 
   if (tab === 'signup') {
     $('#signup-form')?.classList.remove('hidden');
+    void renderSignupTurnstile();
   } else if (tab === 'forgot') {
     $('#forgot-password-form')?.classList.remove('hidden');
   } else if (tab === 'reset') {
@@ -3959,6 +4101,7 @@ $('#signup-form')?.addEventListener('submit', async (event) => {
       body: JSON.stringify({
         email: $('#signup-email').value.trim(),
         password: $('#signup-password').value,
+        turnstile_token: turnstileState.token,
       }),
     });
 
@@ -3973,6 +4116,9 @@ $('#signup-form')?.addEventListener('submit', async (event) => {
   } catch (error) {
     msg.textContent = error.message;
     msg.classList.add('error');
+    if (appMeta.turnstileEnabled) {
+      resetSignupTurnstile();
+    }
   }
 });
 
