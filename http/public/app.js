@@ -1055,14 +1055,75 @@ async function ensureObjectivesCatalog() {
   }
   try {
     const data = await api('/onboarding/objectives');
-    state.objectivesCatalog = data.objectives || [];
+    state.objectivesCatalog = Array.isArray(data.objectives) && data.objectives.length
+      ? data.objectives
+      : [
+          { slug: 'reservar_noches' },
+          { slug: 'reservar_horarios' },
+          { slug: 'enviar_a_sitio_web' },
+          { slug: 'responder_preguntas' },
+        ];
   } catch {
-    state.objectivesCatalog = [];
+    state.objectivesCatalog = [
+      { slug: 'reservar_noches' },
+      { slug: 'reservar_horarios' },
+      { slug: 'enviar_a_sitio_web' },
+      { slug: 'responder_preguntas' },
+    ];
   }
 }
 
 function getObjectiveMeta(slug) {
-  return state.objectivesCatalog.find((item) => item.slug === slug) || null;
+  const normalized = String(slug || '').trim();
+  const localized = {
+    responder_preguntas: {
+      slug: 'responder_preguntas',
+      name: t('objective.responder_preguntas.name'),
+      description: t('objective.responder_preguntas.description'),
+      examples: t('objective.responder_preguntas.examples'),
+    },
+    reservar_noches: {
+      slug: 'reservar_noches',
+      name: t('objective.reservar_noches.name'),
+      description: t('objective.reservar_noches.description'),
+      examples: t('objective.reservar_noches.examples'),
+    },
+    reservar_horarios: {
+      slug: 'reservar_horarios',
+      name: t('objective.reservar_horarios.name'),
+      description: t('objective.reservar_horarios.description'),
+      examples: t('objective.reservar_horarios.examples'),
+    },
+    enviar_a_sitio_web: {
+      slug: 'enviar_a_sitio_web',
+      name: t('objective.enviar_a_sitio_web.name'),
+      description: t('objective.enviar_a_sitio_web.description'),
+      examples: t('objective.enviar_a_sitio_web.examples'),
+    },
+  }[normalized];
+  if (localized) {
+    return localized;
+  }
+  return state.objectivesCatalog.find(
+    (item) => String(item.slug || item.objective_slug || '') === normalized
+  ) || null;
+}
+
+function getObjectivesForView() {
+  const order = ['reservar_noches', 'reservar_horarios', 'enviar_a_sitio_web', 'responder_preguntas'];
+  const bySlug = new Map();
+  for (const item of state.objectivesCatalog || []) {
+    const meta = getObjectiveMeta(item.slug || item.objective_slug || '');
+    if (meta) bySlug.set(meta.slug, meta);
+  }
+  return order
+    .map((slug) => bySlug.get(slug))
+    .filter(Boolean)
+    .concat(
+      [...bySlug.entries()]
+        .filter(([slug]) => !order.includes(slug))
+        .map(([, item]) => item)
+    );
 }
 
 function currentProfileObjective() {
@@ -1081,7 +1142,7 @@ function renderProfileObjectiveCards() {
 
   const selected =
     state.profileObjectiveDraft || currentProfileObjective() || '';
-  const objectives = state.objectivesCatalog.filter((item) =>
+  const objectives = getObjectivesForView().filter((item) =>
     SELECTABLE_OBJECTIVE_SLUGS.has(item.slug)
   );
 
@@ -1910,7 +1971,7 @@ function isPersistedCategoryId(id) {
 }
 
 function isDefaultFaqCategory(category) {
-  return String(category?.name || '').trim() === DEFAULT_FAQ_CATEGORY;
+  return Boolean(category?.is_default);
 }
 
 async function loadFaqCategories() {
@@ -1931,7 +1992,11 @@ function renderFaqCategorySelect(selectEl, selected = '') {
   if (!selectEl) return;
 
   const categories = Array.isArray(state.faqCategories) ? state.faqCategories : [];
-  const normalized = String(selected || '').trim() || DEFAULT_FAQ_CATEGORY;
+  const defaultCategory =
+    categories.find((item) => item?.is_default) || null;
+  const defaultCategoryName =
+    String(defaultCategory?.name || '').trim() || DEFAULT_FAQ_CATEGORY;
+  const normalized = String(selected || '').trim() || defaultCategoryName;
   const seen = new Set();
   const options = [];
 
@@ -1947,10 +2012,10 @@ function renderFaqCategorySelect(selectEl, selected = '') {
     );
   };
 
-  pushOption(DEFAULT_FAQ_CATEGORY, true);
+  pushOption(defaultCategoryName, true);
 
   for (const category of categories) {
-    if (category.active === false) continue;
+    if (category.is_default || category.active === false) continue;
     pushOption(category.name, true);
   }
 
@@ -2010,7 +2075,6 @@ function renderProfileCategories() {
             class="profile-category-name-input"
             value="${escapeAttr(category.name || '')}"
             maxlength="128"
-            ${isDefault ? 'readonly' : ''}
             aria-label="${escapeAttr(t('profile.categoryColName'))}"
           />
         </td>
@@ -3105,14 +3169,15 @@ function showOnboardingPanel(step) {
 function renderOnboardingObjectives() {
   const grid = $('#onboarding-objectives');
   const data = state.onboardingData;
-  if (!grid || !data?.objectives?.length) {
+  const objectives = getObjectivesForView();
+  if (!data && !objectives.length) {
     return;
   }
 
   const selected =
-    state.onboardingSelectedObjective || data.objetivo_slug || '';
+    state.onboardingSelectedObjective || data?.objetivo_slug || '';
 
-  grid.innerHTML = data.objectives
+  grid.innerHTML = objectives
     .map(
       (objective) => `
       <button
@@ -3352,6 +3417,7 @@ async function refreshOnboarding() {
     state.onboardingStep = state.onboardingData?.objetivo_slug ? 2 : 1;
   }
 
+  await ensureObjectivesCatalog();
   renderOnboardingObjectives();
   syncOnboardingBusinessFields();
   renderOnboardingConfig();

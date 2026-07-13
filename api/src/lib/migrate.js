@@ -66,6 +66,21 @@ CREATE TABLE IF NOT EXISTS faq_items (
   UNIQUE (tenant_id, faq_uid)
 );
 
+CREATE TABLE IF NOT EXISTS faq_categories (
+  id BIGSERIAL PRIMARY KEY,
+  tenant_id BIGINT NOT NULL REFERENCES tenants (id) ON DELETE CASCADE,
+  name VARCHAR(128) NOT NULL,
+  active BOOLEAN NOT NULL DEFAULT TRUE,
+  is_default BOOLEAN NOT NULL DEFAULT FALSE,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  UNIQUE (tenant_id, name)
+);
+
+CREATE UNIQUE INDEX IF NOT EXISTS idx_faq_categories_default
+  ON faq_categories (tenant_id)
+  WHERE is_default;
+
 CREATE TABLE IF NOT EXISTS unanswered_questions (
   id BIGSERIAL PRIMARY KEY,
   tenant_id BIGINT NOT NULL REFERENCES tenants (id) ON DELETE CASCADE,
