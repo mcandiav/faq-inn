@@ -70,6 +70,7 @@ const MESSAGES = {
     'signup.email': 'Correo electrónico',
     'signup.password': 'Contraseña',
     'signup.submit': 'Crear cuenta y vincular WhatsApp',
+    'signup.turnstileHint': 'Verificación de seguridad',
     'provision.qrTitle': 'Escanea el QR',
     'provision.qrLead':
       'Abre WhatsApp en tu teléfono → Dispositivos vinculados → Vincular un dispositivo.',
@@ -609,6 +610,7 @@ const MESSAGES = {
     'signup.email': 'Correo electrónico',
     'signup.password': 'Senha',
     'signup.submit': 'Criar conta e vincular WhatsApp',
+    'signup.turnstileHint': 'Verificação de segurança',
     'provision.qrTitle': 'Escaneie o QR',
     'provision.qrLead':
       'Abra o WhatsApp no telefone → Aparelhos conectados → Conectar um aparelho.',
@@ -1144,6 +1146,7 @@ const MESSAGES = {
     'signup.email': 'Email',
     'signup.password': 'Password',
     'signup.submit': 'Create account and link WhatsApp',
+    'signup.turnstileHint': 'Security verification',
     'provision.qrTitle': 'Scan the QR code',
     'provision.qrLead':
       'Open WhatsApp on your phone → Linked devices → Link a device.',

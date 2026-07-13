@@ -442,12 +442,16 @@ body {
 }
 
 .signup-turnstile-panel {
+  display: grid;
+  gap: 0.65rem;
+  justify-items: center;
   margin: 1rem 0 0.25rem;
-  padding: 0.85rem;
-  border: 1px solid #475569;
+  padding: 0.95rem 0.9rem 0.9rem;
+  border: 1px solid #64748b;
   border-radius: 14px;
-  background: #e2e8f0;
+  background: linear-gradient(180deg, rgba(226, 232, 240, 0.98), rgba(226, 232, 240, 0.92));
   color: #0f172a;
+  box-shadow: 0 10px 24px rgba(2, 6, 23, 0.12);
 }
 
 .signup-turnstile-panel.hidden {
@@ -457,6 +461,7 @@ body {
 .signup-turnstile {
   display: flex;
   justify-content: center;
+  width: 100%;
   overflow: auto;
 }
 
@@ -466,9 +471,13 @@ body {
   border-radius: 10px;
 }
 
-.signup-turnstile-hint {
-  margin: 0.6rem 0 0;
-  color: #1e293b;
+.signup-turnstile-label {
+  margin: 0;
+  color: #334155;
+  font-size: 0.8rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
   text-align: center;
 }
 
