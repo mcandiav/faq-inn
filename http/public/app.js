@@ -3746,7 +3746,7 @@ async function openFaqDialog(id, options = {}) {
 
   $('#faq-dialog-title').textContent =
     options.title ||
-    (fromUnanswered ? t('faq.reply') : faqId ? t('faq.edit') : t('faq.new'));
+    (fromUnanswered ? t('faq.newUnanswered') : faqId ? t('faq.edit') : t('faq.new'));
   $('#faq-id').value = faqId != null && !Number.isNaN(faqId) ? String(faqId) : '';
   $('#faq-question').value = question;
   $('#faq-answer').value = answer;
