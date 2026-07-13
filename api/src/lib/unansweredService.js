@@ -274,6 +274,33 @@ export async function deleteUnanswered(pool, id, user) {
   return { id: Number(id), deleted: true };
 }
 
+export async function markUnansweredAsConverted(pool, id, user, faqId) {
+  const row = await getUnansweredForUser(pool, id, user);
+  if (!row) {
+    const error = new Error('Pregunta no encontrada');
+    error.statusCode = 404;
+    throw error;
+  }
+
+  if (row.status === 'converted_to_faq') {
+    const error = new Error('Ya fue convertida en FAQ');
+    error.statusCode = 409;
+    throw error;
+  }
+
+  await pool.query(
+    `UPDATE unanswered_questions
+     SET status = 'converted_to_faq',
+         converted_faq_id = ?,
+         resolved_by = ?,
+         resolved_at = ?
+     WHERE id = ?`,
+    [faqId, user.id, new Date(), id]
+  );
+
+  return { id: Number(id), converted_faq_id: Number(faqId) };
+}
+
 export async function convertUnansweredToFaq(pool, config, id, user, input = {}) {
   const row = await getUnansweredForUser(pool, id, user);
   if (!row) {
@@ -349,15 +376,7 @@ export async function convertUnansweredToFaq(pool, config, id, user, input = {})
       [indexed.point_id, indexed.embedding_hash, indexed.indexed_at, result.insertId]
     );
 
-    await conn.query(
-      `UPDATE unanswered_questions
-       SET status = 'converted_to_faq',
-           converted_faq_id = ?,
-           resolved_by = ?,
-           resolved_at = ?
-       WHERE id = ?`,
-      [result.insertId, user.id, new Date(), id]
-    );
+    await markUnansweredAsConverted(conn, id, user, result.insertId);
 
     await conn.commit();
 

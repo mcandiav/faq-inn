@@ -1,5 +1,6 @@
 import { indexFaqItem, removeFaqFromQdrant } from '../lib/indexer.js';
 import { createFaqRecord, importFaqRows, reindexTenantFaqs } from '../lib/faqService.js';
+import { markUnansweredAsConverted } from '../lib/unansweredService.js';
 import { parseSpreadsheetBuffer } from '../lib/parseSpreadsheet.js';
 import { ensureFaqCategory, resolveFaqCategoryInput } from '../lib/faqCategories.js';
 
@@ -97,6 +98,7 @@ export async function faqRoutes(app, config) {
 
   app.post('/api/faqs', { preHandler: [app.authenticate] }, async (request, reply) => {
     const user = request.user;
+    const unansweredId = request.body?.unanswered_id;
 
     if (!tenantScope(user)) {
       reply.code(403);
@@ -105,6 +107,9 @@ export async function faqRoutes(app, config) {
 
     try {
       const faq = await createFaqRecord(pool, config, user, request.body || {});
+      if (unansweredId !== undefined && unansweredId !== null && unansweredId !== '') {
+        await markUnansweredAsConverted(pool, unansweredId, user, faq.id);
+      }
       return { status: 'ok', faq };
     } catch (error) {
       const code = error.statusCode || 502;
