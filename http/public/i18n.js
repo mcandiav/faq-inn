@@ -127,7 +127,7 @@ const MESSAGES = {
     'btn.createTenant': 'Crear posada',
     'unanswered.title': 'Preguntas sin respuesta',
     'unanswered.hint':
-      'Escribe la respuesta aquí mismo y pulsa <strong>Responderla</strong> para guardar la FAQ y activarla en el asistente.',
+      'Abre la FAQ, escribe la respuesta y guarda para crear o actualizar la FAQ desde el mismo modal.',
     'unanswered.filter': 'Estado',
     'unanswered.filterAll': 'Todas',
     'unanswered.filterPending': 'Pendientes',
@@ -665,7 +665,7 @@ const MESSAGES = {
     'btn.createTenant': 'Criar pousada',
     'unanswered.title': 'Perguntas sem resposta',
     'unanswered.hint':
-      'Escreva a resposta aqui e clique em <strong>Responder</strong> para salvar a FAQ e ativá-la no assistente.',
+      'Abra a FAQ, escreva a resposta e salve para criar ou atualizar a FAQ no mesmo modal.',
     'unanswered.filter': 'Status',
     'unanswered.filterAll': 'Todas',
     'unanswered.filterPending': 'Pendentes',
@@ -1202,7 +1202,7 @@ const MESSAGES = {
     'btn.createTenant': 'Create lodging',
     'unanswered.title': 'Unanswered questions',
     'unanswered.hint':
-      'Write the answer here and click <strong>Answer it</strong> to save the FAQ and enable it for the assistant.',
+      'Open the FAQ, write the answer, and save to create or update the FAQ from the same modal.',
     'unanswered.filter': 'Status',
     'unanswered.filterAll': 'All',
     'unanswered.filterPending': 'Pending',

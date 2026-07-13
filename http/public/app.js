@@ -2554,62 +2554,6 @@ function unansweredById(id) {
   return state.unanswered.find((row) => Number(row.id) === numericId);
 }
 
-async function respondUnanswered(id) {
-  const item = unansweredById(id);
-  if (!item) {
-    return;
-  }
-
-  const textarea = document.querySelector(`[data-answer-for="${id}"]`);
-  const questionInput = document.querySelector(`[data-question-for="${id}"]`);
-  const rowMsg = document.querySelector(`[data-msg-for="${id}"]`);
-  const answer = textarea?.value.trim() || '';
-  const question = questionInput?.value.trim() || item.question;
-
-  if (!answer) {
-    if (rowMsg) {
-      rowMsg.textContent = t('msg.writeAnswer');
-      rowMsg.className = 'form-msg error unanswered-row-msg';
-    }
-    textarea?.focus();
-    return;
-  }
-
-  const btn = document.querySelector(`[data-respond="${id}"]`);
-  if (btn) {
-    btn.disabled = true;
-  }
-  if (rowMsg) {
-    rowMsg.textContent = t('msg.savingFaq');
-    rowMsg.className = 'form-msg unanswered-row-msg';
-  }
-
-  try {
-    await api(`/unanswered/${id}/convert`, {
-      method: 'POST',
-      body: JSON.stringify({
-        question,
-        answer,
-      }),
-    });
-
-    const listMsg = $('#unanswered-msg');
-    listMsg.textContent = t('msg.savedIndexed');
-    listMsg.className = 'form-msg ok';
-
-    await refreshUnanswered();
-    await refreshFaqs();
-  } catch (error) {
-    if (rowMsg) {
-      rowMsg.textContent = error.message;
-      rowMsg.className = 'form-msg error unanswered-row-msg';
-    }
-    if (btn) {
-      btn.disabled = false;
-    }
-  }
-}
-
 async function refreshUnanswered() {
   if (state.user?.role !== 'client') {
     state.unanswered = [];
@@ -2625,56 +2569,6 @@ async function refreshUnanswered() {
     id: Number(item.id),
   }));
   renderUnanswered();
-}
-
-async function saveUnansweredQuestion(id) {
-  const questionInput = document.querySelector(`[data-question-for="${id}"]`);
-  const rowMsg = document.querySelector(`[data-msg-for="${id}"]`);
-  const question = questionInput?.value.trim() || '';
-
-  if (!question) {
-    if (rowMsg) {
-      rowMsg.textContent = t('msg.queryEmpty');
-      rowMsg.className = 'form-msg error unanswered-row-msg';
-    }
-    questionInput?.focus();
-    return;
-  }
-
-  const btn = document.querySelector(`[data-save-question="${id}"]`);
-  if (btn) {
-    btn.disabled = true;
-  }
-  if (rowMsg) {
-    rowMsg.textContent = t('msg.savingQuery');
-    rowMsg.className = 'form-msg unanswered-row-msg';
-  }
-
-  try {
-    await api(`/unanswered/${id}`, {
-      method: 'PATCH',
-      body: JSON.stringify({ question }),
-    });
-
-    const item = unansweredById(id);
-    if (item) {
-      item.question = question;
-    }
-
-    if (rowMsg) {
-      rowMsg.textContent = t('msg.querySaved');
-      rowMsg.className = 'form-msg ok unanswered-row-msg';
-    }
-  } catch (error) {
-    if (rowMsg) {
-      rowMsg.textContent = error.message;
-      rowMsg.className = 'form-msg error unanswered-row-msg';
-    }
-  } finally {
-    if (btn) {
-      btn.disabled = false;
-    }
-  }
 }
 
 async function deleteUnanswered(id) {
@@ -4519,15 +4413,15 @@ $('#faq-form').addEventListener('submit', async (event) => {
   const id = $('#faq-id').value;
 
   try {
-    if (unansweredId) {
-      await api(`/unanswered/${unansweredId}/convert`, {
-        method: 'POST',
-        body: JSON.stringify(payload),
-      });
-    } else if (id) {
+    if (id) {
       await api(`/faqs/${id}`, { method: 'PATCH', body: JSON.stringify(payload) });
     } else {
-      await api('/faqs', { method: 'POST', body: JSON.stringify(payload) });
+      await api('/faqs', {
+        method: 'POST',
+        body: JSON.stringify(
+          unansweredId ? { ...payload, unanswered_id: unansweredId } : payload
+        ),
+      });
     }
     $('#faq-dialog').close();
     state.faqDialogContext = { unansweredId: null };
