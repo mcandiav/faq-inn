@@ -15,7 +15,7 @@ export async function getDefaultAgent(pool, tenantId) {
   return rows[0] || null;
 }
 
-export async function createFaqRecord(pool, config, user, faqInput) {
+export async function createFaqRecord(pool, config, user, faqInput, options = {}) {
   const tenantId = user.tenant_id;
   const tenantSlug = user.tenant_slug;
 
@@ -86,39 +86,22 @@ export async function createFaqRecord(pool, config, user, faqInput) {
     agent_slug: agent.slug,
   };
 
-  const indexed = await indexFaqItem(config, faqRow, tenantSlug);
-
-  await pool.query(
-    `UPDATE faq_items
-     SET qdrant_point_id = ?, embedding_hash = ?, indexed_at = ?
-     WHERE id = ?`,
-    [indexed.point_id, indexed.embedding_hash, indexed.indexed_at, result.insertId]
-  );
+  const indexed = await saveAndIndexFaqRecord(pool, config, tenantSlug, faqRow, options);
 
   return {
     id: result.insertId,
     faq_uid: faqUid,
     indexed: true,
     collection: indexed.collection,
+    point_id: indexed.point_id,
+    embedding_hash: indexed.embedding_hash,
+    indexed_at: indexed.indexed_at,
   };
 }
 
-export async function reindexFaqRecord(pool, config, faq) {
-  const indexed = await indexFaqItem(
-    config,
-    {
-      id: faq.id,
-      faq_uid: faq.faq_uid,
-      qdrant_point_id: faq.qdrant_point_id,
-      question: faq.question,
-      answer: faq.answer,
-      category: faq.category,
-      keywords: faq.keywords,
-      active: Boolean(faq.active),
-      agent_slug: faq.agent_slug,
-    },
-    faq.tenant_slug
-  );
+export async function saveAndIndexFaqRecord(pool, config, tenantSlug, faq, options = {}) {
+  const indexFn = options.indexFn || indexFaqItem;
+  const indexed = await indexFn(config, faq, tenantSlug);
 
   await pool.query(
     `UPDATE faq_items
@@ -128,6 +111,20 @@ export async function reindexFaqRecord(pool, config, faq) {
   );
 
   return indexed;
+}
+
+export async function reindexFaqRecord(pool, config, faq, options = {}) {
+  return saveAndIndexFaqRecord(pool, config, faq.tenant_slug, {
+    id: faq.id,
+    faq_uid: faq.faq_uid,
+    qdrant_point_id: faq.qdrant_point_id,
+    question: faq.question,
+    answer: faq.answer,
+    category: faq.category,
+    keywords: faq.keywords,
+    active: Boolean(faq.active),
+    agent_slug: faq.agent_slug,
+  }, options);
 }
 
 export async function reindexTenantFaqs(pool, config, user) {

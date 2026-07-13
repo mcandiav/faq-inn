@@ -1,5 +1,10 @@
 import { indexFaqItem, removeFaqFromQdrant } from '../lib/indexer.js';
-import { createFaqRecord, importFaqRows, reindexTenantFaqs } from '../lib/faqService.js';
+import {
+  createFaqRecord,
+  importFaqRows,
+  reindexTenantFaqs,
+  saveAndIndexFaqRecord,
+} from '../lib/faqService.js';
 import { parseSpreadsheetBuffer } from '../lib/parseSpreadsheet.js';
 
 const ALLOWED_EXTENSIONS = new Set(['.xlsx', '.xls', '.csv']);
@@ -230,26 +235,23 @@ export async function faqRoutes(app, config) {
       [question, answer, category, keywords, active, faq.id]
     );
 
-    const faqRow = {
-      id: faq.id,
-      faq_uid: faq.faq_uid,
-      qdrant_point_id: faq.qdrant_point_id,
-      question,
-      answer,
-      category,
-      keywords,
-      active,
-      agent_slug: faq.agent_slug,
-    };
-
     try {
-      const indexed = await indexFaqItem(config, faqRow, faq.tenant_slug);
-
-      await pool.query(
-        `UPDATE faq_items
-         SET qdrant_point_id = ?, embedding_hash = ?, indexed_at = ?
-         WHERE id = ?`,
-        [indexed.point_id, indexed.embedding_hash, indexed.indexed_at, faq.id]
+      const indexed = await saveAndIndexFaqRecord(
+        pool,
+        config,
+        faq.tenant_slug,
+        {
+          id: faq.id,
+          faq_uid: faq.faq_uid,
+          qdrant_point_id: faq.qdrant_point_id,
+          question,
+          answer,
+          category,
+          keywords,
+          active,
+          agent_slug: faq.agent_slug,
+        },
+        { indexFn: indexFaqItem }
       );
 
       return {
