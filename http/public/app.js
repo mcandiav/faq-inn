@@ -90,6 +90,9 @@ const state = {
   profileObjectiveDraft: '',
   profileObjectivePickerOpen: false,
   faqCategories: [],
+  faqDialogContext: {
+    unansweredId: null,
+  },
 };
 const appMeta = {
   productName: APP_PRODUCT_NAME,
@@ -2496,85 +2499,49 @@ function renderUnanswered() {
 
     const phone = item.phone || item.remote_id || '—';
 
-    let body = `
+    const pendingAction =
+      item.status === 'pending'
+        ? `<button type="button" class="btn primary" data-respond="${item.id}">${escapeHtml(t('btn.respond'))}</button>`
+        : '';
+    const deleteClass = item.status === 'pending' ? 'btn ghost' : 'btn ghost danger';
+
+    card.innerHTML = `
       <div class="unanswered-card-head">
         ${statusLabel(item.status)}
+        <span class="unanswered-card-date">${escapeHtml(formatDate(item.created_at))}</span>
       </div>
-      <dl class="unanswered-facts">
-        <div class="unanswered-facts-row">
-          <dt>${escapeHtml(t('unanswered.dateTime'))}</dt>
-          <dd>${escapeHtml(formatDate(item.created_at))}</dd>
+      <div class="unanswered-card-body">
+        <div class="unanswered-card-meta">
+          <span>${escapeHtml(t('unanswered.phone'))}</span>
+          <strong>${escapeHtml(phone)}</strong>
         </div>
-        <div class="unanswered-facts-row">
-          <dt>${escapeHtml(t('unanswered.phone'))}</dt>
-          <dd>${escapeHtml(phone)}</dd>
+        <div class="unanswered-card-question">
+          <span>${escapeHtml(t('unanswered.query'))}</span>
+          <p>${escapeHtml(item.question)}</p>
         </div>
+      </div>
+      <div class="unanswered-actions">
+        ${pendingAction}
+        <button type="button" class="${deleteClass}" data-delete-unanswered="${item.id}">${escapeHtml(t('btn.delete'))}</button>
+      </div>
+      <p class="form-msg unanswered-row-msg" data-msg-for="${item.id}"></p>
     `;
-
-    if (item.status !== 'pending') {
-      body += `
-        <div class="unanswered-facts-row">
-          <dt>${escapeHtml(t('unanswered.query'))}</dt>
-          <dd class="unanswered-question">${escapeHtml(item.question)}</dd>
-        </div>
-      `;
-    }
-
-    body += `</dl>`;
-
-    if (item.status === 'pending') {
-      body += `
-        <div class="unanswered-consulta-edit">
-          <label class="unanswered-field-label">
-            ${escapeHtml(t('unanswered.query'))}
-            <textarea
-              class="unanswered-question-input"
-              rows="2"
-              data-question-for="${item.id}"
-            >${escapeHtml(item.question)}</textarea>
-          </label>
-          <button type="button" class="btn small ghost" data-save-question="${item.id}">
-            ${escapeHtml(t('btn.saveQuestion'))}
-          </button>
-        </div>
-      `;
-    }
-
-    if (item.status === 'pending') {
-      body += `
-        <label class="unanswered-field-label">
-          ${escapeHtml(t('unanswered.yourAnswer'))}
-          <textarea
-            class="unanswered-answer"
-            rows="4"
-            placeholder="${escapeAttr(t('unanswered.answerPlaceholder'))}"
-            data-answer-for="${item.id}"
-          ></textarea>
-        </label>
-        <div class="unanswered-actions">
-          <button type="button" class="btn primary" data-respond="${item.id}">${escapeHtml(t('btn.respond'))}</button>
-          <button type="button" class="btn danger" data-delete-unanswered="${item.id}">${escapeHtml(t('btn.delete'))}</button>
-        </div>
-        <p class="form-msg unanswered-row-msg" data-msg-for="${item.id}"></p>
-      `;
-    } else {
-      body += `
-        <div class="unanswered-actions">
-          <button type="button" class="btn danger" data-delete-unanswered="${item.id}">${escapeHtml(t('btn.delete'))}</button>
-        </div>
-      `;
-    }
-
-    card.innerHTML = body;
     list.appendChild(card);
   });
 
   list.querySelectorAll('[data-respond]').forEach((btn) => {
-    btn.addEventListener('click', () => respondUnanswered(Number(btn.dataset.respond)));
-  });
-
-  list.querySelectorAll('[data-save-question]').forEach((btn) => {
-    btn.addEventListener('click', () => saveUnansweredQuestion(Number(btn.dataset.saveQuestion)));
+    btn.addEventListener('click', () => {
+      const item = unansweredById(btn.dataset.respond);
+      if (!item) {
+        return;
+      }
+      void openFaqDialog(null, {
+        unansweredId: item.id,
+        question: item.question,
+        title: t('faq.reply'),
+        saveLabel: t('btn.respond'),
+      });
+    });
   });
 
   list.querySelectorAll('[data-delete-unanswered]').forEach((btn) => {
@@ -3860,30 +3827,48 @@ async function savePromptTemplate() {
   }
 }
 
-async function openFaqDialog(id) {
+async function openFaqDialog(id, options = {}) {
   const dialog = $('#faq-dialog');
   const faqId = id == null || id === '' ? null : Number(id);
   const faq =
     faqId != null && !Number.isNaN(faqId)
       ? state.faqs.find((f) => Number(f.id) === faqId)
       : null;
+  const unansweredId =
+    options.unansweredId == null || options.unansweredId === ''
+      ? null
+      : Number(options.unansweredId);
+  const fromUnanswered = unansweredId != null && !Number.isNaN(unansweredId);
+  const question = options.question ?? faq?.question ?? '';
+  const answer = options.answer ?? faq?.answer ?? '';
+  const keywords = options.keywords ?? faq?.keywords ?? '';
+  const category = options.category ?? faq?.category ?? DEFAULT_FAQ_CATEGORY;
+  const active =
+    options.active !== undefined ? Boolean(options.active) : faq ? Boolean(faq.active) : true;
 
-  $('#faq-dialog-title').textContent = faqId ? t('faq.edit') : t('faq.new');
+  state.faqDialogContext = {
+    unansweredId: fromUnanswered ? unansweredId : null,
+  };
+
+  $('#faq-dialog-title').textContent =
+    options.title ||
+    (fromUnanswered ? t('faq.reply') : faqId ? t('faq.edit') : t('faq.new'));
   $('#faq-id').value = faqId != null && !Number.isNaN(faqId) ? String(faqId) : '';
-  $('#faq-question').value = faq?.question || '';
-  $('#faq-answer').value = faq?.answer || '';
-  $('#faq-keywords').value = faq?.keywords || '';
-  $('#faq-active').checked = faq ? Boolean(faq.active) : true;
+  $('#faq-question').value = question;
+  $('#faq-answer').value = answer;
+  $('#faq-keywords').value = keywords;
+  $('#faq-active').checked = active;
   $('#faq-msg').textContent = '';
-  $('#faq-delete').classList.toggle('hidden', !id);
+  $('#faq-delete').classList.toggle('hidden', !faqId);
+  $('#faq-save').textContent =
+    options.saveLabel ||
+    (fromUnanswered ? t('btn.respond') : t('btn.saveIndex'));
 
   await loadFaqCategories();
-  renderFaqCategorySelect(
-    $('#faq-category'),
-    faq?.category || DEFAULT_FAQ_CATEGORY
-  );
+  renderFaqCategorySelect($('#faq-category'), category);
 
   dialog.showModal();
+  $('#faq-answer')?.focus();
 }
 
 async function deleteFaq(id) {
@@ -4518,6 +4503,7 @@ $('#faq-form').addEventListener('submit', async (event) => {
   event.preventDefault();
   const msg = $('#faq-msg');
   const saveBtn = $('#faq-save');
+  const unansweredId = state.faqDialogContext?.unansweredId;
   msg.textContent = t('msg.savingIndexing');
   msg.className = 'form-msg';
   saveBtn.disabled = true;
@@ -4533,13 +4519,22 @@ $('#faq-form').addEventListener('submit', async (event) => {
   const id = $('#faq-id').value;
 
   try {
-    if (id) {
+    if (unansweredId) {
+      await api(`/unanswered/${unansweredId}/convert`, {
+        method: 'POST',
+        body: JSON.stringify(payload),
+      });
+    } else if (id) {
       await api(`/faqs/${id}`, { method: 'PATCH', body: JSON.stringify(payload) });
     } else {
       await api('/faqs', { method: 'POST', body: JSON.stringify(payload) });
     }
     $('#faq-dialog').close();
+    state.faqDialogContext = { unansweredId: null };
     await refreshFaqs();
+    if (unansweredId) {
+      await refreshUnanswered();
+    }
   } catch (error) {
     msg.textContent = error.message;
     msg.classList.add('error');

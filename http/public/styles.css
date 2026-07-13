@@ -1192,8 +1192,49 @@ code {
 .unanswered-card-head {
   display: flex;
   justify-content: space-between;
-  align-items: flex-start;
+  align-items: center;
   gap: 0.75rem;
+}
+
+.unanswered-card-date {
+  flex-shrink: 0;
+  font-size: 0.78rem;
+  color: #94a3b8;
+}
+
+.unanswered-card-body {
+  display: grid;
+  gap: 0.9rem;
+  margin-top: 0.85rem;
+}
+
+.unanswered-card-meta,
+.unanswered-card-question {
+  display: grid;
+  gap: 0.25rem;
+}
+
+.unanswered-card-meta span,
+.unanswered-card-question span {
+  font-size: 0.76rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: #94a3b8;
+}
+
+.unanswered-card-meta strong {
+  font-size: 0.98rem;
+  color: #e2e8f0;
+}
+
+.unanswered-card-question p {
+  margin: 0;
+  font-size: 1rem;
+  line-height: 1.5;
+  color: #f8fafc;
+  font-weight: 600;
+  white-space: pre-wrap;
+  word-break: break-word;
 }
 
 .unanswered-question {
@@ -1224,6 +1265,16 @@ code {
   gap: 0.5rem;
   flex-wrap: wrap;
   margin-top: 0.75rem;
+}
+
+.unanswered-actions .btn.danger {
+  background: transparent;
+  border-color: #b91c1c;
+  color: #fecaca;
+}
+
+.unanswered-actions .btn.danger:hover {
+  background: rgba(185, 28, 28, 0.14);
 }
 
 .unanswered-row-msg {
