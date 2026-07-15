@@ -12,7 +12,7 @@ const FLAG_LABELS = {
 const MESSAGES = {
   es: {
     'lang.label': 'Idioma',
-    'nav.faqs': 'FAQs',
+    'nav.faqs': 'Respuestas',
     'nav.unanswered': 'Sin respuesta',
     'nav.unansweredShort': 'Sin resp.',
     'nav.profile': 'Mi cuenta',
@@ -558,7 +558,7 @@ const MESSAGES = {
   },
   pt: {
     'lang.label': 'Idioma',
-    'nav.faqs': 'FAQs',
+    'nav.faqs': 'Respostas',
     'nav.unanswered': 'Sem resposta',
     'nav.unansweredShort': 'Sem resp.',
     'nav.profile': 'Minha conta',
@@ -1101,7 +1101,7 @@ const MESSAGES = {
   },
   en: {
     'lang.label': 'Language',
-    'nav.faqs': 'FAQs',
+    'nav.faqs': 'Answers',
     'nav.unanswered': 'Unanswered',
     'nav.unansweredShort': 'Unanswered',
     'nav.profile': 'My account',
