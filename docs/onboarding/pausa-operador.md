@@ -1,43 +1,45 @@
-# Pausa del agente — intervención del operador
+# Suspensión del agente — intervención del operador
 
 Texto canónico para mostrar en **onboarding** y en documentación de operación.
 
+Arquitectura: V1.22 / V1.23 (README rama `api`). Implementación n8n: **FAQ Productivo** — ver [../n8n/README.md](../n8n/README.md).
+
 ## Regla para el operador
 
-> Para suspender el agente por **5 minutos** en una conversación, inicie su intervención con **`**`** (asterisco asterisco).
+> Para suspender al agente en una conversación, envía exactamente **`**`** desde el WhatsApp del negocio.
 >
-> Con esta clave el agente hace una pausa de 5 minutos en **ese chat** y usted puede responder al cliente sin que el bot interfiera.
+> Para reactivarlo en esa misma conversación, envía exactamente **`##`**.
+>
+> La suspensión es persistente: no vence sola y solo afecta ese chat.
 
 ## Detalle técnico (referencia)
 
-| Parámetro | Valor |
+| Parámetro | Valor default |
 |---|---|
-| `pause_enabled` | `true` |
-| `pause_trigger` | `**` |
-| `pause_ttl_seconds` | `300` (5 minutos) |
-| `pause_scope` | `chat` (solo la conversación actual) |
+| `agent_off_trigger` | `**` |
+| `agent_on_trigger` | `##` |
 
 ### Cómo funciona
 
-1. El operador envía un mensaje al cliente por WhatsApp cuyo texto **empieza** con `**`.
-2. El workflow n8n detecta el trigger y escribe una clave Redis con TTL.
-3. Mientras la clave existe, el agente **no responde** a mensajes entrantes de ese chat.
-4. Tras 5 minutos la clave expira y el agente vuelve a responder.
+1. El operador envía un mensaje **exacto** `**` o `##` desde el teléfono del negocio (`fromMe = true`).
+2. n8n llama a `POST /api/runtime/conversation-control` y PostgreSQL guarda el estado en `conversation_states`.
+3. Mientras el chat esté `suspended`, el agente **no responde** a mensajes del cliente.
+4. Solo `##` (o el `agent_on_trigger` configurado en Mi cuenta) reactiva el agente.
 
-Clave Redis:
+Clave de estado:
 
 ```text
-faqinn:pause:{tenant_slug}:{agent_slug}:{chat_id}
+tenant_id + agent_id + chat_id
 ```
 
-Ver también: [../pruebas/04-pausa-humana-redis.md](../pruebas/04-pausa-humana-redis.md).
+Los comandos se editan en **Mi cuenta** (WhatsApp conectado). Deben tener exactamente 2 caracteres y ser distintos.
 
 ## Dónde debe mostrarse
 
 | Pantalla | Obligatorio |
 |---|---|
 | **Onboarding** (wizard post-WhatsApp) | Sí — bloque visible antes de finalizar |
-| Mi cuenta → Agente WhatsApp | Sí — recordatorio permanente |
+| Mi cuenta → Agente WhatsApp | Sí — campos editables + recordatorio |
 | Documentación operador | Sí — este archivo |
 
 ## Textos sugeridos por idioma (UI)
@@ -45,17 +47,21 @@ Ver también: [../pruebas/04-pausa-humana-redis.md](../pruebas/04-pausa-humana-r
 **Español**
 
 ```text
-Para pausar el agente en un chat, escribile al cliente un mensaje que empiece con ** (dos asteriscos). El asistente queda pausado 5 minutos en esa conversación y podés responder vos.
+Para suspender al agente en un chat, enviá exactamente ** (dos asteriscos) desde el WhatsApp del negocio. Para reactivarlo, enviá exactamente ##. La suspensión no vence sola y solo afecta esa conversación.
 ```
 
 **Portugués**
 
 ```text
-Para pausar o agente num chat, escreva ao cliente uma mensagem que comece com ** (dois asteriscos). O assistente fica pausado 5 minutos nessa conversa e você pode responder.
+Para suspender o agente num chat, envie exatamente ** (dois asteriscos) pelo WhatsApp do negócio. Para reativar, envie exatamente ##. A suspensão não expira sozinha e afeta só essa conversa.
 ```
 
 **Inglés**
 
 ```text
-To pause the agent in a chat, send the client a message starting with ** (two asterisks). The assistant stays paused for 5 minutes in that conversation so you can reply yourself.
+To suspend the agent in a chat, send exactly ** (two asterisks) from the business WhatsApp. To resume it, send exactly ##. Suspension does not expire on its own and only affects that conversation.
 ```
+
+## Modelo anterior (obsoleto)
+
+Hasta julio 2026 el MVP usaba Redis TTL (`pause_trigger` con `startsWith` + 5 minutos). Ese modelo quedó reemplazado por la suspensión persistente PostgreSQL. No usar Redis para este control.

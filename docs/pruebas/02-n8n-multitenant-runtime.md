@@ -17,17 +17,15 @@ En prueba.
 ## Workflow actual
 
 ```text
-FAQ prototipo
+FAQ Productivo (webhook faq-prototipo)
 ```
-
-## Configuración temporal
-
-Actualmente el workflow usa un nodo Set llamado `Config Tenant` para simular la configuración que luego debe venir desde PostgreSQL/API.
 
 ## Endpoints API (red interna)
 
 ```text
 http://n8n_inn-api:3000/api/runtime/tenant-config?instance_name=...
+http://n8n_inn-api:3000/api/runtime/conversation-state
+http://n8n_inn-api:3000/api/runtime/conversation-control
 http://n8n_inn-api:3000/api/search
 http://n8n_inn-api:3000/api/unanswered
 ```
@@ -39,10 +37,11 @@ Hostname documentado en EasyPanel: **`n8n_inn-api`** (servicio `inn-api`).
 ```text
 El runtime recibe un mensaje.
 Identifica tenant_id (slug), agent_id y chat_id.
-Carga initial_greeting, pause_trigger y pause_ttl_seconds.
+Carga initial_greeting, agent_off_trigger y agent_on_trigger.
 Consulta Respostas con tenant_id (= slug), tenant_slug y agent_id.
 Registra SemResposta con tenant_id (= slug), agent_id, chat_id y channel.
 No hay nodos IF de conexión WhatsApp ni reconsulta a Evolution en el path del mensaje.
+Suspensión: match exacto + fromMe; estado en PostgreSQL (no Redis TTL).
 ```
 
 ## Criterio de descarte

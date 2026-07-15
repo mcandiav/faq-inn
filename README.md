@@ -4,6 +4,7 @@
 
 | Fecha | Versión | Cambio realizado | Motivo | Impacto | Sección afectada |
 |---|---|---|---|---|---|
+| 2026-07-15 | V1.17 | Se documenta la puesta en producción de la suspensión persistente en **FAQ Productivo** (n8n): Redis TTL reemplazado por endpoints PostgreSQL. No hay decisión arquitectónica nueva: aplica V1.22/V1.23 ya definidas en la bitácora de la rama `api`. | El port V2.0 → Productivo se hizo en operación n8n sin pasar por una ronda nueva de arquitecto; la documentación operativa debía quedar alineada. | Workflow `faq-prototipo` usa `¿Comando control?` / `Control conversacion` / `Estado conversacion` / `¿Agente activo?`. Defaults de producto `**` / `##`. Módulos `docs/n8n`, onboarding y pruebas actualizados. | 8.2, 8.3, 14.6, 14.10, docs/n8n, docs/onboarding |
 | 2026-07-12 | V1.16 | Se documenta `objetivo_slug` en Admin detalle tenant, la separación Admin vs `tenant-config`, y la regla de cache-bust al versionar la UI. | El detalle Admin mostraba `—` aunque Postgres tenía el objetivo: la API admin no lo exponía y la UI cacheada leía `objective_slug` con `?v=` repetido. | `GET /api/admin/tenants/:id` devuelve `objetivo_slug`; la UI lee ese campo; cada release `http` debe subir `VERSION` para invalidar `app.js?v=`. | Admin, Variables por tenant, Deploy, Esquema, Estado actual |
 | 2026-07-12 | V1.15 | Se incorpora el esquema vigente de la base de datos directamente en el README oficial. | Documentar tablas, campos y relaciones sin crear documentos paralelos. | El README identifica las nueve tablas implementadas, sus claves y las brechas pendientes de migración. | Esquema de base de datos |
 | 2026-07-08 | V1.14 | Se documenta el botón **Descargar Excel** del dashboard FAQ (export CSV client-side). | Faltaba inventario operativo simétrico al Importar Excel / Sincronizar respuestas. | El cliente puede bajar `id,question,answer,category,keywords,active` con BOM UTF-8 para Excel; no pasa por n8n. | Variables FAQ, Estado actual, UI dashboard |
@@ -141,7 +142,7 @@ El agente Hotel v1 debe:
 5. Confirmar los datos antes de enviar link de reserva.
 6. Construir el link con la URL o plantilla de URL del hotel.
 7. Registrar preguntas sin respuesta.
-8. Permitir pausa humana mediante prefijo `**`.
+8. Permitir suspensión humana por conversación con comandos exactos (`**` / `##` por defecto).
 
 ---
 
@@ -314,7 +315,7 @@ Motivo:
 - Reduce duplicación operativa.
 - Permite corregir la lógica conversacional una sola vez.
 - Mantiene el onboarding en la app FAQ Inn, no en n8n.
-- Facilita pruebas iniciales de Evolution API, Redis TTL, búsqueda FAQ y preguntas sin respuesta.
+- Facilita pruebas iniciales de Evolution API, suspensión por conversación (PostgreSQL), búsqueda FAQ y preguntas sin respuesta.
 
 El workflow debe identificar el tenant desde el identificador de la instancia Evolution recibido en el webhook, webhook path, token, metadata o mapeo persistido, y luego cargar su configuración completa desde PostgreSQL/API. La llave preferida de runtime será `evolution_instance_name`, confirmando el nombre exacto del campo con un payload real de Evolution API.
 
@@ -336,10 +337,8 @@ evolution_instance_name
 evolution_api_url
 faq_search_endpoint
 unanswered_endpoint
-pause_enabled
-pause_trigger
-pause_ttl_seconds
-pause_scope
+agent_off_trigger
+agent_on_trigger
 ```
 
 #### 8.2.1 Composición del system prompt en FAQ Productivo
@@ -394,33 +393,38 @@ Detalle del módulo de columnas por objetivo: [docs/systemprompt-configurable/RE
 
 El modelo de workflow por tenant queda reservado como alternativa futura solo si existe una necesidad explícita de aislamiento, personalización fuerte o lógica conversacional distinta por cliente.
 
-### 8.3 Regla de pausa humana
+### 8.3 Suspensión humana persistente por conversación
 
-MVP:
+Decisión arquitectónica: **V1.22 / V1.23** (bitácora rama `api`). Implementación n8n en **FAQ Productivo** (2026-07-15): ver [docs/n8n/README.md](docs/n8n/README.md).
 
-```text
-Si un mensaje entrante comienza con el `pause_trigger` configurado, el agente se pausa para esa conversación.
-```
-
-La pausa humana se implementa con Redis TTL, no con `Wait` de n8n ni apagando workflows.
-
-Clave estándar:
+Regla funcional:
 
 ```text
-faqinn:pause:<tenant_id>:<agent_id>:<chat_id>
+El tenant puede suspender indefinidamente al agente para una conversación específica y reactivarlo posteriormente.
+La suspensión no vence automáticamente y no afecta a otras conversaciones del mismo tenant.
 ```
 
-Configuración mínima por tenant/agente:
+Comandos configurables por tenant (exactamente 2 caracteres, distintos). Defaults de producto:
 
 ```text
-pause_enabled=true
-pause_trigger=**
-pause_ttl_seconds=300
-pause_scope=chat
-pause_mode=redis_ttl
+agent_off_trigger = **
+agent_on_trigger  = ##
 ```
 
-Mientras exista la clave Redis de pausa, n8n no debe responder al cliente, para permitir intervención humana desde WhatsApp o Chatwoot.
+Los comandos solo valen si el mensaje **completo** coincide exactamente y viene del negocio (`fromMe = true`). No se envían al AI Agent.
+
+Estado por conversación en PostgreSQL (`conversation_states`), identidad:
+
+```text
+tenant_id + agent_id + chat_id
+```
+
+```text
+active     = el agente puede responder
+suspended  = el agente no responde hasta agent_on_trigger
+```
+
+Mientras esté `suspended`, n8n recibe el mensaje, consulta estado y detiene el flujo antes del AI Agent / Enviar WhatsApp. Redis **no** participa en este control.
 
 ---
 
@@ -538,10 +542,8 @@ business_type
 booking_url_base
 booking_url_template
 human_contact
-pause_enabled
-pause_trigger
-pause_ttl_seconds
-pause_scope
+agent_off_trigger
+agent_on_trigger
 evolution_instance_name
 evolution_instance_token_encrypted
 phone_number
@@ -731,25 +733,27 @@ En la vista **Preguntas y respuestas** el cliente tiene:
 
 **Descargar Excel** existe para respaldar o editar fuera de la app el mismo conjunto que se ve en pantalla; no reemplaza el flujo conversacional n8n.
 
-### 14.6 Módulo pausa humana
+### 14.6 Módulo de suspensión humana persistente
+
+Configuración por tenant en `tenant_settings` (arquitectura V1.22/V1.23):
 
 | Variable | Valor ejemplo / desarrollo | Uso obligatorio | Fuente esperada |
 |---|---|---|---|
-| `pause_enabled` | `true` | Habilita o deshabilita pausa humana por tenant/agente. | tenant_settings |
-| `pause_trigger` | `**` | Prefijo que activa pausa humana cuando aparece al inicio del mensaje. | tenant_settings |
-| `pause_ttl_seconds` | `300` | Duración de la pausa Redis en segundos. | tenant_settings |
-| `pause_scope` | `chat` | Alcance de la pausa: conversación específica. | tenant_settings |
-| `pause_mode` | `redis_ttl` | Mecanismo técnico de pausa. | Arquitectura / tenant_settings |
-| `pause_key` | `faqinn:pause:<tenant_slug>:<agent_id>:<chat_id>` | Clave Redis usada para bloquear respuesta automática. | Runtime n8n |
-| `pause_lock` | valor Redis | Indica si la pausa está vigente. | Redis / runtime n8n |
+| `agent_off_trigger` | `**` | Mensaje exacto de dos caracteres que suspende al agente para la conversación. | tenant_settings |
+| `agent_on_trigger` | `##` | Mensaje exacto de dos caracteres que reactiva al agente para la conversación. | tenant_settings |
 
-Regla vigente:
+Reglas de validación: exactamente 2 caracteres, distintos, no vacíos.
+
+Tabla operativa: `conversation_states` con `UNIQUE (tenant_id, agent_id, chat_id)` y `agent_status` ∈ `active` \| `suspended`.
+
+Runtime n8n (FAQ Productivo):
 
 ```text
-Mientras exista `pause_lock`, n8n no debe responder al cliente.
+POST /api/runtime/conversation-control
+GET  /api/runtime/conversation-state
 ```
 
-Nota: la documentación anterior usaba como clave estándar `faqinn:pause:<tenant_id>:<agent_id>:<chat_id>`. El prototipo n8n vigente usa `tenant_slug`. Esta diferencia debe resolverse antes de producción; por ahora ambas deben considerarse equivalentes conceptuales y la implementación final debe elegir una sola convención.
+Mientras `agent_status = suspended`, n8n no ejecuta el AI Agent ni envía respuesta automática. Redis no debe usarse para este módulo.
 
 ### 14.7 Módulo motor-reservas
 
@@ -863,7 +867,7 @@ El Programador debe revisar y reconstruir con variables de tenant, como mínimo:
 4. Identidad de tenant y agente.
 5. Resolución de tenant por `evolution_instance_name`.
 6. Endpoints internos para FAQ, Qdrant y preguntas sin respuesta.
-7. Configuración de pausa humana por Redis TTL.
+7. Configuración y persistencia de suspensión humana por conversación en PostgreSQL (`agent_off_trigger` / `agent_on_trigger`).
 8. Configuración de motor-reservas solo cuando esté aprobada.
 9. Construcción del system prompt desde variables de tenant/agente/vertical.
 10. Registro de preguntas sin respuesta asociado a tenant, agente, canal, teléfono y chat.
@@ -972,7 +976,7 @@ MVP Evolution onboarding validado en inn.at-once.cl (V1.3.x): registro, QR, cone
 System prompt por objetivo (`system_prompt_objective_templates`) + `custom_sprompt` admin-only documentados; n8n FAQ Productivo usa Armar SPrompt + append de custom_sprompt.
 Admin detalle tenant (`GET /api/admin/tenants/:id`) expone `objetivo_slug` (slug técnico) desde `tenant_settings`; UI Admin lo muestra en **Ver**.
 Dashboard FAQ: Importar Excel, Descargar Excel (CSV), Sincronizar respuestas, Nueva FAQ.
-Siguiente etapa: 02-n8n-multitenant-runtime (payload webhook + resolución tenant por evolution_instance_name).
+FAQ Productivo (n8n): suspensión persistente PostgreSQL (`**`/`##`) operativa; aplica arquitectura V1.22/V1.23 (rama api); documentado en docs/n8n (merge 2026-07-15 sin ronda nueva de arquitecto).
 Pendiente arquitecto: cleanup al desvincular WhatsApp desde teléfono; persistencia instance_token_encrypted.
 ```
 
@@ -987,7 +991,7 @@ La fuente del esquema vigente es `api/src/lib/migrate.js` (rama `api` en producc
 | `agents` | `id`, `tenant_id`, `slug`, `name`, `channel`, `status`, `created_at`, `updated_at` | `tenant_id → tenants.id` con `ON DELETE CASCADE`. Único por `tenant_id + slug`. |
 | `faq_items` | `id`, `tenant_id`, `agent_id`, `faq_uid`, `question`, `answer`, `category`, `keywords`, `language`, `active`, `qdrant_point_id`, `embedding_hash`, `indexed_at`, `created_at`, `updated_at` | `tenant_id → tenants.id`; `agent_id → agents.id`, ambos en cascada. Único por `tenant_id + faq_uid`. |
 | `unanswered_questions` | `id`, `tenant_id`, `agent_id`, `tenant_slug`, `channel`, `remote_id`, `contact_name`, `phone`, `question`, `language`, `score`, `suggested_faq_id`, `suggested_faq_question`, `status`, `converted_faq_id`, `resolved_by`, `resolved_at`, `created_at`, `updated_at` | `tenant_id → tenants.id`; `agent_id → agents.id`; `converted_faq_id → faq_items.id`; `resolved_by → users.id`. |
-| `tenant_settings` | `tenant_id`, `objetivo_slug`, `vertical_slug`, `primary_language`, `booking_url_base`, `booking_url_template`, `booking_url_mode`, `validation_status`, `confidence_score`, `booking_config`, `booking_approved_at`, `lodging_type`, `business_hours`, `policies`, `welcome_message`, `address`, `postgres_database`, `custom_sprompt`, `created_at`, `updated_at` | `tenant_id` es PK y FK a `tenants.id`; existe como máximo una configuración por tenant. Campo canónico de objetivo: `objetivo_slug`. |
+| `tenant_settings` | `tenant_id`, `objetivo_slug`, `vertical_slug`, `primary_language`, `booking_url_base`, `booking_url_template`, `booking_url_mode`, `validation_status`, `confidence_score`, `booking_config`, `booking_approved_at`, `lodging_type`, `business_hours`, `policies`, `welcome_message`, `address`, `postgres_database`, `custom_sprompt`, `agent_off_trigger`, `agent_on_trigger`, `created_at`, `updated_at` | `tenant_id` es PK y FK a `tenants.id`; existe como máximo una configuración por tenant. Campo canónico de objetivo: `objetivo_slug`. Triggers de suspensión: exactamente 2 caracteres, distintos. |
 | `tenant_provisioning` | `tenant_id`, `status`, `last_error`, `created_at`, `updated_at` | `tenant_id` es PK y FK a `tenants.id`; existe como máximo un estado de provisionamiento por tenant. |
 | `evolution_instances` | `id`, `tenant_id`, `instance_name`, `status`, `phone_number`, `webhook_url`, `last_qr_base64`, `last_qr_at`, `connected_at`, `last_error`, `created_at`, `updated_at` | `tenant_id → tenants.id` en cascada. `instance_name` único. |
 | `booking_discovery_sessions` | `id`, `tenant_id`, `status`, `scenarios`, `sample_urls`, `candidate_template`, `candidate_config`, `verification_scenario`, `verification_url`, `warnings`, `confidence_score`, `created_at`, `updated_at` | `tenant_id → tenants.id` en cascada. Un tenant puede tener varias sesiones. |
@@ -1013,3 +1017,4 @@ Brechas / notas:
 - El catálogo visible de nombres de objetivo vive en `public.system_prompt_objective_templates` (`objective_slug` / `objective_name`). El tenant guarda el slug técnico en `tenant_settings.objetivo_slug` (sin FK obligatoria al catálogo).
 - Admin y runtime leen `objetivo_slug` desde `tenant_settings`. No confundir con el nombre inglés `objective_slug` del catálogo de plantillas.
 - `custom_sprompt` se crea/asegura en la migración de la rama `api` junto a `objetivo_slug`.
+- `conversation_states` y columnas `agent_off_trigger` / `agent_on_trigger` se crean en la migración API V1.9.0 (suspensión persistente). Detalle operativo n8n: [docs/n8n/README.md](docs/n8n/README.md).

@@ -1,60 +1,66 @@
-# 04 - Pausa humana Redis
+# 04 - Suspensión humana persistente (ex pausa Redis)
+
+> **Estado:** modelo Redis TTL **obsoleto**. Vigente: suspensión PostgreSQL (arquitectura V1.22/V1.23; FAQ Productivo 2026-07-15).
 
 ## Objetivo
 
-Validar pausa humana temporal por chat usando Redis TTL.
+Validar suspensión / reactivación por conversación con comandos exactos del negocio.
 
 ## Alcance
 
 ```text
-Mensaje con pause_trigger -> crear lock Redis TTL -> mensajes posteriores del mismo chat no reciben respuesta hasta vencer TTL.
+Negocio envía ** exacto (fromMe=true)
+  -> POST conversation-control (suspend)
+  -> Cliente escribe -> n8n NoOp (sin respuesta)
+Negocio envía ## exacto
+  -> POST conversation-control (resume)
+  -> Cliente escribe -> agente responde
 ```
 
-## Estado
+## Workflow
 
-En prueba.
+```text
+FAQ Productivo (webhook faq-prototipo)
+```
 
 ## Configuración vigente
 
 ```text
-pause_enabled=true
-pause_trigger=**
-pause_ttl_seconds=300
-pause_scope=chat
-pause_mode=redis_ttl
-```
-
-## Clave Redis estándar
-
-```text
-faqinn:pause:{tenant_id}:{agent_id}:{chat_id}
-```
-
-## Servicio Redis confirmado
-
-```text
-Servicio: n8n_redis
-Host interno: n8n_redis
-Puerto interno: 6379
+agent_off_trigger=**
+agent_on_trigger=##
+persistencia=PostgreSQL conversation_states
+clave=tenant_id + agent_id + chat_id
 ```
 
 ## Criterio de éxito
 
 ```text
-Enviar pause_trigger crea lock Redis.
-Un mensaje posterior del mismo chat cae en NoOp.
-Al vencer TTL, el agente vuelve a responder.
-La pausa no afecta otros chats del mismo tenant.
+** exacto desde negocio suspende (action: suspend).
+Cliente mientras suspended: sin FAQ inn / Enviar WhatsApp.
+## exacto desde negocio reactiva (action: resume).
+Cliente tras resume: agente responde.
+** que pasa / ** desde cliente: no suspende.
+Suspensión no vence sola (no hay TTL).
 ```
 
 ## Criterio de descarte
 
 ```text
-Redis no resulta accesible desde n8n.
-La clave no puede segmentarse por tenant, agent y chat.
-El comportamiento genera bloqueo global no deseado.
+El flujo vuelve a Redis TTL o startsWith.
+Los comandos se interpretan como prefijo en vez de match exacto.
+Se afecta a otros chats del mismo tenant por error de chat_id.
 ```
 
 ## Decisión final
 
-Pendiente. La solución Redis TTL sigue vigente para MVP.
+Aprobado en sandbox **FAQ V2.0** (ejecuciones 15097–15106, tenant `faqinn_mcandia`) y portado a **FAQ Productivo** el 2026-07-15. Detalle: [../n8n/README.md](../n8n/README.md).
+
+## Histórico Redis (referencia)
+
+Modelo anterior (no usar):
+
+```text
+pause_trigger=** (startsWith)
+pause_ttl_seconds=300
+clave Redis: faqinn:pause:{tenant}:{agent}:{chat}
+```

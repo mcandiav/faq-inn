@@ -14,6 +14,8 @@ Los nodos HTTP del workflow **FAQ Productivo** deben apuntar a:
 
 ```text
 http://n8n_inn-api:3000/api/runtime/tenant-config
+http://n8n_inn-api:3000/api/runtime/conversation-state
+http://n8n_inn-api:3000/api/runtime/conversation-control
 http://n8n_inn-api:3000/api/search
 http://n8n_inn-api:3000/api/unanswered
 http://n8n_inn-api:3000/api/runtime/booking-link
@@ -24,11 +26,19 @@ Solo resuelven desde contenedores en la red `easypanel-n8n`.
 
 ## Backups del workflow productivo
 
-Backup versionado en repo:
+Backup versionado en repo (pre-migración suspensión Redis):
 
 ```text
 docs/n8n/workflows/backups/FAQ-Productivo.rt5MZuQBonSFwS7J.2026-07-08.json
 ```
+
+Referencia de la migración suspensión PostgreSQL (julio 2026):
+
+```text
+scripts/n8n-faq-v2-create.json
+```
+
+Workflow sandbox usado para validar antes del merge: **FAQ V2.0** (`K4skbzUW8tO4s69S`, webhook `faq-v2-0`). La lógica quedó portada a **FAQ Productivo** el 2026-07-15.
 
 ## Rol de n8n
 
@@ -58,7 +68,7 @@ Relación esperada:
 evolution_instances.instance_name
   -> evolution_instances.tenant_id
   -> tenants.id
-  -> tenant_settings / agents / faq_config / pause_config
+  -> tenant_settings / agents / faq_config / conversation_states
 ```
 
 El nombre exacto del campo recibido desde Evolution API debe confirmarse con un payload real. Posibles nombres a validar:
@@ -74,7 +84,15 @@ apikey
 ## Flujo runtime esperado
 
 ```text
-Webhook Evolution -> Parse Evolution -> Es mensaje entrante? -> Resolver Tenant (GET API plana) -> Detecta ** -> … -> Datos -> TextoFinal -> FAQ inn
+Webhook Evolution
+  -> If (messageType texto)
+  -> Datos Tenant (GET tenant-config)
+  -> ¿Comando control? (fromMe + match exacto agent_off/on_trigger)
+       | true  -> Control conversacion (POST) -> stop
+       | false -> Estado conversacion (GET)
+            -> ¿Agente activo? (no suspended + fromMe=false)
+                 | true  -> Armar SPrompt -> FAQ inn -> Enviar WhatsApp
+                 | false -> stop
 ```
 
 ## Separación de dominios (contrato vigente)
@@ -87,10 +105,10 @@ El campo de objetivo en esa respuesta es `objetivo_slug` (misma columna `tenant_
 |---|---|
 | `chatInput`, `sessionId`, `remoteJid`, `pushName` | `tenant_id`, `tenant_slug`, `agent_id`, `initial_greeting` |
 | `fromMe`, `event`, `message_type`, `source_channel` | motor reservas, `business_hours`, `policies` |
-| `evolution_instance` (solo lookup) | `pause_trigger`, `pause_ttl_seconds`, `search_limit`, `unanswered_limit` |
+| `evolution_instance` (solo lookup) | `agent_off_trigger`, `agent_on_trigger`, `search_limit`, `unanswered_limit` |
 | | `evolution_instance_name`, `evolution_api_url`, `evolution_api_key` |
 
-**Derivados en n8n (Datos):** `Texto`, `question`, `chat_id`, `pause_key`, etc. — merge de ambos dominios, no viven en ninguna API.
+**Derivados en n8n:** `chat_id` (dígitos de `remoteJid`), texto del mensaje, `agent_status` / `conversation_status` desde los endpoints de conversación. El estado de suspensión **no** vive en Redis ni en variables del merge local.
 
 ## Variables mínimas cargadas por runtime
 
@@ -122,20 +140,28 @@ faq_search_endpoint
 unanswered_endpoint
 custom_sprompt
 sprompt.*                 (columnas del objetivo activo: role/limits/tools/…)
-pause_enabled / pause_trigger / pause_ttl_seconds / pause_scope
+agent_off_trigger         (default **)
+agent_on_trigger          (default ##)
+```
+
+Estado de conversación (runtime, no viene en tenant-config):
+
+```text
+agent_status              active | suspended
+conversation_status       active | suspended
 ```
 
 ## Workflow FAQ Productivo — Armar SPrompt y `custom_sprompt`
 
 Workflow productivo vigente (backup versionado arriba): **FAQ Productivo**.
 
-Cadena relevante al system prompt:
+Cadena relevante al system prompt (rama activa del agente):
 
 ```text
-Resolver Tenant → … → Datos Tenant → Armar SPrompt → AI Agent (systemMessage)
+… → ¿Agente activo? → Armar SPrompt → FAQ inn (systemMessage)
 ```
 
-1. **Resolver Tenant** carga `custom_sprompt` y `sprompt` desde `GET /api/runtime/tenant-config`.
+1. **Datos Tenant** carga `custom_sprompt`, `sprompt` y triggers desde `GET /api/runtime/tenant-config`.
 2. **Armar SPrompt** (Code) resuelve tokens neutros (`tenant_display_name`, `url`, `today`, `validation_status`, etc.) en cada columna del objetivo y en `custom_sprompt`.
 3. El **systemMessage** del AI Agent concatena, en este orden:
 
@@ -155,19 +181,38 @@ Reglas:
 - Solo Admin lo edita (no el cliente del tenant).
 - No hardcodear el prompt completo en el nodo del agente; siempre partir de **Armar SPrompt**.
 
-## Workflow FAQ prototipo — propagación al agente
+## Workflow FAQ Productivo — cadena de suspensión y agente
 
-Cadena vigente:
+Cadena vigente (julio 2026):
 
 ```text
-Parse Evolution → Es mensaje entrante? → Resolver Tenant → Detecta ** → … → Datos → TextoFinal → FAQ inn
+Webhook → If → Datos Tenant → ¿Comando control? → … → Armar SPrompt → FAQ inn
 ```
 
-- **Parse Evolution**: extrae `chatInput`, `sessionId`, `evolution_instance`, `source_channel` del webhook Evolution.
-- **Resolver Tenant**: `GET /api/runtime/tenant-config?instance_name=…` devuelve solo **config del tenant** (item plano). El mensaje (`chatInput`, `sessionId`) viene de **Parse Evolution**, no de la API.
-- **Datos / TextoFinal**: merge **Parse Evolution** + **Resolver Tenant**; propaga variables al agente.
-- El system prompt del agente usa `{{booking_url_template}}`, `{{validation_status}}`, etc. desde `$json` de **TextoFinal**.
-- En **FAQ Productivo** (no en el prototipo legado) el system prompt pasa por **Armar SPrompt** e incluye `custom_sprompt` al final.
+- **Datos Tenant**: `GET /api/runtime/tenant-config?instance_name=…` — config aplanada del tenant (incluye `agent_off_trigger` / `agent_on_trigger`).
+- **¿Comando control?**: `fromMe === true` y mensaje **exacto** igual a `agent_off_trigger` o `agent_on_trigger`.
+- **Control conversacion**: `POST /api/runtime/conversation-control` con `tenant_db_id`, `agent_id`, `chat_id`, `message`, `from_me: true`. Responde `action: suspend|resume` y actualiza PostgreSQL (`conversation_states`).
+- **Estado conversacion**: `GET /api/runtime/conversation-state` con la misma clave de chat.
+- **¿Agente activo?**: continúa solo si `agent_status !== 'suspended'` **y** `fromMe === false` (mensaje del cliente).
+- El system prompt pasa por **Armar SPrompt** e incluye `custom_sprompt` al final.
+
+### Reglas operativas de los comandos
+
+| Condición | Efecto |
+|---|---|
+| Negocio envía exactamente `**` (o `agent_off_trigger`) | Suspende el agente en ese chat |
+| Negocio envía exactamente `##` (o `agent_on_trigger`) | Reactiva el agente en ese chat |
+| Cliente envía `**` o texto con `**` al inicio | No es comando; no suspende |
+| Cliente escribe mientras `suspended` | Flujo termina en No Operation (sin respuesta) |
+| Negocio escribe texto normal (sin comando exacto) | No pasa por Control conversacion; el flujo no “resuelve” la intervención humana (responsabilidad del operador) |
+
+Clave de estado en API (PostgreSQL):
+
+```text
+tenant_id + agent_id + chat_id
+```
+
+`chat_id` = dígitos de `remoteJid` (misma expresión que memoria y SemResposta).
 
 ## Memoria conversacional PostgreSQL (dominio n8n)
 
@@ -199,26 +244,55 @@ Configuración del nodo: `tableName = n8n_faq_inn`, `contextWindowLength = 8`.
 
 ## Workflow de referencia actual
 
+| Workflow | ID n8n | Webhook | Rol |
+|---|---|---|---|
+| **FAQ Productivo** | `rt5MZuQBonSFwS7J` | `faq-prototipo` | Runtime multitenant activo (Evolution global) |
+| FAQ V2.0 | `K4skbzUW8tO4s69S` | `faq-v2-0` | Sandbox de validación; misma lógica que Productivo tras merge 2026-07-15 |
+| FAQ prototipo | — | — | Legado / referencia histórica |
+
+Estado: **FAQ Productivo** es el runtime multitenant activo. Backup pre-migración: `docs/n8n/workflows/backups/FAQ-Productivo.rt5MZuQBonSFwS7J.2026-07-08.json`.
+
+Características incorporadas (Productivo, post-migración):
+
 ```text
-FAQ Productivo   (productivo; webhook path faq-prototipo)
-FAQ prototipo    (legado / referencia histórica)
-```
-
-Estado: **FAQ Productivo** es el runtime multitenant activo. Backup: `docs/n8n/workflows/backups/FAQ-Productivo.rt5MZuQBonSFwS7J.2026-07-08.json`.
-
-Características incorporadas:
-
-```text
-Resolver Tenant (GET inn-api) devuelve solo config tenant (incluye custom_sprompt y sprompt).
-Armar SPrompt resuelve tokens y expone rol/limites/tools/…/custom_sprompt.
-systemMessage del AI Agent termina con {{ $('Armar SPrompt').item.json.custom_sprompt }}.
-Redis TTL para pausa humana por chat.
-Clave Redis: faqinn:pause:{tenant_slug}:{agent_id}:{chat_id}.
-Datos merge Evolution + inn-api.
-initial_greeting vive como variable, no como texto fijo del prompt.
-Respostas y SemResposta reciben tenant_id, tenant_slug y agent_id.
+Datos Tenant (GET tenant-config): custom_sprompt, sprompt, agent_off_trigger, agent_on_trigger.
+Armar SPrompt: tokens neutros + custom_sprompt.
+Suspensión persistente PostgreSQL (sin Redis, sin TTL).
+Nodos: ¿Comando control? / Control conversacion / Estado conversacion / ¿Agente activo?
+initial_greeting como variable, no texto fijo del prompt.
+Respostas y SemResposta: tenant_id, tenant_slug, agent_id.
 Tools: GenerarLinkReserva, GenerarLinkAgenda, Enviar WhatsApp.
 ```
+
+### Migración n8n — suspensión Redis → PostgreSQL (2026-07-15)
+
+**Contexto arquitectónico:** la decisión ya estaba en bitácora **V1.22 / V1.23** (rama `api`). El port a **FAQ Productivo** fue implementación operativa en n8n (sandbox **FAQ V2.0** → Productivo); **no** introdujo una decisión arquitectónica nueva ni pasó por una ronda de arquitecto adicional. Documentación alineada en README §8.3 / §14.6 (V1.17 operativa en rama `http`).
+
+**Eliminado de FAQ Productivo:**
+
+```text
+Detecta **          (startsWith pause_trigger)
+Redis pausa 5 min   (INCR + TTL)
+Redis consulta pausa
+¿Pausa vigente?
+```
+
+**Añadido (equivalente FAQ V2.0):**
+
+```text
+¿Comando control?
+Control conversacion   POST /api/runtime/conversation-control
+Estado conversacion    GET  /api/runtime/conversation-state
+¿Agente activo?
+```
+
+**Cambio de comportamiento respecto al modelo Redis:**
+
+- Antes: mensaje del negocio que **empezaba** con `**` pausaba 5 minutos.
+- Ahora: solo suspende/reactiva con mensaje **exacto** `**` o `##` desde `fromMe: true`.
+- La suspensión no vence sola; solo `##` (o `agent_on_trigger`) la levanta.
+
+Validación en sandbox: ejecuciones FAQ V2.0 `15097`–`15106` (tenant `faqinn_mcandia`). Productivo verificado operativo el mismo día.
 
 `tenant_id` en runtime es el **slug** (`miguel-telefono`), no el id numérico de PostgreSQL. Coincide con el filtro Qdrant y con `docs/N8N-SEARCH.md`.
 
@@ -245,22 +319,23 @@ La API `/api/runtime/tenant-config` resuelve por `instance_name` registrado en P
 
 `evolution_api_url` en runtime apunta a la **URL interna** (`http://n8n_evolution-api:8080`) para el nodo Enviar WhatsApp desde n8n.
 
-## Pausa humana
+## Suspensión del agente (intervención del operador)
 
-La pausa humana no debe implementarse con Wait de n8n ni apagando workflows.
+La suspensión **no** debe implementarse con Wait de n8n, apagando workflows ni Redis TTL.
 
-La regla vigente es Redis TTL por chat:
+Regla vigente (API + n8n):
 
 ```text
-pause_enabled=true
-pause_trigger=**
-pause_ttl_seconds=300
-pause_scope=chat
-pause_mode=redis_ttl
+agent_off_trigger=**     (configurable por tenant, 2 caracteres)
+agent_on_trigger=##      (configurable por tenant, 2 caracteres)
+pause_scope=chat         (implícito: clave tenant_id + agent_id + chat_id)
+persistencia=PostgreSQL  (tabla conversation_states)
 ```
 
-Mientras exista la clave Redis de pausa, el runtime n8n no debe responder al cliente.
+Mientras `conversation_status = suspended` para ese chat, n8n no ejecuta FAQ inn ni Enviar WhatsApp ante mensajes del cliente (`fromMe: false`).
+
+Documentación operador: [../onboarding/pausa-operador.md](../onboarding/pausa-operador.md) (texto UI; la implementación técnica ya no usa Redis).
 
 ## Regla de evolución del prototipo
 
-El aplanado del tenant vive en la API (`buildRuntimeWorkflowItem` en `runtimeService.js`). El mensaje WhatsApp y la clave Redis de pausa se arman en n8n referenciando **Parse Evolution** + **Resolver Tenant** (`Datos`, Redis, Enviar WhatsApp).
+El aplanado del tenant vive en la API (`buildRuntimeWorkflowItem` en `runtimeService.js`). El estado de suspensión lo gobiernan `conversationStateService.js` y los endpoints runtime. En n8n, `chat_id` y el texto del mensaje se derivan del webhook Evolution; los comandos exactos se evalúan en **¿Comando control?** antes del agente.
