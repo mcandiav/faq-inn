@@ -285,6 +285,10 @@ const MESSAGES = {
     'profile.whatsappDisconnectConfirm':
       '¿Seguro que querés desconectar WhatsApp? El asistente dejará de responder hasta que vuelvas a escanear el QR.',
     'profile.whatsappDisconnectError': 'No se pudo desconectar WhatsApp.',
+    'profile.agentControlHint':
+      'Para suspender el agente en un chat, envía exactamente el comando de apagado desde este WhatsApp. Para reactivarlo, envía el comando de encendido. La suspensión no vence sola.',
+    'profile.agentOffTrigger': 'Comando apagar',
+    'profile.agentOnTrigger': 'Comando encender',
     'help.show': 'Ver ayuda',
     'booking.title': 'Motor de reservas',
     'booking.back': '← Volver a Mi cuenta',
@@ -825,6 +829,10 @@ const MESSAGES = {
     'profile.whatsappDisconnectConfirm':
       'Tem certeza de que deseja desconectar o WhatsApp? O assistente deixará de responder até você escanear o QR novamente.',
     'profile.whatsappDisconnectError': 'Não foi possível desconectar o WhatsApp.',
+    'profile.agentControlHint':
+      'Para suspender o agente num chat, envie exatamente o comando de desligar por este WhatsApp. Para reativar, envie o comando de ligar. A suspensão não expira sozinha.',
+    'profile.agentOffTrigger': 'Comando desligar',
+    'profile.agentOnTrigger': 'Comando ligar',
     'help.show': 'Ver ajuda',
     'booking.title': 'Motor de reservas',
     'booking.back': '← Voltar à Minha conta',
@@ -1363,6 +1371,10 @@ const MESSAGES = {
     'profile.whatsappDisconnectConfirm':
       'Are you sure you want to disconnect WhatsApp? The assistant will stop replying until you scan the QR again.',
     'profile.whatsappDisconnectError': 'Could not disconnect WhatsApp.',
+    'profile.agentControlHint':
+      'To suspend the agent in a chat, send exactly the off command from this WhatsApp. To resume, send the on command. Suspension does not expire automatically.',
+    'profile.agentOffTrigger': 'Off command',
+    'profile.agentOnTrigger': 'On command',
     'help.show': 'Show help',
     'booking.title': 'Booking engine',
     'booking.back': '← Back to My account',

@@ -1934,6 +1934,25 @@ code {
   color: #e2e8f0;
 }
 
+.profile-agent-control {
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+  margin-top: 0.35rem;
+}
+
+.profile-agent-control-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.75rem;
+}
+
+.profile-agent-control-grid input {
+  max-width: 5rem;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  text-align: center;
+}
+
 .booking-scenarios {
   display: flex;
   flex-direction: column;

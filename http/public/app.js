@@ -1163,6 +1163,15 @@ function renderProfile() {
       }
     }
 
+    const offTriggerEl = $('#profile-agent-off-trigger');
+    const onTriggerEl = $('#profile-agent-on-trigger');
+    if (offTriggerEl) {
+      offTriggerEl.value = account?.settings?.agent_off_trigger || '**';
+    }
+    if (onTriggerEl) {
+      onTriggerEl.value = account?.settings?.agent_on_trigger || '##';
+    }
+
     onboardHint?.classList.remove('hidden');
   } else {
     businessInput.disabled = true;
@@ -4502,6 +4511,12 @@ $('#profile-form').addEventListener('submit', async (event) => {
       const timezone = $('#profile-timezone')?.value || '';
       if (timezone) {
         accountBody.timezone = timezone;
+      }
+      const offTrigger = $('#profile-agent-off-trigger')?.value.trim() || '';
+      const onTrigger = $('#profile-agent-on-trigger')?.value.trim() || '';
+      if (offTrigger || onTrigger) {
+        accountBody.agent_off_trigger = offTrigger || '**';
+        accountBody.agent_on_trigger = onTrigger || '##';
       }
       const businessName = $('#profile-business').value.trim();
       if (businessName.length >= 2) {
