@@ -179,9 +179,9 @@ export async function getOnboardingStatus(pool, config, userId, tenantId) {
     },
     starter_faqs: starterFaqs,
     objectives: OBJECTIVES.map(mapObjectiveForClient),
-    pause: {
-      trigger: '**',
-      ttl_seconds: 300,
+    agent_control: {
+      agent_off_trigger: '**',
+      agent_on_trigger: '##',
     },
     ready_to_complete:
       whatsappConnected &&
@@ -377,8 +377,12 @@ export async function completeOnboarding(pool, config, userId, tenantId, input) 
     throw validationError('Faltan las FAQs plantilla del onboarding');
   }
 
-  if (!input?.pause_acknowledged) {
-    throw validationError('Confirma que entendiste la pausa del operador con **');
+  const acknowledged =
+    input?.suspension_acknowledged ?? input?.pause_acknowledged;
+  if (!acknowledged) {
+    throw validationError(
+      'Confirma que entendiste la suspensión del agente con ** y su reactivación con ##'
+    );
   }
 
   await pool.query(

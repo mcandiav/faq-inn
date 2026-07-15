@@ -4,6 +4,10 @@ import {
   generateRuntimeBookingLink,
   getRuntimeTenantConfig,
 } from '../lib/runtimeService.js';
+import {
+  getConversationState,
+  processConversationControl,
+} from '../lib/conversationStateService.js';
 
 function verifyN8nToken(request, config) {
   const expected = config.n8nAllowedToken;
@@ -87,6 +91,62 @@ export async function runtimeRoutes(app, config) {
       return {
         status: 'error',
         error: error.message || 'No se pudo generar el link de agenda',
+      };
+    }
+  });
+
+  app.get('/api/runtime/conversation-state', async (request, reply) => {
+    if (!verifyN8nToken(request, config)) {
+      reply.code(401);
+      return { status: 'error', error: 'Token n8n inválido' };
+    }
+
+    const tenantDbId =
+      request.query?.tenant_db_id ||
+      request.query?.tenant_id ||
+      '';
+    const agentId = request.query?.agent_id || '';
+    const chatId = request.query?.chat_id || request.query?.session_id || '';
+
+    try {
+      const agent_status = await getConversationState(
+        pool,
+        tenantDbId,
+        agentId,
+        chatId
+      );
+      return {
+        status: 'ok',
+        agent_status,
+        conversation_status: agent_status,
+      };
+    } catch (error) {
+      reply.code(error.statusCode || 500);
+      return {
+        status: 'error',
+        error: error.message || 'No se pudo consultar el estado de la conversación',
+      };
+    }
+  });
+
+  app.post('/api/runtime/conversation-control', async (request, reply) => {
+    if (!verifyN8nToken(request, config)) {
+      reply.code(401);
+      return { status: 'error', error: 'Token n8n inválido' };
+    }
+
+    try {
+      const result = await processConversationControl(pool, request.body || {});
+      return {
+        status: 'ok',
+        ...result,
+        conversation_status: result.agent_status,
+      };
+    } catch (error) {
+      reply.code(error.statusCode || 500);
+      return {
+        status: 'error',
+        error: error.message || 'No se pudo procesar el control de conversación',
       };
     }
   });

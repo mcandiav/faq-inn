@@ -17,6 +17,10 @@ function slugFromInstanceName(instanceName, prefix) {
   return name.slice(p.length);
 }
 
+import {
+  DEFAULT_AGENT_OFF_TRIGGER,
+  DEFAULT_AGENT_ON_TRIGGER,
+} from './agentControlTriggers.js';
 import { buildPlaceholderMap, buildRequiredFields } from './bookingApprovedFormat.js';
 import {
   buildObjetivoDirective,
@@ -110,10 +114,8 @@ function mapRuntimeRow(row, config) {
       config.evolutionApiBaseUrl || config.evolutionApiPublicUrl || '',
     evolution_api_key: evolutionApiKey,
     whatsapp_phone: row.whatsapp_phone || '',
-    pause_enabled: true,
-    pause_trigger: '**',
-    pause_ttl_seconds: 300,
-    pause_scope: 'chat',
+    agent_off_trigger: row.agent_off_trigger || DEFAULT_AGENT_OFF_TRIGGER,
+    agent_on_trigger: row.agent_on_trigger || DEFAULT_AGENT_ON_TRIGGER,
     search_limit: 2,
     unanswered_limit: 1,
     faq_search_endpoint: '/api/search',
@@ -127,6 +129,7 @@ const TENANT_RUNTIME_SQL = `
          ts.vertical_slug, ts.primary_language, ts.welcome_message AS initial_greeting,
          ts.objetivo_slug, ts.onboarding_completed, ts.business_type,
          ts.timezone, ts.tenant_url, ts.custom_sprompt,
+         ts.agent_off_trigger, ts.agent_on_trigger,
          ts.validation_status, ts.confidence_score, ts.booking_config,
          ts.agenda_validation_status, ts.agenda_confidence_score, ts.agenda_config,
          ts.business_hours, ts.policies,
@@ -321,8 +324,8 @@ export function buildRuntimeWorkflowItem(tenant) {
     business_hours: tenant.business_hours,
     policies: tenant.policies,
     whatsapp_phone: tenant.whatsapp_phone,
-    pause_trigger: tenant.pause_trigger,
-    pause_ttl_seconds: tenant.pause_ttl_seconds,
+    agent_off_trigger: tenant.agent_off_trigger,
+    agent_on_trigger: tenant.agent_on_trigger,
     search_limit: tenant.search_limit,
     unanswered_limit: tenant.unanswered_limit,
     faq_search_endpoint: tenant.faq_search_endpoint || '/api/search',

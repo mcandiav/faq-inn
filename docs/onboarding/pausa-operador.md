@@ -1,36 +1,36 @@
-# Pausa del agente — intervención del operador
+# Suspensión del agente — intervención del operador
 
 Texto canónico para mostrar en **onboarding** y en documentación de operación.
 
 ## Regla para el operador
 
-> Para suspender el agente por **5 minutos** en una conversación, inicie su intervención con **`**`** (asterisco asterisco).
+> Para suspender al agente en una conversación, envía exactamente **`**`** desde el WhatsApp del negocio.
 >
-> Con esta clave el agente hace una pausa de 5 minutos en **ese chat** y usted puede responder al cliente sin que el bot interfiera.
+> Para reactivarlo en esa misma conversación, envía exactamente **`##`**.
+>
+> La suspensión es persistente: no vence sola y solo afecta ese chat.
 
 ## Detalle técnico (referencia)
 
-| Parámetro | Valor |
+| Parámetro | Valor default |
 |---|---|
-| `pause_enabled` | `true` |
-| `pause_trigger` | `**` |
-| `pause_ttl_seconds` | `300` (5 minutos) |
-| `pause_scope` | `chat` (solo la conversación actual) |
+| `agent_off_trigger` | `**` |
+| `agent_on_trigger` | `##` |
 
 ### Cómo funciona
 
-1. El operador envía un mensaje al cliente por WhatsApp cuyo texto **empieza** con `**`.
-2. El workflow n8n detecta el trigger y escribe una clave Redis con TTL.
-3. Mientras la clave existe, el agente **no responde** a mensajes entrantes de ese chat.
-4. Tras 5 minutos la clave expira y el agente vuelve a responder.
+1. El operador envía un mensaje **exacto** `**` o `##` desde el teléfono del negocio (`fromMe = true`).
+2. n8n llama a `POST /api/runtime/conversation-control` y FAQ Inn persiste el estado en PostgreSQL (`conversation_states`).
+3. Mientras el estado sea `suspended`, el agente no responde en ese chat.
+4. Al enviar `##`, la conversación vuelve a `active` y el siguiente mensaje del contacto se procesa con la memoria acumulada.
 
-Clave Redis:
+Identidad lógica del estado:
 
 ```text
-faqinn:pause:{tenant_slug}:{agent_slug}:{chat_id}
+tenant_id + agent_id + chat_id
 ```
 
-Ver también: [../pruebas/04-pausa-humana-redis.md](../pruebas/04-pausa-humana-redis.md).
+Los comandos no se envían al contacto, no pasan al AI Agent y no se tratan como mensaje conversacional normal.
 
 ## Dónde debe mostrarse
 
@@ -45,17 +45,17 @@ Ver también: [../pruebas/04-pausa-humana-redis.md](../pruebas/04-pausa-humana-r
 **Español**
 
 ```text
-Para pausar el agente en un chat, escribile al cliente un mensaje que empiece con ** (dos asteriscos). El asistente queda pausado 5 minutos en esa conversación y podés responder vos.
+Para suspender el agente en un chat, envía exactamente ** desde el WhatsApp del negocio. Para reactivarlo en esa conversación, envía exactamente ##. La suspensión no vence sola.
 ```
 
 **Portugués**
 
 ```text
-Para pausar o agente num chat, escreva ao cliente uma mensagem que comece com ** (dois asteriscos). O assistente fica pausado 5 minutos nessa conversa e você pode responder.
+Para suspender o agente num chat, envie exatamente ** pelo WhatsApp do negócio. Para reativar nessa conversa, envie exatamente ##. A suspensão não expira sozinha.
 ```
 
 **Inglés**
 
 ```text
-To pause the agent in a chat, send the client a message starting with ** (two asterisks). The assistant stays paused for 5 minutes in that conversation so you can reply yourself.
+To suspend the agent in a chat, send exactly ** from the business WhatsApp. To resume that conversation, send exactly ##. Suspension does not expire automatically.
 ```

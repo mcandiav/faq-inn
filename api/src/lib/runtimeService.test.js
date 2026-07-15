@@ -64,8 +64,8 @@ test('buildRuntimeWorkflowItem flattens tenant only (no webhook message fields)'
     business_hours: null,
     policies: null,
     whatsapp_phone: '557581477477',
-    pause_trigger: '**',
-    pause_ttl_seconds: 3600,
+    agent_off_trigger: '**',
+    agent_on_trigger: '##',
     search_limit: 5,
     unanswered_limit: 3,
     faq_search_endpoint: '/api/search',
@@ -85,7 +85,10 @@ test('buildRuntimeWorkflowItem flattens tenant only (no webhook message fields)'
   assert.equal(item.custom_sprompt, '');
   assert.equal('chatInput' in item, false);
   assert.equal('sessionId' in item, false);
-  assert.equal('pause_key' in item, false);
+  assert.equal('pause_trigger' in item, false);
+  assert.equal('pause_ttl_seconds' in item, false);
+  assert.equal(item.agent_off_trigger, '**');
+  assert.equal(item.agent_on_trigger, '##');
   assert.equal(item.search_limit, 5);
   assert.equal(item.unanswered_limit, 3);
   assert.equal(item.faq_search_endpoint, '/api/search');

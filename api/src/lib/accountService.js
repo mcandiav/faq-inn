@@ -5,6 +5,7 @@ import {
   isValidObjectiveSlug,
   normalizeObjectiveSlug,
 } from './objectives/index.js';
+import { updateAgentControlTriggers } from './conversationStateService.js';
 
 function validationError(message, statusCode = 400) {
   const error = new Error(message);
@@ -56,7 +57,8 @@ export async function getAccountSettings(pool, config, userId, tenantId) {
             validation_status, confidence_score, booking_config,
             booking_approved_at, lodging_type, business_hours, policies, welcome_message, address,
             objetivo_slug, onboarding_completed, business_type, timezone,
-            agenda_validation_status, agenda_confidence_score, agenda_config, agenda_approved_at
+            agenda_validation_status, agenda_confidence_score, agenda_config, agenda_approved_at,
+            agent_off_trigger, agent_on_trigger
      FROM tenant_settings
      WHERE tenant_id = ?`,
     [tenantId]
@@ -111,6 +113,8 @@ export async function getAccountSettings(pool, config, userId, tenantId) {
       policies: settings.policies || '',
       welcome_message: settings.welcome_message || '',
       address: settings.address || '',
+      agent_off_trigger: settings.agent_off_trigger || '**',
+      agent_on_trigger: settings.agent_on_trigger || '##',
     },
     agent: agentRows[0]
       ? {
@@ -223,6 +227,15 @@ export async function updateAccountSettings(pool, config, userId, tenantId, inpu
   if (timezone !== undefined) {
     settingsUpdates.push('timezone = ?');
     settingsParams.push(timezone);
+  }
+
+  const hasTriggerUpdate =
+    input.agent_off_trigger !== undefined || input.agent_on_trigger !== undefined;
+  if (hasTriggerUpdate) {
+    await updateAgentControlTriggers(pool, tenantId, {
+      agent_off_trigger: input.agent_off_trigger,
+      agent_on_trigger: input.agent_on_trigger,
+    });
   }
 
   if (settingsUpdates.length > 0) {

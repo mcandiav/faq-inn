@@ -617,6 +617,51 @@ async function applySchemaPatches(pool) {
     `CREATE INDEX IF NOT EXISTS idx_password_reset_tokens_user
      ON password_reset_tokens (user_id, created_at DESC)`
   );
+
+  const suspensionSettingsColumns = [
+    ['agent_off_trigger', "VARCHAR(2) NOT NULL DEFAULT '**'"],
+    ['agent_on_trigger', "VARCHAR(2) NOT NULL DEFAULT '##'"],
+  ];
+
+  for (const [columnName, columnDef] of suspensionSettingsColumns) {
+    const [exists] = await pool.query(
+      `SELECT column_name
+       FROM information_schema.columns
+       WHERE table_schema = current_schema()
+         AND table_name = 'tenant_settings'
+         AND column_name = ?`,
+      [columnName]
+    );
+    if (exists.length === 0) {
+      await pool.query(
+        `ALTER TABLE tenant_settings ADD COLUMN ${columnName} ${columnDef}`
+      );
+    }
+  }
+
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS conversation_states (
+      id BIGSERIAL PRIMARY KEY,
+      tenant_id BIGINT NOT NULL REFERENCES tenants (id) ON DELETE CASCADE,
+      agent_id VARCHAR(64) NOT NULL,
+      chat_id VARCHAR(255) NOT NULL,
+      contact_id VARCHAR(255) NULL,
+      agent_status VARCHAR(16) NOT NULL DEFAULT 'active'
+        CHECK (agent_status IN ('active', 'suspended')),
+      suspended_at TIMESTAMPTZ NULL,
+      resumed_at TIMESTAMPTZ NULL,
+      suspended_by VARCHAR(255) NULL,
+      resumed_by VARCHAR(255) NULL,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      UNIQUE (tenant_id, agent_id, chat_id)
+    )
+  `);
+
+  await pool.query(`
+    CREATE INDEX IF NOT EXISTS idx_conversation_states_lookup
+      ON conversation_states (tenant_id, agent_id, chat_id)
+  `);
 }
 
 export async function runMigrations(pool, _config) {

@@ -4,6 +4,8 @@
 
 | Fecha | Versión | Cambio realizado | Motivo | Impacto | Sección afectada |
 |---|---|---|---|---|---|
+| 2026-07-15 | V1.23 | Se elimina el campo redundante de modo de control de `tenant_settings`; la persistencia en PostgreSQL queda como decisión arquitectónica fija. | FAQ Inn no admite modos alternativos de control por tenant. | Se simplifica el esquema, el contrato runtime y la implementación del Programador y de n8n. | 8.3, 14.6, docs/n8n |
+| 2026-07-15 | V1.22 | Se reemplaza la pausa humana temporal por una suspensión persistente por conversación, controlada mediante comandos configurables por tenant. | La pausa de 5 minutos obligaba al tenant a repetir acciones durante intervenciones humanas prolongadas y podía colisionar con el uso de `**` como formato Markdown. | La app debe persistir el estado por conversación en PostgreSQL y n8n debe validar comandos, consultar el estado y bloquear respuestas mientras esté suspendida. | 8.3, 14.6, 14.12, docs/n8n |
 | 2026-07-11 | V1.21 | Se define el módulo de recuperación de contraseña con envío por Zoho reutilizando la cuenta corporativa ya operativa en Trudesk. | FAQ Inn requiere recuperación autónoma de acceso sin crear una infraestructura de correo separada. | El Programador debe implementar un `MailProvider` SMTP desacoplado, tokens de un solo uso, expiración, rate limiting e invalidación de sesiones. | 14.13, 16.2, 18 |
 | 2026-07-10 | V1.20 | Catálogo default de categorías FAQ reducido a 2: «Sin categoría» y «Pregunta sin respuesta». | Simplificar el seed administrativo; el resto se crea a demanda. | Migración retira defaults viejos (`Respuesta interna`, `Responsable 1/2`) y reasigna FAQs a «Sin categoría». | 14.5.2 |
 | 2026-07-10 | V1.19 | Se documenta categoría administrativa vs keywords y se excluye la categoría de la vectorización FAQ (`buildVectorizableText`). Export Excel pasa a `category_id`. | La categoría es metadato interno del tenant; no debe influir en la búsqueda semántica. Las keywords sí. | Tras deploy API, reindexar FAQs para que Qdrant deje de indexar `Categoria:`. | 14.5.1, 14.5.2 |
@@ -158,7 +160,7 @@ Para `reservar_noches`, el agente debe:
 5. Confirmar los datos antes de enviar link de reserva.
 6. Construir el link con la URL o plantilla de URL del tenant.
 7. Registrar preguntas sin respuesta.
-8. Permitir pausa humana mediante prefijo `**`.
+8. Permitir suspensión y reactivación humana persistente por conversación mediante comandos configurables por tenant.
 
 ---
 
@@ -362,10 +364,9 @@ evolution_instance_name
 evolution_api_url
 faq_search_endpoint
 unanswered_endpoint
-pause_enabled
-pause_trigger
-pause_ttl_seconds
-pause_scope
+agent_off_trigger
+agent_on_trigger
+conversation_status
 sprompt
 validation_status
 agenda_validation_status
@@ -402,33 +403,52 @@ Regla de composición del prompt (System Prompt Configurable):
 - El runtime (`/api/runtime/tenant-config`) entrega `sprompt.*` crudo.
 - El nodo Code `Armar SPrompt` reemplaza tokens neutros con variables runtime (`{{tenant_display_name}}`, `{{initial_greeting}}`, `{{objetivo}}`, `{{url}}`, `{{today}}`, etc.) y arma secciones listas para el AI Agent.
 
-### 8.3 Regla de pausa humana
+### 8.3 Suspensión humana persistente por conversación
 
-MVP:
-
-```text
-Si un mensaje entrante comienza con el `pause_trigger` configurado, el agente se pausa para esa conversación.
-```
-
-La pausa humana se implementa con Redis TTL, no con `Wait` de n8n ni apagando workflows.
-
-Clave estándar:
+Regla funcional:
 
 ```text
-faqinn:pause:<tenant_id>:<agent_id>:<chat_id>
+El tenant puede suspender indefinidamente al agente para una conversación específica y reactivarlo posteriormente.
+La suspensión no vence automáticamente y no afecta a otras conversaciones del mismo tenant.
 ```
 
-Configuración mínima por tenant/agente:
+Cada tenant debe poder configurar dos comandos distintos de exactamente dos caracteres:
 
 ```text
-pause_enabled=true
-pause_trigger=**
-pause_ttl_seconds=300
-pause_scope=chat
-pause_mode=redis_ttl
+agent_off_trigger = comando que suspende al agente
+agent_on_trigger  = comando que reactiva al agente
 ```
 
-Mientras exista la clave Redis de pausa, n8n no debe responder al cliente, para permitir intervención humana desde WhatsApp o Chatwoot.
+Los comandos deben reconocerse solo cuando:
+
+1. El mensaje completo coincide exactamente con el comando configurado.
+2. El mensaje fue enviado desde el lado del tenant, identificado por `fromMe = true` o señal equivalente validada del proveedor WhatsApp.
+3. Ambos comandos son distintos entre sí.
+4. Los comandos no se envían al AI Agent, no se responden al contacto y no se incorporan como contenido conversacional normal.
+
+Configuración mínima en `tenant_settings`:
+
+```text
+agent_off_trigger
+agent_on_trigger
+```
+
+Estado por conversación:
+
+```text
+active     = el agente puede procesar y responder mensajes del contacto
+suspended  = el agente no responde hasta recibir el comando de reactivación
+```
+
+El estado se guarda en PostgreSQL, en una tabla independiente de la memoria conversacional, por ejemplo `conversation_states`, usando como identidad lógica:
+
+```text
+tenant_id + agent_id + chat_id
+```
+
+Mientras una conversación esté `suspended`, n8n debe continuar recibiendo y registrando los mensajes para conservar el contexto, pero debe detener el flujo antes del AI Agent y antes del envío automático. Al recibir `agent_on_trigger`, la conversación vuelve a `active`; el siguiente mensaje del contacto se procesa usando la memoria acumulada.
+
+Redis deja de participar en el control de suspensión. La memoria PostgreSQL del agente y la tabla de estado tienen responsabilidades separadas: la memoria conserva el contexto; `conversation_states` decide si el agente está autorizado a responder.
 
 ---
 
@@ -694,10 +714,9 @@ objetivo_slug
 business_type
 tenant_url
 human_contact
-pause_enabled
-pause_trigger
-pause_ttl_seconds
-pause_scope
+agent_off_trigger
+agent_on_trigger
+conversation_status
 evolution_instance_name
 evolution_instance_token_encrypted
 phone_number
@@ -904,25 +923,58 @@ Catálogo inicial: `Sin categoría`, `Pregunta sin respuesta`. «Sin categoría�
 
 Formularios con categoría + keywords + ayuda contextual (`?`): Nueva/Editar FAQ, onboarding paso 4 (FAQs plantilla), Sin respuesta → Responder.
 
-### 14.6 Módulo pausa humana
+### 14.6 Módulo de suspensión humana persistente
+
+Configuración por tenant en `tenant_settings`:
 
 | Variable | Valor ejemplo / desarrollo | Uso obligatorio | Fuente esperada |
 |---|---|---|---|
-| `pause_enabled` | `true` | Habilita o deshabilita pausa humana por tenant/agente. | tenant_settings |
-| `pause_trigger` | `**` | Prefijo que activa pausa humana cuando aparece al inicio del mensaje. | tenant_settings |
-| `pause_ttl_seconds` | `300` | Duración de la pausa Redis en segundos. | tenant_settings |
-| `pause_scope` | `chat` | Alcance de la pausa: conversación específica. | tenant_settings |
-| `pause_mode` | `redis_ttl` | Mecanismo técnico de pausa. | Arquitectura / tenant_settings |
-| `pause_key` | `faqinn:pause:<tenant_slug>:<agent_id>:<chat_id>` | Clave Redis usada para bloquear respuesta automática. | Runtime n8n |
-| `pause_lock` | valor Redis | Indica si la pausa está vigente. | Redis / runtime n8n |
+| `agent_off_trigger` | `#-` | Mensaje exacto de dos caracteres que suspende al agente para la conversación. | tenant_settings |
+| `agent_on_trigger` | `#+` | Mensaje exacto de dos caracteres que reactiva al agente para la conversación. | tenant_settings |
 
-Regla vigente:
+Reglas de validación de configuración:
 
 ```text
-Mientras exista `pause_lock`, n8n no debe responder al cliente.
+Los dos comandos deben tener exactamente dos caracteres.
+Deben ser distintos entre sí.
+No pueden guardarse vacíos.
+La aplicación debe rechazar configuraciones inválidas antes de persistirlas.
 ```
 
-Nota: la documentación anterior usaba como clave estándar `faqinn:pause:<tenant_id>:<agent_id>:<chat_id>`. El prototipo n8n vigente usa `tenant_slug`. Esta diferencia debe resolverse antes de producción; por ahora ambas deben considerarse equivalentes conceptuales y la implementación final debe elegir una sola convención.
+Tabla operativa sugerida:
+
+```text
+conversation_states
+- id
+- tenant_id
+- agent_id
+- chat_id
+- contact_id nullable
+- agent_status         active | suspended
+- suspended_at nullable
+- resumed_at nullable
+- suspended_by nullable
+- resumed_by nullable
+- created_at
+- updated_at
+```
+
+Restricción lógica obligatoria:
+
+```text
+UNIQUE (tenant_id, agent_id, chat_id)
+```
+
+Regla runtime:
+
+```text
+Los comandos solo se procesan si el mensaje completo coincide exactamente y proviene del tenant (`fromMe = true` o equivalente validado).
+`agent_off_trigger` crea o actualiza el estado a `suspended`.
+`agent_on_trigger` crea o actualiza el estado a `active`.
+Mientras el estado sea `suspended`, n8n conserva los mensajes en memoria pero no ejecuta el AI Agent ni envía respuesta automática.
+```
+
+Redis no debe usarse para este módulo. La tabla de memoria conversacional y `conversation_states` son independientes.
 
 ### 14.7 Módulo motor-reservas
 
@@ -1121,7 +1173,7 @@ El Programador debe revisar y reconstruir con variables de tenant, como mínimo:
 4. Identidad de tenant y agente.
 5. Resolución de tenant por `evolution_instance_name`.
 6. Endpoints internos para FAQ, Qdrant y preguntas sin respuesta.
-7. Configuración de pausa humana por Redis TTL.
+7. Configuración y persistencia de suspensión humana por conversación en PostgreSQL, con comandos `agent_off_trigger` y `agent_on_trigger` configurables por tenant.
 8. Configuración de motor-reservas solo cuando esté aprobada.
 9. Configuración Cal.com solo cuando `scheduling_provider = calcom` y el link de agenda esté aprobado.
 10. Construcción de `final_system_prompt` desde el módulo System Prompt Configurable, usando secciones activas, versionadas y variables de tenant, agente, objetivo operativo y cliente.

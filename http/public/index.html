@@ -151,6 +151,21 @@
                 <p class="hint" data-i18n="profile.whatsappConnectedHint">
                   Tu asistente responde mensajes entrantes en este número.
                 </p>
+                <div class="profile-agent-control">
+                  <p class="hint" data-i18n="profile.agentControlHint">
+                    Para suspender el agente en un chat, envía exactamente el comando de apagado desde este WhatsApp. Para reactivarlo, envía el comando de encendido. La suspensión no vence sola.
+                  </p>
+                  <div class="profile-agent-control-grid">
+                    <label>
+                      <span data-i18n="profile.agentOffTrigger">Comando apagar</span>
+                      <input type="text" id="profile-agent-off-trigger" maxlength="2" autocomplete="off" />
+                    </label>
+                    <label>
+                      <span data-i18n="profile.agentOnTrigger">Comando encender</span>
+                      <input type="text" id="profile-agent-on-trigger" maxlength="2" autocomplete="off" />
+                    </label>
+                  </div>
+                </div>
               </div>
               <div id="profile-whatsapp-disconnected" class="profile-whatsapp-block hidden">
                 <div class="profile-whatsapp-status">
@@ -656,7 +671,7 @@
       </form>
     </dialog>
 
-    <script src="/i18n.js?v=1.8.2"></script>
-    <script src="/app.js?v=1.8.2"></script>
+    <script src="/i18n.js?v=1.9.0"></script>
+    <script src="/app.js?v=1.9.0"></script>
   </body>
 </html>

@@ -48,7 +48,7 @@ Relación esperada:
 evolution_instances.instance_name
   -> evolution_instances.tenant_id
   -> tenants.id
-  -> tenant_settings / agents / faq_config / pause_config
+  -> tenant_settings / agents / faq_config / conversation_states
 ```
 
 El nombre exacto del campo recibido desde Evolution API debe confirmarse con un payload real. Posibles nombres a validar:
@@ -64,7 +64,7 @@ apikey
 ## Flujo runtime esperado
 
 ```text
-Webhook Evolution -> Parse Evolution -> Es mensaje entrante? -> Resolver Tenant (GET API plana) -> Detecta ** -> … -> Datos -> TextoFinal -> FAQ inn
+Webhook Evolution -> Parse Evolution -> Resolver Tenant -> Detectar comando tenant -> Actualizar/consultar estado conversación -> ¿Agente activo? -> Datos -> TextoFinal -> FAQ inn
 ```
 
 ## Separación de dominios (contrato vigente)
@@ -75,10 +75,10 @@ Webhook Evolution -> Parse Evolution -> Es mensaje entrante? -> Resolver Tenant 
 |---|---|
 | `chatInput`, `sessionId`, `remoteJid`, `pushName` | `tenant_id`, `tenant_slug`, `agent_id`, `initial_greeting` |
 | `fromMe`, `event`, `message_type`, `source_channel` | motor reservas, `business_hours`, `policies` |
-| `evolution_instance` (solo lookup) | `pause_trigger`, `pause_ttl_seconds`, `search_limit`, `unanswered_limit` |
+| `evolution_instance` (solo lookup) | `agent_off_trigger`, `agent_on_trigger`, `search_limit`, `unanswered_limit` |
 | | `evolution_instance_name`, `evolution_api_url`, `evolution_api_key` |
 
-**Derivados en n8n (Datos):** `Texto`, `question`, `chat_id`, `pause_key`, etc. — merge de ambos dominios, no viven en ninguna API.
+**Derivados en n8n (Datos):** `Texto`, `question`, `chat_id`, etc. — merge de ambos dominios, no viven en ninguna API.
 
 ## Variables mínimas cargadas por runtime
 
@@ -108,7 +108,7 @@ evolution_api_url
 evolution_api_key
 faq_search_endpoint
 unanswered_endpoint
-pause_enabled / pause_trigger / pause_ttl_seconds / pause_scope
+agent_off_trigger / agent_on_trigger / conversation_status
 ```
 
 ## Workflow FAQ prototipo — propagación al agente
@@ -116,7 +116,7 @@ pause_enabled / pause_trigger / pause_ttl_seconds / pause_scope
 Cadena vigente:
 
 ```text
-Parse Evolution → Es mensaje entrante? → Resolver Tenant → Detecta ** → … → Datos → TextoFinal → FAQ inn
+Parse Evolution → Es mensaje entrante? → Resolver Tenant → Detectar comando tenant → Actualizar/consultar estado conversación → ¿Agente activo? → Datos → TextoFinal → FAQ inn
 ```
 
 - **Parse Evolution**: extrae `chatInput`, `sessionId`, `evolution_instance`, `source_channel` del webhook Evolution.
@@ -164,8 +164,8 @@ Características incorporadas:
 
 ```text
 Resolver Tenant (GET inn-api) devuelve solo config tenant.
-Redis TTL para pausa humana por chat.
-Clave Redis: faqinn:pause:{tenant_slug}:{agent_id}:{chat_id}.
+Suspensión persistente por conversación en PostgreSQL (conversation_states).
+Comandos configurables por tenant: agent_off_trigger (default **) y agent_on_trigger (default ##).
 Datos merge Evolution + inn-api.
 initial_greeting vive como variable, no como texto fijo del prompt.
 Respostas y SemResposta reciben tenant_id, tenant_slug y agent_id.
@@ -194,22 +194,38 @@ La API `/api/runtime/tenant-config` resuelve por `instance_name` registrado en P
 
 `evolution_api_url` en runtime apunta a la **URL interna** (`http://n8n_evolution-api:8080`) para el nodo Enviar WhatsApp desde n8n.
 
-## Pausa humana
+## Suspensión humana persistente
 
-La pausa humana no debe implementarse con Wait de n8n ni apagando workflows.
+La suspensión no debe implementarse con Wait de n8n, apagando workflows ni usando Redis TTL.
 
-La regla vigente es Redis TTL por chat:
+La configuración proviene de `tenant_settings`:
 
 ```text
-pause_enabled=true
-pause_trigger=**
-pause_ttl_seconds=300
-pause_scope=chat
-pause_mode=redis_ttl
+agent_off_trigger   (default **)
+agent_on_trigger    (default ##)
 ```
 
-Mientras exista la clave Redis de pausa, el runtime n8n no debe responder al cliente.
+Endpoints runtime en inn-api:
+
+```text
+GET  /api/runtime/conversation-state?tenant_db_id=&agent_id=&chat_id=
+POST /api/runtime/conversation-control
+```
+
+Body mínimo de `conversation-control`:
+
+```text
+tenant_db_id
+agent_id
+chat_id
+message
+from_me
+```
+
+El workflow debe reconocer los comandos únicamente cuando el mensaje completo coincida exactamente y venga desde el tenant (`fromMe = true` o equivalente validado). El comando de apagado actualiza `conversation_states.agent_status = suspended`; el comando de encendido actualiza el estado a `active`.
+
+Antes de ejecutar el AI Agent, n8n debe consultar el estado por `tenant_id + agent_id + chat_id`. Si está suspendido, conserva los mensajes para memoria y trazabilidad, pero no ejecuta el agente ni envía respuesta automática. Los comandos de control no se incorporan a la memoria ni se envían al contacto.
 
 ## Regla de evolución del prototipo
 
-El aplanado del tenant vive en la API (`buildRuntimeWorkflowItem` en `runtimeService.js`). El mensaje WhatsApp y la clave Redis de pausa se arman en n8n referenciando **Parse Evolution** + **Resolver Tenant** (`Datos`, Redis, Enviar WhatsApp).
+El aplanado del tenant vive en la API (`buildRuntimeWorkflowItem` en `runtimeService.js`). El mensaje WhatsApp se obtiene desde **Parse Evolution** y el control persistente debe resolverse mediante endpoints de la app FAQ Inn o nodos PostgreSQL gobernados por el contrato de `conversation_states`; n8n no debe mantener una fuente de verdad paralela.
