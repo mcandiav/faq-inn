@@ -271,8 +271,8 @@ Tools: GenerarLinkReserva, GenerarLinkAgenda, Enviar WhatsApp.
 **Eliminado de FAQ Productivo:**
 
 ```text
-Detecta **          (startsWith pause_trigger)
-Redis pausa 5 min   (INCR + TTL)
+Detecta comando     (prefijo en modelo anterior)
+Redis pausa         (INCR + TTL)
 Redis consulta pausa
 ¿Pausa vigente?
 ```
@@ -288,7 +288,7 @@ Estado conversacion    GET  /api/runtime/conversation-state
 
 **Cambio de comportamiento respecto al modelo Redis:**
 
-- Antes: mensaje del negocio que **empezaba** con `**` pausaba 5 minutos.
+- Antes: mensaje del negocio que **empezaba** con `**` activaba una suspensión temporal.
 - Ahora: solo suspende/reactiva con mensaje **exacto** `**` o `##` desde `fromMe: true`.
 - La suspensión no vence sola; solo `##` (o `agent_on_trigger`) la levanta.
 

@@ -201,7 +201,7 @@ const MESSAGES = {
     'profile.bookingStatusApproved': 'Motor de reservas configurado y aprobado.',
     'profile.bookingStatusPending': 'Motor de reservas pendiente de configuración.',
     'profile.pauseHint':
-      'Para pausar el agente en un chat, escribile al cliente un mensaje que empiece con ** (dos asteriscos). El asistente queda pausado 5 minutos en esa conversación y podés responder vos.',
+      'Para suspender el agente en un chat, enviá exactamente ** (dos asteriscos) desde el WhatsApp del negocio. Para reactivarlo, enviá exactamente ##. La suspensión no vence sola y solo afecta esa conversación.',
     'onboarding.title': 'Completa tu negocio',
     'onboarding.lead':
       'Configura tu agente de WhatsApp en unos minutos. Este asistente es distinto de Mi cuenta.',
@@ -239,8 +239,8 @@ const MESSAGES = {
     'onboarding.faqsHint': 'Edita las respuestas con los datos reales de tu negocio.',
     'onboarding.pauseTitle': 'Pausa del operador',
     'onboarding.pauseBody':
-      'Para suspender el agente por 5 minutos, inicie su intervención con ** (asterisco asterisco). Con esta clave el agente hace una pausa de 5 minutos en esa conversación y usted puede responder al cliente.',
-    'onboarding.pauseAck': 'Entiendo cómo pausar el agente con **',
+      'Para suspender el agente en un chat, envíe exactamente ** (dos asteriscos) desde el WhatsApp del negocio. Para reactivarlo, envíe exactamente ##. La suspensión no vence sola y solo afecta esa conversación.',
+    'onboarding.pauseAck': 'Entiendo cómo suspender con ** y reactivar con ##',
     'onboarding.back': 'Atrás',
     'onboarding.next': 'Siguiente',
     'onboarding.finish': 'Finalizar y entrar al panel',
@@ -744,7 +744,7 @@ const MESSAGES = {
     'profile.bookingStatusApproved': 'Motor de reservas configurado e aprovado.',
     'profile.bookingStatusPending': 'Motor de reservas pendente de configuração.',
     'profile.pauseHint':
-      'Para pausar o agente num chat, escreva ao cliente uma mensagem que comece com ** (dois asteriscos). O assistente fica pausado 5 minutos nessa conversa e você pode responder.',
+      'Para suspender o agente num chat, envie exatamente ** (dois asteriscos) pelo WhatsApp do negócio. Para reativá-lo, envie exatamente ##. A suspensão não expira sozinha e afeta só essa conversa.',
     'onboarding.title': 'Complete seu negócio',
     'onboarding.lead':
       'Configure seu agente de WhatsApp em poucos minutos. Este assistente é diferente de Minha conta.',
@@ -783,8 +783,8 @@ const MESSAGES = {
     'onboarding.faqsHint': 'Edite as respostas com os dados reais do seu negócio.',
     'onboarding.pauseTitle': 'Pausa do operador',
     'onboarding.pauseBody':
-      'Para suspender o agente por 5 minutos, inicie sua intervenção com ** (asterisco asterisco). Com essa chave o agente pausa por 5 minutos nessa conversa e você pode responder ao cliente.',
-    'onboarding.pauseAck': 'Entendo como pausar o agente com **',
+      'Para suspender o agente num chat, envie exatamente ** (dois asteriscos) pelo WhatsApp do negócio. Para reativá-lo, envie exatamente ##. A suspensão não expira sozinha e afeta só essa conversa.',
+    'onboarding.pauseAck': 'Entendo como suspender com ** e reativar com ##',
     'onboarding.back': 'Voltar',
     'onboarding.next': 'Próximo',
     'onboarding.finish': 'Finalizar e entrar no painel',
@@ -1286,7 +1286,7 @@ const MESSAGES = {
     'profile.bookingStatusApproved': 'Booking engine configured and approved.',
     'profile.bookingStatusPending': 'Booking engine setup pending.',
     'profile.pauseHint':
-      'To pause the agent in a chat, send the client a message starting with ** (two asterisks). The assistant stays paused for 5 minutes in that conversation so you can reply yourself.',
+      'To suspend the agent in a chat, send exactly ** (two asterisks) from the business WhatsApp. To resume it, send exactly ##. Suspension does not expire on its own and only affects that conversation.',
     'onboarding.title': 'Complete your business',
     'onboarding.lead':
       'Set up your WhatsApp agent in a few minutes. This wizard is separate from My account.',
@@ -1325,8 +1325,8 @@ const MESSAGES = {
     'onboarding.faqsHint': 'Edit answers with your real business information.',
     'onboarding.pauseTitle': 'Operator pause',
     'onboarding.pauseBody':
-      'To suspend the agent for 5 minutes, start your message with ** (two asterisks). The agent pauses for 5 minutes in that chat so you can reply.',
-    'onboarding.pauseAck': 'I understand how to pause the agent with **',
+      'To suspend the agent in a chat, send exactly ** (two asterisks) from the business WhatsApp. To resume it, send exactly ##. Suspension does not expire on its own and only affects that conversation.',
+    'onboarding.pauseAck': 'I understand how to suspend with ** and resume with ##',
     'onboarding.back': 'Back',
     'onboarding.next': 'Next',
     'onboarding.finish': 'Finish and open dashboard',

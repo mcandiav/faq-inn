@@ -64,4 +64,4 @@ To suspend the agent in a chat, send exactly ** (two asterisks) from the busines
 
 ## Modelo anterior (obsoleto)
 
-Hasta julio 2026 el MVP usaba Redis TTL (`pause_trigger` con `startsWith` + 5 minutos). Ese modelo quedó reemplazado por la suspensión persistente PostgreSQL. No usar Redis para este control.
+El MVP anterior usaba un control temporal con Redis. Ese modelo quedó reemplazado por la suspensión persistente en PostgreSQL. No usar Redis para este control.

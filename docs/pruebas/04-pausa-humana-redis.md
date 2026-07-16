@@ -55,12 +55,3 @@ Se afecta a otros chats del mismo tenant por error de chat_id.
 
 Aprobado en sandbox **FAQ V2.0** (ejecuciones 15097–15106, tenant `faqinn_mcandia`) y portado a **FAQ Productivo** el 2026-07-15. Detalle: [../n8n/README.md](../n8n/README.md).
 
-## Histórico Redis (referencia)
-
-Modelo anterior (no usar):
-
-```text
-pause_trigger=** (startsWith)
-pause_ttl_seconds=300
-clave Redis: faqinn:pause:{tenant}:{agent}:{chat}
-```

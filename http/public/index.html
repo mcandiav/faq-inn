@@ -11,8 +11,8 @@
     <link rel="icon" type="image/png" sizes="512x512" href="/favicon.png" />
     <link rel="apple-touch-icon" href="/favicon.png" />
     <title>FAQ Inn</title>
-    <meta name="faq-inn-ui-version" content="1.7.91" />
-    <link rel="stylesheet" href="/styles.css?v=1.7.91" />
+    <meta name="faq-inn-ui-version" content="1.7.92" />
+    <link rel="stylesheet" href="/styles.css?v=1.7.92" />
     <!-- CSS crítico QR help: evita layout roto si Cloudflare cachea styles.css?v= antiguo -->
     <style id="qr-scan-help-critical">
       .qr-scan-layout {
@@ -293,11 +293,11 @@
             <div id="onboarding-panel-5" class="onboarding-panel hidden">
               <h3 data-i18n="onboarding.pauseTitle">Pausa del operador</h3>
               <p class="profile-operator-tip onboarding-pause-tip" data-i18n="onboarding.pauseBody">
-                Para suspender el agente por 5 minutos, inicie su intervención con ** (asterisco asterisco). Con esta clave el agente hace una pausa de 5 minutos en esa conversación y usted puede responder al cliente.
+                Para suspender el agente en un chat, envíe exactamente ** (dos asteriscos) desde el WhatsApp del negocio. Para reactivarlo, envíe exactamente ##. La suspensión no vence sola y solo afecta esa conversación.
               </p>
               <label class="checkbox onboarding-pause-check">
                 <input type="checkbox" id="onboarding-pause-ack" />
-                <span data-i18n="onboarding.pauseAck">Entiendo cómo pausar el agente con **</span>
+                <span data-i18n="onboarding.pauseAck">Entiendo cómo suspender con ** y reactivar con ##</span>
               </label>
             </div>
 
@@ -517,7 +517,7 @@
                 <span class="field-hint" data-i18n="profile.timezoneHint">Usada para calcular fechas (hoy, mañana) en el agente. Por defecto es la de tu onboarding.</span>
               </label>
               <p class="profile-operator-tip" data-i18n="profile.pauseHint">
-                Para pausar el agente en un chat, escribile al cliente un mensaje que empiece con ** (dos asteriscos). El asistente queda pausado 5 minutos en esa conversación y podés responder vos.
+                Para suspender el agente en un chat, enviá exactamente ** (dos asteriscos) desde el WhatsApp del negocio. Para reactivarlo, enviá exactamente ##. La suspensión no vence sola y solo afecta esa conversación.
               </p>
             </fieldset>
             <fieldset>
@@ -1178,7 +1178,7 @@
       </form>
     </dialog>
 
-    <script src="/i18n.js?v=1.7.91"></script>
-    <script src="/app.js?v=1.7.91"></script>
+    <script src="/i18n.js?v=1.7.92"></script>
+    <script src="/app.js?v=1.7.92"></script>
   </body>
 </html>

@@ -104,7 +104,11 @@ Debe quedar **explícito** en el wizard, no solo en Mi cuenta.
 
 Texto canónico:
 
-> Para suspender el agente por **5 minutos**, inicie su intervención con **`**`** (asterisco asterisco). Con esta clave el agente hace una pausa de 5 minutos en esa conversación.
+> Para suspender el agente en una conversación, envíe exactamente **`**`** desde el WhatsApp del negocio.
+>
+> Para reactivarlo en esa misma conversación, envíe exactamente **`##`**.
+>
+> La suspensión es persistente: no vence sola y solo afecta ese chat.
 
 Detalle técnico e i18n: [pausa-operador.md](pausa-operador.md).
 

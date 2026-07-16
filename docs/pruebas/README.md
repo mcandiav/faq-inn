@@ -27,7 +27,7 @@ decisión final
 | `01-evolution-onboarding-mvp` | **Cerrado / validado** | Registro, instancia Evolution, QR, polling, webhook MESSAGES_UPSERT. |
 | `02-n8n-multitenant-runtime` | En prueba | Validar workflow compartido multitenant con configuración por tenant. |
 | `03-tenant-settings-api` | Pendiente | Definir API/tablas para configuración de tenant y agente. |
-| `04-pausa-humana-redis` | En prueba | Validar pausa humana con Redis TTL por chat. |
+| `04-pausa-humana-redis` | En prueba | Validar suspensión humana persistente por chat. |
 | `05-respostas-semresposta` | En prueba | Validar búsqueda FAQ y registro de preguntas sin respuesta por tenant/agente. |
 | `06-panel-admin-tenant` | Pendiente | Validar UI mínima para alta y administración del tenant. |
 

@@ -57,7 +57,7 @@ Separación de responsabilidades:
 | Datos del negocio | Tenant / Agent settings |
 | Instrucciones extra por tenant (`custom_sprompt`) | Admin View tenant → Custom SPrompt |
 | URLs, motor de reservas y short links | Motor de reservas / Link builder |
-| Pausa humana y handoff | Módulo pausa humana / Redis TTL |
+| Pausa humana y handoff | Suspensión por conversación |
 
 ---
 
