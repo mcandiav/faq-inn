@@ -2,6 +2,8 @@
 
 Texto canónico para mostrar en **onboarding** y en documentación de operación.
 
+Arquitectura: V1.22 / V1.23 (README rama `api`). Implementación n8n: **FAQ Productivo** — ver [../n8n/README.md](../n8n/README.md).
+
 ## Regla para el operador
 
 > Para suspender al agente en una conversación, envía exactamente **`**`** desde el WhatsApp del negocio.
@@ -20,24 +22,24 @@ Texto canónico para mostrar en **onboarding** y en documentación de operación
 ### Cómo funciona
 
 1. El operador envía un mensaje **exacto** `**` o `##` desde el teléfono del negocio (`fromMe = true`).
-2. n8n llama a `POST /api/runtime/conversation-control` y FAQ Inn persiste el estado en PostgreSQL (`conversation_states`).
-3. Mientras el estado sea `suspended`, el agente no responde en ese chat.
-4. Al enviar `##`, la conversación vuelve a `active` y el siguiente mensaje del contacto se procesa con la memoria acumulada.
+2. n8n llama a `POST /api/runtime/conversation-control` y PostgreSQL guarda el estado en `conversation_states`.
+3. Mientras el chat esté `suspended`, el agente **no responde** a mensajes del cliente.
+4. Solo `##` (o el `agent_on_trigger` configurado en Mi cuenta) reactiva el agente.
 
-Identidad lógica del estado:
+Clave de estado:
 
 ```text
 tenant_id + agent_id + chat_id
 ```
 
-Los comandos no se envían al contacto, no pasan al AI Agent y no se tratan como mensaje conversacional normal.
+Los comandos se editan en **Mi cuenta** (WhatsApp conectado). Deben tener exactamente 2 caracteres y ser distintos.
 
 ## Dónde debe mostrarse
 
 | Pantalla | Obligatorio |
 |---|---|
 | **Onboarding** (wizard post-WhatsApp) | Sí — bloque visible antes de finalizar |
-| Mi cuenta → Agente WhatsApp | Sí — recordatorio permanente |
+| Mi cuenta → Agente WhatsApp | Sí — campos editables + recordatorio |
 | Documentación operador | Sí — este archivo |
 
 ## Textos sugeridos por idioma (UI)
@@ -45,17 +47,21 @@ Los comandos no se envían al contacto, no pasan al AI Agent y no se tratan como
 **Español**
 
 ```text
-Para suspender el agente en un chat, envía exactamente ** desde el WhatsApp del negocio. Para reactivarlo en esa conversación, envía exactamente ##. La suspensión no vence sola.
+Para suspender al agente en un chat, enviá exactamente ** (dos asteriscos) desde el WhatsApp del negocio. Para reactivarlo, enviá exactamente ##. La suspensión no vence sola y solo afecta esa conversación.
 ```
 
 **Portugués**
 
 ```text
-Para suspender o agente num chat, envie exatamente ** pelo WhatsApp do negócio. Para reativar nessa conversa, envie exatamente ##. A suspensão não expira sozinha.
+Para suspender o agente num chat, envie exatamente ** (dois asteriscos) pelo WhatsApp do negócio. Para reativar, envie exatamente ##. A suspensão não expira sozinha e afeta só essa conversa.
 ```
 
 **Inglés**
 
 ```text
-To suspend the agent in a chat, send exactly ** from the business WhatsApp. To resume that conversation, send exactly ##. Suspension does not expire automatically.
+To suspend the agent in a chat, send exactly ** (two asterisks) from the business WhatsApp. To resume it, send exactly ##. Suspension does not expire on its own and only affects that conversation.
 ```
+
+## Modelo anterior (obsoleto)
+
+El MVP anterior usaba un control temporal con Redis. Ese modelo quedó reemplazado por la suspensión persistente en PostgreSQL. No usar Redis para este control.

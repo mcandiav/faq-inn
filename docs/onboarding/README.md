@@ -98,13 +98,17 @@ Tres FAQs plantilla editables antes de finalizar. Detalle canónico: [faqs-trans
 
 ---
 
-## Paso 5 — Suspensión del operador (obligatorio en onboarding)
+## Paso 5 — Pausa del operador (obligatorio en onboarding)
 
 Debe quedar **explícito** en el wizard, no solo en Mi cuenta.
 
 Texto canónico:
 
-> Para suspender al agente en una conversación, envía exactamente **`**`** desde el WhatsApp del negocio. Para reactivarlo, envía exactamente **`##`**. La suspensión no vence sola.
+> Para suspender el agente en una conversación, envíe exactamente **`**`** desde el WhatsApp del negocio.
+>
+> Para reactivarlo en esa misma conversación, envíe exactamente **`##`**.
+>
+> La suspensión es persistente: no vence sola y solo afecta ese chat.
 
 Detalle técnico e i18n: [pausa-operador.md](pausa-operador.md).
 
@@ -176,7 +180,7 @@ Tenant connected en WhatsApp
 + nombre comercial y saludo guardados
 + configuración del objetivo iniciada o pospuesta con aviso claro
 + 3 FAQs transversales confirmadas o editadas
-+ operador informado de la suspensión con ** y reactivación con ##
++ operador informado de la pausa con **
 → onboarding_completed = true → acceso al panel
 ```
 
