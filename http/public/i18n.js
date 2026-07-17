@@ -1,4 +1,4 @@
-﻿const LANG_STORAGE_KEY = 'faq-inn-lang';
+const LANG_STORAGE_KEY = 'faq-inn-lang';
 const SUPPORTED_LANGS = ['es', 'pt', 'en'];
 
 const LOCALE_MAP = { es: 'es-CL', pt: 'pt-BR', en: 'en-US' };
@@ -243,7 +243,7 @@ const MESSAGES = {
     'onboarding.pauseAck': 'Entiendo cómo suspender con ** y reactivar con ##',
     'onboarding.back': 'Atrás',
     'onboarding.next': 'Siguiente',
-    'onboarding.finish': 'Finalizar y entrar al panel',
+    'onboarding.finish': 'Siguiente',
     'onboarding.pickObjective': 'Elige un objetivo para continuar.',
     'onboarding.bookingOptional': 'Puedes configurar el motor después; también desde Mi cuenta.',
     'onboarding.bookingApproved': 'Motor de reservas aprobado',
@@ -252,7 +252,7 @@ const MESSAGES = {
     'onboarding.agendaOptional': 'Puedes configurar el motor después; también desde Mi cuenta.',
     'onboarding.faqsMissing': 'No se cargaron las FAQs iniciales. Usa el botón de abajo o recarga la página.',
     'onboarding.faqsReload': 'Cargar FAQs iniciales',
-    'onboarding.done': '¡Listo! Tu negocio ya está configurado.',
+    'onboarding.done': '¡Listo! Ahora escanea el QR para vincular WhatsApp.',
     'profile.primaryLanguage': 'Idioma principal',
     'profile.timezone': 'Zona horaria',
     'profile.timezoneHint':
@@ -787,7 +787,7 @@ const MESSAGES = {
     'onboarding.pauseAck': 'Entendo como suspender com ** e reativar com ##',
     'onboarding.back': 'Voltar',
     'onboarding.next': 'Próximo',
-    'onboarding.finish': 'Finalizar e entrar no painel',
+    'onboarding.finish': 'Próximo',
     'onboarding.pickObjective': 'Escolha um objetivo para continuar.',
     'onboarding.bookingOptional': 'Você pode configurar o motor depois, também em Minha conta.',
     'onboarding.bookingApproved': 'Motor de reservas aprovado',
@@ -796,7 +796,7 @@ const MESSAGES = {
     'onboarding.agendaOptional': 'Você pode configurar o motor depois; também em Minha conta.',
     'onboarding.faqsMissing': 'As FAQs iniciais não carregaram. Use o botão abaixo ou recarregue a página.',
     'onboarding.faqsReload': 'Carregar FAQs iniciais',
-    'onboarding.done': 'Pronto! Seu negócio já está configurado.',
+    'onboarding.done': 'Pronto! Agora escaneie o QR para vincular o WhatsApp.',
     'profile.primaryLanguage': 'Idioma principal',
     'profile.timezone': 'Fuso horário',
     'profile.timezoneHint':
@@ -1329,7 +1329,7 @@ const MESSAGES = {
     'onboarding.pauseAck': 'I understand how to suspend with ** and resume with ##',
     'onboarding.back': 'Back',
     'onboarding.next': 'Next',
-    'onboarding.finish': 'Finish and open dashboard',
+    'onboarding.finish': 'Next',
     'onboarding.pickObjective': 'Choose an objective to continue.',
     'onboarding.bookingOptional': 'You can configure the engine later from My account too.',
     'onboarding.bookingApproved': 'Booking engine approved',
@@ -1338,7 +1338,7 @@ const MESSAGES = {
     'onboarding.agendaOptional': 'You can configure the engine later from My account.',
     'onboarding.faqsMissing': 'Starter FAQs did not load. Use the button below or reload the page.',
     'onboarding.faqsReload': 'Load starter FAQs',
-    'onboarding.done': 'Done! Your business is set up.',
+    'onboarding.done': 'Done! Now scan the QR to link WhatsApp.',
     'profile.primaryLanguage': 'Primary language',
     'profile.timezone': 'Time zone',
     'profile.timezoneHint':
