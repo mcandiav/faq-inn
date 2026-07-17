@@ -1,4 +1,4 @@
-import { indexFaqItem } from './indexer.js';
+﻿import { indexFaqItem } from './indexer.js';
 import { OBJECTIVES, getObjective, isValidObjectiveSlug } from './objectives/index.js';
 import { syncWhatsappConnectionStatus } from './provisionService.js';
 import { seedStarterFaqs } from './seedStarterFaqs.js';
@@ -184,7 +184,6 @@ export async function getOnboardingStatus(pool, config, userId, tenantId) {
       agent_on_trigger: '##',
     },
     ready_to_complete:
-      whatsappConnected &&
       Boolean(settings.objetivo_slug) &&
       (user.name || '').trim().length >= 2 &&
       starterFaqs.length >= 3,
@@ -354,10 +353,6 @@ export async function completeOnboarding(pool, config, userId, tenantId, input) 
 
   if (status.onboarding_completed) {
     return status;
-  }
-
-  if (!status.whatsapp.connected) {
-    throw validationError('Conecta WhatsApp antes de completar el onboarding');
   }
 
   if (!status.objetivo_slug) {
