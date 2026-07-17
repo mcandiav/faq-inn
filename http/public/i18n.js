@@ -1,4 +1,4 @@
-const LANG_STORAGE_KEY = 'faq-inn-lang';
+﻿const LANG_STORAGE_KEY = 'faq-inn-lang';
 const SUPPORTED_LANGS = ['es', 'pt', 'en'];
 
 const LOCALE_MAP = { es: 'es-CL', pt: 'pt-BR', en: 'en-US' };
@@ -62,7 +62,7 @@ const MESSAGES = {
       'Escanea el QR con tu teléfono y conecta el número del negocio.',
     'landing.badgeNow': 'Paso actual',
     'landing.badgeAfterRegister': 'Justo después del registro',
-    'landing.badgeAfterWhatsapp': 'Al conectar WhatsApp',
+    'landing.badgeAfterWhatsapp': 'Último paso',
     'landing.flowTotal':
       'El alta inicial toma unos 8 minutos. Las FAQs las cargas cuando quieras desde el panel.',
     'signup.title': 'Registra tu usuario',
@@ -608,7 +608,7 @@ const MESSAGES = {
       'Escaneie o QR com seu telefone e conecte o número do negócio.',
     'landing.badgeNow': 'Passo atual',
     'landing.badgeAfterRegister': 'Logo após o registro',
-    'landing.badgeAfterWhatsapp': 'Ao conectar WhatsApp',
+    'landing.badgeAfterWhatsapp': 'Último passo',
     'landing.flowTotal':
       'O cadastro inicial leva cerca de 8 minutos. As FAQs você carrega quando quiser no painel.',
     'signup.title': 'Registre seu usuário',
@@ -1150,7 +1150,7 @@ const MESSAGES = {
     'landing.step3Desc': 'Scan the QR with your phone and connect the business number.',
     'landing.badgeNow': 'Current step',
     'landing.badgeAfterRegister': 'Right after signup',
-    'landing.badgeAfterWhatsapp': 'When WhatsApp connects',
+    'landing.badgeAfterWhatsapp': 'Last step',
     'landing.flowTotal':
       'Initial setup takes about 8 minutes. You can load FAQs anytime from the dashboard.',
     'signup.title': 'Create your account',

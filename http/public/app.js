@@ -546,20 +546,11 @@ async function onWhatsappConnected(phoneNumber) {
   renderHeader();
   await loadOnboardingState();
 
-  const view = clientNeedsOnboarding() ? 'onboarding' : 'profile';
-  await openView(view);
-
-  if (view !== 'profile') {
-    return;
-  }
-
-  const msg = $('#profile-msg');
-  if (msg) {
-    const phone = formatWhatsappPhone(phoneNumber);
-    msg.textContent = phone
-      ? t('msg.whatsappConnectedPhone', { phone })
-      : t('msg.whatsappConnected');
-    msg.className = 'form-msg ok';
+  const onboardingCompleted = !clientNeedsOnboarding();
+  if (onboardingCompleted) {
+    await openView('dashboard');
+  } else {
+    await openView('onboarding');
   }
 }
 
@@ -716,13 +707,7 @@ function clientNeedsOnboarding() {
   const completed =
     state.onboardingData?.onboarding_completed ??
     state.account?.settings?.onboarding_completed;
-  if (completed) {
-    return false;
-  }
-  const connected =
-    state.onboardingData?.whatsapp?.connected ??
-    state.account?.whatsapp?.connection_status === 'connected';
-  return Boolean(connected);
+  return !completed;
 }
 
 async function loadOnboardingState() {
@@ -3538,9 +3523,10 @@ async function finishOnboarding() {
       state.account.settings.onboarding_completed = true;
     }
     setOnboardingMsg(t('onboarding.done'), 'ok');
-    await ensureClientAppOrWhatsapp();
-    renderHeader();
-    await openView('dashboard');
+    showLanding('signup');
+    hideLandingPanels();
+    setWhatsappFocus(true);
+    await startWhatsappConnect();
   } catch (error) {
     setOnboardingMsg(error.message, 'error');
   }
@@ -3994,13 +3980,15 @@ $('#signup-form')?.addEventListener('submit', async (event) => {
     });
 
     state.user = data.user;
-    whatsappState.uiTarget = 'landing';
-    whatsappState.pollIntervalSeconds =
-      data.poll_interval_seconds || whatsappState.pollIntervalSeconds;
-    whatsappState.timeoutSeconds =
-      data.timeout_seconds || whatsappState.timeoutSeconds;
-
-    await startWhatsappConnect();
+    try {
+      state.account = await api('/account/settings');
+    } catch {
+      /* keep defaults */
+    }
+    showApp();
+    renderHeader();
+    await loadOnboardingState();
+    await openView('onboarding');
   } catch (error) {
     msg.textContent = error.message;
     msg.classList.add('error');
